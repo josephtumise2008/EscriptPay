@@ -1,0 +1,372 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #ecfeff;
+  --color-brand-100: #cffafe;
+  --color-brand-200: #a5f3fc;
+  --color-brand-300: #67e8f9;
+  --color-brand-400: #22d3ee;
+  --color-brand-500: #06b6d4;
+  --color-brand-600: #0891b2;
+  --color-brand-700: #0e7490;
+
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #0ea5e9;
+  --color-sky-600: #0284c7;
+
+  --color-periwinkle-100: #e0e7ff;
+  --color-periwinkle-200: #c7d2fe;
+  --color-periwinkle-300: #a5b4fc;
+  --color-periwinkle-400: #818cf8;
+  --color-periwinkle-500: #6366f1;
+
+  --color-purple-lite-100: #ede9fe;
+  --color-purple-lite-200: #ddd6fe;
+  --color-purple-lite-300: #c4b5fd;
+  --color-purple-lite-400: #a78bfa;
+  --color-purple-lite-500: #8b5cf6;
+  --color-purple-lite-600: #7c3aed;
+
+  --color-ink-50: #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-300: #cbd5e1;
+  --color-ink-400: #94a3b8;
+  --color-ink-500: #64748b;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.1);
+  --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 16px 40px -16px rgb(6 182 212 / 0.18);
+
+  --animate-fade-in: fade-in 0.5s ease both;
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-down: fade-down 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-scale-in: scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+  --animate-draw: draw 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-float: float 8s ease-in-out infinite;
+  --animate-gradient-x: gradient-x 8s ease infinite;
+  --animate-check: check 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-slide-in-right: slide-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-bar-grow: bar-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pop {
+  0% { opacity: 0; transform: scale(0.7); }
+  60% { transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes draw {
+  from { stroke-dashoffset: 600; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-18px); }
+}
+
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes check {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+/* Class-based dark mode. Toggle `.dark` on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --gradient-brand: linear-gradient(90deg, #06b6d4 0%, #38bdf8 45%, #818cf8 100%);
+  --gradient-brand-soft: linear-gradient(135deg, #cffafe 0%, #e0f2fe 40%, #ede9fe 100%);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ---------- Dark theme palette ----------
+   Tailwind v4 compiles every color utility to var(--color-*), so overriding
+   the theme tokens inside `.dark` re-skins the whole app (cards, inputs,
+   pastels, borders, muted text) without touching every class. */
+
+.dark {
+  color-scheme: dark;
+
+  --color-white: #101827;
+  --color-black: #030711;
+
+  --color-slate-50: #0b1120;
+  --color-slate-100: #111a2c;
+  --color-slate-200: #1b2740;
+  --color-slate-300: #263452;
+  --color-slate-400: #8492ab;
+  --color-slate-500: #97a5be;
+  --color-slate-600: #aab8d0;
+  --color-slate-700: #becae0;
+  --color-slate-800: #d2dcec;
+  --color-slate-900: #e6edf6;
+
+  --color-ink-50: #2b374b;
+  --color-ink-100: #3e4c63;
+  --color-ink-200: #51607a;
+  --color-ink-300: #64738e;
+  --color-ink-400: #7a89a4;
+  --color-ink-500: #8b9bb5;
+  --color-ink-600: #9eabc2;
+  --color-ink-700: #b8c5d8;
+  --color-ink-800: #d3dbe8;
+  --color-ink-900: #eef2f9;
+
+  --color-brand-50: #0b2328;
+  --color-brand-100: #0e2f38;
+  --color-brand-200: #12424f;
+  --color-brand-300: #15596b;
+  --color-brand-400: #22d3ee;
+  --color-brand-500: #38bdf8;
+  --color-brand-600: #22d3ee;
+  --color-brand-700: #67e8f9;
+
+  --color-cyan-50: #0c2434;
+  --color-cyan-100: #102f44;
+  --color-cyan-200: #143c55;
+  --color-cyan-300: #1a4d6d;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #38bdf8;
+  --color-cyan-600: #22d3ee;
+  --color-cyan-700: #67e8f9;
+  --color-cyan-800: #a5f3fc;
+  --color-cyan-900: #cffafe;
+
+  --color-sky-50: #0a2138;
+  --color-sky-100: #0e2c4a;
+  --color-sky-200: #133a62;
+  --color-sky-300: #1b4d7d;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #38bdf8;
+  --color-sky-600: #38bdf8;
+
+  --color-periwinkle-100: #181f45;
+  --color-periwinkle-200: #202a58;
+  --color-periwinkle-300: #2a376f;
+  --color-periwinkle-400: #818cf8;
+  --color-periwinkle-500: #a5b4fc;
+
+  --color-purple-lite-100: #231a4b;
+  --color-purple-lite-200: #2b2060;
+  --color-purple-lite-300: #36296f;
+  --color-purple-lite-400: #a78bfa;
+  --color-purple-lite-500: #c4b5fd;
+  --color-purple-lite-600: #a78bfa;
+
+  --color-indigo-50: #141d47;
+  --color-indigo-100: #182453;
+  --color-indigo-500: #a5b4fc;
+
+  --color-emerald-50: #0a241d;
+  --color-emerald-100: #0f3329;
+  --color-emerald-200: #13422f;
+  --color-emerald-500: #34d399;
+  --color-emerald-600: #6ee7b7;
+  --color-emerald-700: #a7f3d0;
+
+  --color-amber-50: #29200c;
+  --color-amber-100: #3b2e11;
+  --color-amber-200: #4d3a12;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #fbbf24;
+  --color-amber-600: #fcd34d;
+  --color-amber-700: #fcd34d;
+
+  --color-red-50: #33121a;
+  --color-red-100: #471a25;
+  --color-red-200: #58202d;
+  --color-red-400: #f87171;
+  --color-red-500: #f87171;
+  --color-red-600: #fca5a5;
+
+  --gradient-brand-soft: linear-gradient(135deg, #102f44 0%, #0e2c4a 40%, #231a4b 100%);
+}
+
+/* Fixed white for text sitting on saturated brand gradients (never inverts). */
+.brand-contrast {
+  color: #fff;
+}
+
+/* Fixed white spinner ring for buttons on saturated gradients. */
+.brand-spin {
+  border: 2px solid rgb(255 255 255 / 0.4);
+  border-top-color: #fff;
+}
+
+/* Glass surfaces follow the theme instead of staying light. */
+.dark .glass {
+  background: rgb(11 17 32 / 0.72);
+}
+
+/* Gently crossfade theme colors on the main surfaces only.
+   (Bounded, permanent transitions — a global !important flash
+   makes the UI flicker/snap while switching themes.) */
+
+/* Default micro-interactions for interactive elements that lack utilities. */
+@layer base {
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+body {
+  @apply bg-slate-50 text-ink-800 antialiased;
+  font-feature-settings: "cv11", "ss01";
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+::selection {
+  @apply bg-cyan-200 text-cyan-900;
+}
+
+/* ---------- Utility classes ---------- */
+
+.gradient-text {
+  background-image: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradient-btn {
+  background-image: linear-gradient(90deg, #06b6d4 0%, #38bdf8 50%, #818cf8 100%);
+  background-size: 150% 100%;
+  transition: background-position 0.35s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.gradient-btn:hover {
+  background-position: 100% 0;
+  box-shadow: 0 10px 30px -10px rgb(56 189 248 / 0.55);
+}
+
+.card {
+  @apply rounded-2xl border border-slate-100 bg-white shadow-[var(--shadow-card)];
+  transition: background-color 0.35s ease, box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+
+.card-hover:hover {
+  @apply border-cyan-100 shadow-[var(--shadow-card-hover)];
+  transform: translateY(-2px);
+}
+
+.glass {
+  background: rgb(255 255 255 / 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: background-color 0.35s ease;
+}
+
+.focus-ring {
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+}
+
+.input-base {
+  @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-ink-800 placeholder:text-slate-400 transition-all duration-200;
+}
+
+.input-base:focus {
+  @apply border-cyan-300 outline-none ring-4 ring-cyan-100/70;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Accessible reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,75 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# MongoDB local database
+.local/
+
+# Next.js
+.next/
+out/
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# macOS
+.DS_Store# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+
+
+
+
+
+
+
+
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Environment / secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+*.bak
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
