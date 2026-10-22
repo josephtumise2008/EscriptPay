@@ -51,15 +51,27 @@ const processOrder = async (tx, plan) => {
 // GET /api/transactions — all transactions for the authenticated user.
 // Supports optional query filters (used by the history page):
 //   ?status=pending|successful|failed
+//   ?type=data|airtime
+//   ?network=MTN|Airtel|Glo|9mobile
 //   ?q=search (matches transactionId, network, plan, phone)
 //   ?from=YYYY-MM-DD&to=YYYY-MM-DD
+//   ?page=1&limit=25 (pagination; without these the full list is returned)
 const getUserTransactions = async (req, res) => {
   try {
-    const { status, q, from, to } = req.query || {};
+    const { status, type, network, q, from, to, page, limit } = req.query || {};
     const query = { user: req.userId };
 
     if (status && ["pending", "successful", "failed"].includes(status)) {
       query.status = status;
+    }
+
+    if (type && ["data", "airtime"].includes(type)) {
+      query.type = type;
+    }
+
+    if (typeof network === "string" && network.trim()) {
+      const name = normalizeNetwork(network.trim());
+      if (name) query.network = name;
     }
 
     if (typeof q === "string" && q.trim()) {
@@ -78,11 +90,29 @@ const getUserTransactions = async (req, res) => {
       if (Object.keys(range).length) query.createdAt = range;
     }
 
-    const transactions = await Transaction.find(query).sort({ createdAt: -1 });
+    const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : null;
+    const limitNum = limit ? Math.min(100, Math.max(1, parseInt(limit, 10) || 25)) : null;
+
+    const find = Transaction.find(query).sort({ createdAt: -1 });
+    const total = await Transaction.countDocuments(query);
+
+    let transactions;
+    if (pageNum && limitNum) {
+      transactions = await find.skip((pageNum - 1) * limitNum).limit(limitNum);
+    } else {
+      transactions = await find;
+    }
+
     return res.json({
       success: true,
       count: transactions.length,
       transactions: transactions.map(serialize),
+      pagination: {
+        page: pageNum || 1,
+        limit: limitNum || total,
+        total,
+        pages: limitNum && limitNum > 0 ? Math.max(1, Math.ceil(total / limitNum)) : 1,
+      },
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to fetch transactions." });
@@ -147,6 +177,7 @@ const createTestTransaction = async (req, res) => {
       type: "data",
       network: plan.network,
       plan: plan.name,
+      planId: plan._id,
       phone: phoneCheck.normalized,
       amount: plan.price,
       status: "pending",

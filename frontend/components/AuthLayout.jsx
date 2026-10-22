@@ -27,6 +27,11 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
             </div>
 
             {footer && <div className="mt-6 text-center text-sm text-ink-500">{footer}</div>}
+
+            <p className="mt-6 text-center text-xs leading-relaxed text-ink-400">
+              Staging environment — payments and service delivery are simulated. No real money or
+              data is transferred.
+            </p>
           </div>
         </div>
       </main>

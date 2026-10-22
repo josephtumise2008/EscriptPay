@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const crypto = require("crypto");
 const { validateNigerianPhone } = require("../utils/validators");
 const {
   requireAuth,
@@ -13,8 +14,22 @@ const sanitize = (user) => ({
   email: user.email,
   phone: user.phone,
   state: user.state || "",
+  role: user.role || "user",
   createdAt: user.createdAt,
 });
+
+// Password-reset tokens are one-time, single-URL, expire after 60 minutes,
+// and are stored only as an SHA-256 hash — the raw token never touches the DB.
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+const hashResetToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
+
+const generateResetToken = () => crypto.randomBytes(32).toString("hex");
+
+const buildResetLink = (token) => {
+  const origin = process.env.CLIENT_ORIGIN || "http://localhost:3000";
+  return `${origin}/reset-password?token=${encodeURIComponent(token)}`;
+};
 
 // POST /api/auth/signup
 const signup = async (req, res) => {
@@ -192,4 +207,100 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, logout, me, updateProfile, changePassword };
+// POST /api/auth/forgot-password
+//
+// Generates a single-use reset token, stores its hash + expiry on the user,
+// and (in the future) emails a reset link. We intentionally return the same
+// generic response whether or not the email exists, so attackers cannot use
+// this endpoint to enumerate registered accounts.
+//
+// STAGING: email delivery is not connected yet. In non-production the reset
+// link is printed to the server console so the flow can be tested end-to-end.
+const forgotPassword = async (req, res) => {
+  try {
+    const emailClean = ((req.body || {}).email || "").trim().toLowerCase();
+    const generic = {
+      success: true,
+      message: "If an account exists for that email, a password reset link has been sent.",
+    };
+
+    if (!/^\S+@\S+\.\S+$/.test(emailClean)) {
+      return res.status(400).json({ success: false, message: "Enter a valid email address." });
+    }
+
+    const user = await User.findOne({ email: emailClean }).select("_id name email");
+    if (!user) {
+      return res.status(200).json(generic);
+    }
+
+    const token = generateResetToken();
+    user.resetTokenHash = hashResetToken(token);
+    user.resetTokenExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+    await user.save();
+
+    if (process.env.NODE_ENV !== "production") {
+      // STAGING HELP: replace with a real email send (SendGrid/Postmark/etc.)
+      // in production. logRelevant* is intentionally console-only here.
+      console.log(
+        `[forgot-password] reset link for ${user.email}: ${buildResetLink(token)} ` +
+          `(expires in 60 minutes)`
+      );
+    }
+
+    // Email dispatch (e.g. sendResetEmail(to, link)) is a future integration.
+    return res.status(200).json(generic);
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("authController.forgotPassword:", error.message);
+    }
+    return res.status(500).json({ success: false, message: "Could not process the request." });
+  }
+};
+
+// POST /api/auth/reset-password  { token, password }
+//
+// Verifies the raw token against the stored hash and expiry, then sets the
+// new password and expires the token immediately (single use). Rate-limited.
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body || {};
+
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ success: false, message: "Reset token is required." });
+    }
+    if (!password || password.length < 8) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Password must be at least 8 characters." });
+    }
+
+    const tokenHash = hashResetToken(token.trim());
+    const user = await User.findOne({ resetTokenHash: tokenHash }).select(
+      "+resetTokenHash +resetTokenExpires"
+    );
+
+    if (
+      !user ||
+      !user.resetTokenExpires ||
+      user.resetTokenExpires.getTime() < Date.now()
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "This reset link is invalid or has expired." });
+    }
+
+    user.password = password;
+    user.resetTokenHash = undefined;
+    user.resetTokenExpires = undefined;
+    await user.save();
+
+    return res.json({ success: true, message: "Password reset successful. You can now sign in." });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("authController.resetPassword:", error.message);
+    }
+    return res.status(500).json({ success: false, message: "Could not reset your password." });
+  }
+};
+
+module.exports = { signup, login, logout, me, updateProfile, changePassword, forgotPassword, resetPassword };

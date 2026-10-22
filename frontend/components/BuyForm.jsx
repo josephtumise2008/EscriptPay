@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NetworkSelector from "@/components/NetworkSelector";
 import PlanList from "@/components/PlanList";
 import OrderSummary from "@/components/OrderSummary";
 import { validateNigerianPhone } from "@/lib/validators";
-import { createTestTransaction, errorMessage } from "@/lib/api";
+import { createTestTransaction, getPlanById, errorMessage } from "@/lib/api";
 import { PackageOpen, AlertCircle } from "lucide-react";
 
 const makeReference = () =>
@@ -14,15 +14,38 @@ const makeReference = () =>
     ? crypto.randomUUID()
     : `ref_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-export default function BuyForm() {
+const KNOWN_NETWORKS = ["MTN", "Airtel", "Glo", "9mobile"];
+
+export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
   const router = useRouter();
-  const [network, setNetwork] = useState("MTN");
+  const startingNetwork = KNOWN_NETWORKS.includes(initialNetwork) ? initialNetwork : "MTN";
+  const [network, setNetwork] = useState(startingNetwork);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [processing, setProcessing] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const clientRef = useRef(null);
+
+  // "Buy Again" support: when arriving with ?plan=<id>, load that exact plan
+  // (which also selects its network) so the summary is pre-filled.
+  useEffect(() => {
+    if (!initialPlanId) return;
+    let active = true;
+    getPlanById(initialPlanId)
+      .then((plan) => {
+        if (active && plan) {
+          setNetwork(plan.network);
+          setSelectedPlan(plan);
+        }
+      })
+      .catch(() => {
+        // Plan no longer exists — fall back to a normal empty form.
+      });
+    return () => {
+      active = false;
+    };
+  }, [initialPlanId]);
 
   const selectPlan = (plan) => {
     setSelectedPlan(plan);

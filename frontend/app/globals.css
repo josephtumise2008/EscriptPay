@@ -370,3 +370,29 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Printable receipts ----------
+   Only the .receipt-sheet in the DOM is printed; the rest of the app
+   (nav, buttons, sidebars) is hidden via visibility. */
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-sheet,
+  .receipt-sheet * {
+    visibility: visible;
+  }
+  .receipt-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

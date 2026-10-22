@@ -1,9 +1,10 @@
-import { Wallet, ReceiptText, Wifi, CheckCircle2 } from "lucide-react";
+import { Wallet, ReceiptText, Wifi, CheckCircle2, Phone } from "lucide-react";
 
 const ICONS = {
   balance: Wallet,
   total: ReceiptText,
   purchased: Wifi,
+  airtime: Phone,
   successful: CheckCircle2,
 };
 
@@ -11,6 +12,7 @@ const ACCENTS = {
   balance: "from-cyan-100 to-sky-50 text-cyan-600",
   total: "from-sky-100 to-indigo-50 text-sky-600",
   purchased: "from-purple-lite-100 to-cyan-50 text-purple-lite-600",
+  airtime: "from-cyan-100 to-purple-lite-50 text-cyan-600",
   successful: "from-emerald-50 to-cyan-50 text-emerald-600",
 };
 

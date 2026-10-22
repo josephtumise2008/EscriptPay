@@ -3,7 +3,11 @@ import TestModeBadge from "@/components/TestModeBadge";
 
 export const metadata = { title: "Buy Airtime" };
 
-export default function BuyAirtimePage() {
+export default async function BuyAirtimePage({ searchParams }) {
+  const sp = await (searchParams ?? {});
+  const network = typeof sp.network === "string" ? sp.network : "";
+  const amount = typeof sp.amount === "string" ? sp.amount : "";
+
   return (
     <div className="space-y-6">
       <header className="animate-fade-up">
@@ -20,7 +24,7 @@ export default function BuyAirtimePage() {
         </div>
       </header>
 
-      <AirtimeForm />
+      <AirtimeForm initialNetwork={network} initialAmount={amount} />
     </div>
   );
 }

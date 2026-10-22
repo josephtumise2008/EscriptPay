@@ -51,4 +51,23 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-module.exports = { requireAuth, signToken, setAuthCookie, clearAuthCookie, COOKIE_NAME };
+// Composes with requireAuth. Only users whose DB record has role === "admin"
+// may pass. The DB is the real authorization boundary — a forged token still
+// has to correspond to a stored admin user.
+const requireAdmin = async (req, res, next) => {
+  try {
+    const User = require("../models/User");
+    const user = await User.findById(req.userId).select("role");
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User not found." });
+    }
+    if (user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Admin access required." });
+    }
+    return next();
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Authorization failed." });
+  }
+};
+
+module.exports = { requireAuth, requireAdmin, signToken, setAuthCookie, clearAuthCookie, COOKIE_NAME };

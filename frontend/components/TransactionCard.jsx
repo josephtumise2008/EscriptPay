@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Wifi } from "lucide-react";
 import { formatNaira, formatDateTime, maskPhone } from "@/lib/format";
 
@@ -17,9 +18,14 @@ const STATUS_LABELS = {
 export default function TransactionCard({ transaction, demo = false }) {
   const status = transaction.status || "pending";
   const date = transaction.createdAt || transaction.date;
+  const href = `/history/${transaction._id}`;
 
   return (
-    <div className="card card-hover flex items-center gap-4 p-4 animate-fade-up">
+    <Link
+      href={href}
+      aria-label={`View details for ${transaction.transactionId}`}
+      className="card card-hover focus-ring flex items-center gap-4 p-4 animate-fade-up"
+    >
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-100 to-purple-lite-100 text-cyan-600">
         <Wifi size={20} aria-hidden="true" />
       </div>
@@ -61,6 +67,6 @@ export default function TransactionCard({ transaction, demo = false }) {
           {STATUS_LABELS[status] || status}
         </span>
       </div>
-    </div>
+    </Link>
   );
 }

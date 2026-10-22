@@ -107,7 +107,11 @@ function SuccessContent() {
   const successful = transaction.status === "successful";
   const isAirtime = transaction.type === "airtime";
   const deliveredLabel = isAirtime ? formatNaira(transaction.amount) : transaction.plan;
-  const buyAgainHref = isAirtime ? "/buy-airtime" : "/buy-data";
+  const buyAgainHref = isAirtime
+    ? `/buy-airtime?network=${encodeURIComponent(transaction.network)}&amount=${transaction.amount}`
+    : `/buy-data?network=${encodeURIComponent(transaction.network)}${
+        transaction.planId ? `&plan=${encodeURIComponent(transaction.planId)}` : ""
+      }`;
 
   const rows = [
     { label: "Network", value: transaction.network, icon: Wifi },

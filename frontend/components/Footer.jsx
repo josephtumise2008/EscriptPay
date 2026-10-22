@@ -60,6 +60,10 @@ export default function Footer() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-slate-200/70 pt-6 text-xs text-ink-400 sm:flex-row">
           <p>© {new Date().getFullYear()} EscriptPay. All rights reserved.</p>
+          <p>
+            Staging environment — payments and service delivery are simulated. No real money or
+            data is transferred.
+          </p>
           <p>Made in Nigeria 🇳🇬</p>
         </div>
       </div>

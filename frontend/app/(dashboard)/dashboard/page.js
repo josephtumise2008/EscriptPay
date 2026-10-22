@@ -13,13 +13,20 @@ import TestModeBadge from "@/components/TestModeBadge";
 import { useAuth } from "@/lib/auth-context";
 import { getTransactions, errorMessage } from "@/lib/api";
 import { formatNaira } from "@/lib/format";
-import { computeStats, buildWeeklySeries } from "@/lib/transactions";
+import { computeStats, buildRangeSeries } from "@/lib/transactions";
+
+const RANGES = [
+  { value: "7d", label: "7 days" },
+  { value: "30d", label: "30 days" },
+  { value: "all", label: "All time" },
+];
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [range, setRange] = useState("7d");
 
   const firstName = (user?.name || "").split(" ")[0] || "there";
   const [lagos, setLagos] = useState(null);
@@ -73,7 +80,7 @@ export default function DashboardPage() {
   }, []);
 
   const stats = useMemo(() => computeStats(transactions), [transactions]);
-  const weeklySeries = useMemo(() => buildWeeklySeries(transactions), [transactions]);
+  const chartSeries = useMemo(() => buildRangeSeries(transactions, range), [transactions, range]);
   const recent = transactions.slice(0, 5);
 
   return (
@@ -96,7 +103,7 @@ export default function DashboardPage() {
       </header>
 
       <section aria-label="Account summary">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <SummaryCard
             icon="balance"
             title="Demo Wallet"
@@ -119,11 +126,18 @@ export default function DashboardPage() {
             index={2}
           />
           <SummaryCard
+            icon="airtime"
+            title="Airtime Purchased"
+            value={stats.airtimePurchased}
+            sub={loading ? "Loading…" : "Successful airtime orders"}
+            index={3}
+          />
+          <SummaryCard
             icon="successful"
             title="Successful Transactions"
             value={`${stats.successful}/${stats.total}`}
             sub={loading ? "Loading…" : "Completed in test mode"}
-            index={3}
+            index={4}
           />
         </div>
       </section>
@@ -136,7 +150,31 @@ export default function DashboardPage() {
       </section>
 
       <section aria-labelledby="weekly-heading" className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <TransactionChart data={weeklySeries} loading={loading} />
+        <div>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 id="weekly-heading" className="font-display text-lg font-bold text-ink-800">
+              Spending Chart
+            </h2>
+            <div className="flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Chart range">
+              {RANGES.map((r) => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setRange(r.value)}
+                  aria-pressed={range === r.value}
+                  className={`focus-ring rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                    range === r.value
+                      ? "bg-white text-cyan-700 shadow-sm"
+                      : "text-ink-500 hover:text-ink-700"
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <TransactionChart data={chartSeries} loading={loading} period={range} />
+        </div>
 
         <div>
           <div className="mb-4 flex items-center justify-between">
