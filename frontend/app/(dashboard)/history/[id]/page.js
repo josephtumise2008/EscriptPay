@@ -136,11 +136,13 @@ export default function TransactionDetailPage() {
         <Receipt transaction={transaction} />
       </div>
 
-      <p className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-        <AlertCircle size={16} className="mt-0.5 shrink-0" />
-        This is a simulated test purchase — no real money moved and no data or
-        airtime was delivered.
-      </p>
+      {transaction.mode !== "live" && (
+        <p className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          This is a test-mode purchase — no real money moved and no data or
+          airtime was delivered.
+        </p>
+      )}
     </div>
   );
 }

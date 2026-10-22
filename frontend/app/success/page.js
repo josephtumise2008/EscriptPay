@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import { getTransaction, errorMessage } from "@/lib/api";
 import { formatDateTime, formatNaira } from "@/lib/format";
-import { statusLabel } from "@/lib/transactions";
+import { statusLabel, describeTransaction, isAwaitingUpdate } from "@/lib/transactions";
+import { isTrustedCheckoutUrl } from "@/lib/checkout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import TestModeBadge from "@/components/TestModeBadge";
 
@@ -72,6 +73,33 @@ function SuccessContent() {
     }
   }, [unauthorized, ref, router]);
 
+  // While payment confirmation (webhook) or delivery is still in flight,
+  // refresh the order every few seconds for up to ~2 minutes.
+  const awaiting = isAwaitingUpdate(transaction);
+  const txRef = transaction?.transactionId || "";
+  useEffect(() => {
+    if (!awaiting || !txRef) return;
+    let active = true;
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries += 1;
+      if (tries > 30) {
+        clearInterval(timer);
+        return;
+      }
+      try {
+        const { transaction: tx } = await getTransaction(txRef);
+        if (active && tx) setTransaction(tx);
+      } catch {
+        // Transient network error: try again on the next tick.
+      }
+    }, 4000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [awaiting, txRef]);
+
   if (loading) {
     return (
       <main className="flex flex-1 items-center justify-center px-4 py-14">
@@ -105,6 +133,11 @@ function SuccessContent() {
 
   const StatusIcon = STATUS_ICONS[transaction.status] || Clock;
   const successful = transaction.status === "successful";
+  const summary = describeTransaction(transaction);
+  const resumeCheckoutUrl =
+    transaction.paymentStatus === "pending" && isTrustedCheckoutUrl(transaction.checkoutUrl)
+      ? transaction.checkoutUrl
+      : "";
   const isAirtime = transaction.type === "airtime";
   const deliveredLabel = isAirtime ? formatNaira(transaction.amount) : transaction.plan;
   const buyAgainHref = isAirtime
@@ -137,7 +170,7 @@ function SuccessContent() {
           </div>
 
           <h1 className="mt-6 font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
-            {successful ? "Purchase Successful!" : "Purchase " + statusLabel(transaction.status)}
+            {summary.title}
           </h1>
           <p className="mt-2 text-sm text-ink-500">
             {successful ? (
@@ -146,12 +179,27 @@ function SuccessContent() {
                 sent to:
               </>
             ) : (
-              "This purchase did not go through."
+              summary.message
             )}
           </p>
           <p className="mt-1 font-display text-lg font-bold gradient-text">
             {successful ? transaction.phone : "—"}
           </p>
+          {awaiting && (
+            <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-amber-600" role="status">
+              <Clock size={13} aria-hidden="true" />
+              Checking for updates…
+            </p>
+          )}
+          {resumeCheckoutUrl && (
+            <a
+              href={resumeCheckoutUrl}
+              className="focus-ring mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition-colors hover:bg-cyan-100"
+            >
+              <Banknote size={16} aria-hidden="true" />
+              Complete payment
+            </a>
+          )}
 
           <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 text-left sm:p-5">
             <div className="flex items-center justify-center gap-2 border-b border-slate-200/70 pb-3">
@@ -212,9 +260,11 @@ function SuccessContent() {
             </Link>
           </div>
 
-          <p className="mt-5 text-xs text-ink-400">
-            This is a simulated test purchase — no real money was moved and no data was delivered.
-          </p>
+          {transaction.mode !== "live" && (
+            <p className="mt-5 text-xs text-ink-400">
+              Test mode — no real money was moved and no data or airtime was delivered.
+            </p>
+          )}
         </div>
       </div>
     </main>

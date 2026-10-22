@@ -6,7 +6,8 @@ import NetworkSelector from "@/components/NetworkSelector";
 import PlanList from "@/components/PlanList";
 import OrderSummary from "@/components/OrderSummary";
 import { validateNigerianPhone } from "@/lib/validators";
-import { createTestTransaction, getPlanById, errorMessage } from "@/lib/api";
+import { createDataTransaction, getPlanById, errorMessage } from "@/lib/api";
+import { continueAfterOrder } from "@/lib/checkout";
 import { PackageOpen, AlertCircle } from "lucide-react";
 
 const makeReference = () =>
@@ -26,6 +27,16 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
   const [processing, setProcessing] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const clientRef = useRef(null);
+
+  // Returning from Paystack with the browser Back button can restore this
+  // page from cache with the button still "processing"; re-enable it.
+  useEffect(() => {
+    const onPageShow = (event) => {
+      if (event.persisted) setProcessing(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   // "Buy Again" support: when arriving with ?plan=<id>, load that exact plan
   // (which also selects its network) so the summary is pre-filled.
@@ -67,16 +78,18 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
 
     setProcessing(true);
     try {
-      // TEST MODE purchase. Only the plan ID and phone are sent; the backend
-      // reads the price/plan/network from MongoDB (never trusts the client).
-      const { transaction } = await createTestTransaction({
+      // Only the plan ID and phone are sent; the backend reads the
+      // price/plan/network from MongoDB (never trusts the client). With
+      // Paystack enabled the response carries a checkout URL and nothing is
+      // delivered until the server verifies the payment.
+      const data = await createDataTransaction({
         planId: selectedPlan._id,
         phone: phone.trim(),
         clientReference: clientRef.current,
       });
 
       clientRef.current = null;
-      router.push(`/success?ref=${encodeURIComponent(transaction.transactionId)}`);
+      continueAfterOrder(router, data);
     } catch (error) {
       // Reset the idempotency key so a genuine retry creates a fresh order.
       clientRef.current = null;

@@ -1,51 +1,139 @@
 const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
 const Plan = require("../models/Plan");
+const User = require("../models/User");
 const { generateTransactionId } = require("../utils/transactionId");
 const { validateNigerianPhone } = require("../utils/validators");
-const { payment, vtu } = require("../services");
+const { toKobo } = require("../utils/money");
+const { logEvent } = require("../utils/logger");
+const { payment, config } = require("../services");
+const lifecycle = require("../services/lifecycle");
 
 const serialize = (tx) => tx.toJSON();
 
 const AIRTIME_NETWORKS = ["MTN", "Airtel", "Glo", "9mobile"];
+const AIRTIME_MIN = 100;
+const AIRTIME_MAX = 10000;
+const CLIENT_REFERENCE_PATTERN = /^[A-Za-z0-9_.:-]{8,100}$/;
+const PAYMENT_REFERENCE_PATTERN = /^[A-Za-z0-9.=-]{1,100}$/;
 
 const normalizeNetwork = (value) => {
-  const raw = (value || "").trim();
+  const raw = typeof value === "string" ? value.trim() : "";
   if (!raw) return null;
   return AIRTIME_NETWORKS.find((n) => n.toLowerCase() === raw.toLowerCase()) || null;
 };
 
 const validateAirtimeAmount = (value) => {
   const amount = Number(value);
-  if (!Number.isInteger(amount) || amount < 100 || amount > 10000) {
+  if (!Number.isInteger(amount) || amount < AIRTIME_MIN || amount > AIRTIME_MAX) {
     return { valid: false, amount: null };
   }
   return { valid: true, amount };
 };
 
-// Runs the simulated payment then VTU delivery steps for a transaction.
-// Shared by the data and airtime purchase flows. This is where a real
-// Paystack / VTU provider would be invoked through the service layer.
-const processOrder = async (tx, plan) => {
-  const paymentResult = await payment.processPayment({
-    user: tx.user,
-    transaction: tx,
-    amount: tx.amount,
-  });
+// Escapes user input before it is used inside a RegExp (prevents regex
+// injection / catastrophic backtracking from the history search box).
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-  const vtuResult = await vtu.purchaseData({
-    network: tx.network,
-    phone: tx.phone,
-    plan,
-    transaction: tx,
-  });
+// Response for an order that already exists for this idempotency key.
+const reusedResponse = (res, tx) => {
+  const body = { success: true, transaction: serialize(tx), reused: true };
+  if (tx.paymentStatus === "pending" && tx.checkoutUrl) body.checkoutUrl = tx.checkoutUrl;
+  return res.json(body);
+};
 
-  tx.paymentStatus = paymentResult.paymentStatus || tx.paymentStatus;
-  tx.providerStatus = vtuResult.providerStatus || "failed";
-  tx.providerReference = vtuResult.reference || tx.providerReference;
-  tx.status = vtuResult.providerStatus === "successful" ? "successful" : "failed";
-  await tx.save();
-  return tx;
+const findByClientReference = (userId, clientReference) =>
+  Transaction.findOne({ user: userId, clientReference });
+
+// Creates the order with a server-computed price, then either:
+//   - Paystack: initializes checkout and returns `checkoutUrl` (nothing is
+//     delivered until the payment is verified), or
+//   - test mode: simulates payment and delivery (original behaviour).
+const startOrder = async (req, res, spec) => {
+  const clientReference =
+    typeof spec.clientReference === "string" && CLIENT_REFERENCE_PATTERN.test(spec.clientReference)
+      ? spec.clientReference
+      : undefined;
+
+  if (clientReference) {
+    const existing = await findByClientReference(req.userId, clientReference);
+    if (existing) return reusedResponse(res, existing);
+  }
+
+  const user = await User.findById(req.userId).select("email");
+  if (!user) {
+    return res.status(401).json({ success: false, message: "Not authenticated." });
+  }
+
+  const checkout = payment.requiresCheckout === true;
+  const transactionId = generateTransactionId();
+
+  let created;
+  try {
+    created = await Transaction.create({
+      user: req.userId,
+      transactionId,
+      type: spec.type,
+      network: spec.network,
+      plan: spec.planName,
+      planId: spec.planId,
+      phone: spec.phone,
+      amount: spec.amount,
+      status: "pending",
+      paymentStatus: checkout ? "pending" : "not_required",
+      providerStatus: "pending",
+      mode: config.paymentMode,
+      paymentProvider: config.paymentProvider,
+      paymentReference: checkout ? transactionId : undefined,
+      paymentAmountKobo: toKobo(spec.amount),
+      currency: config.currency,
+      clientReference,
+    });
+  } catch (error) {
+    // Two identical requests raced past the lookup: return the winner.
+    if (error && error.code === 11000 && clientReference) {
+      const existing = await findByClientReference(req.userId, clientReference);
+      if (existing) return reusedResponse(res, existing);
+    }
+    throw error;
+  }
+
+  if (checkout) {
+    try {
+      const init = await payment.initializePayment({
+        email: user.email,
+        amountKobo: created.paymentAmountKobo,
+        reference: created.paymentReference,
+        callbackUrl: `${config.appUrl}/payment/callback`,
+        metadata: { transactionId: created.transactionId },
+      });
+      const updated = await Transaction.findOneAndUpdate(
+        { _id: created._id, paymentStatus: "pending" },
+        { $set: { checkoutUrl: init.checkoutUrl } },
+        { returnDocument: "after" }
+      );
+      logEvent("payment.initialized", { transactionId: created.transactionId });
+      return res
+        .status(201)
+        .json({ success: true, transaction: serialize(updated || created), checkoutUrl: init.checkoutUrl });
+    } catch (error) {
+      logEvent("payment.init_failed", { transactionId: created.transactionId, code: error && error.code });
+      await Transaction.updateOne(
+        { _id: created._id, paymentStatus: "pending" },
+        { $set: { paymentStatus: "failed", status: "failed", failureReason: "payment_init_failed" } }
+      ).catch(() => {});
+      return res.status(502).json({
+        success: false,
+        message: "We could not start the payment. You have not been charged. Please try again.",
+      });
+    }
+  }
+
+  // TEST MODE: simulated payment, then simulated delivery through the same
+  // guarded fulfilment path used after a verified real payment.
+  await payment.processPayment({ user: req.userId, transaction: created, amount: created.amount });
+  const { tx } = await lifecycle.fulfillOrder(created);
+  return res.status(201).json({ success: true, transaction: serialize(tx) });
 };
 
 // GET /api/transactions — all transactions for the authenticated user.
@@ -75,14 +163,14 @@ const getUserTransactions = async (req, res) => {
     }
 
     if (typeof q === "string" && q.trim()) {
-      const term = new RegExp(q.trim(), "i");
+      const term = new RegExp(escapeRegex(q.trim().slice(0, 64)), "i");
       query.$or = [{ transactionId: term }, { network: term }, { plan: term }, { phone: term }];
     }
 
     if (from || to) {
       const range = {};
-      if (from && !Number.isNaN(Date.parse(from))) range.$gte = new Date(from);
-      if (to && !Number.isNaN(Date.parse(to))) {
+      if (typeof from === "string" && !Number.isNaN(Date.parse(from))) range.$gte = new Date(from);
+      if (typeof to === "string" && !Number.isNaN(Date.parse(to))) {
         const end = new Date(to);
         end.setHours(23, 59, 59, 999);
         range.$lte = end;
@@ -125,7 +213,7 @@ const getTransactionById = async (req, res) => {
     const { id } = req.params;
     const query = mongoose.isValidObjectId(id)
       ? { _id: id, user: req.userId }
-      : { transactionId: id.toUpperCase(), user: req.userId };
+      : { transactionId: String(id).toUpperCase(), user: req.userId };
 
     const tx = await Transaction.findOne(query);
     if (!tx) {
@@ -137,68 +225,42 @@ const getTransactionById = async (req, res) => {
   }
 };
 
-// POST /api/transactions/test — simulated DATA purchase flow.
+// POST /api/transactions/data (and the original /test) — DATA purchase.
 //
-// TEST MODE: payment and VTU delivery are simulated through the service
-// layer. The plan (name, network, price) is always read from MongoDB —
-// anything price-related sent by the client is ignored.
+// Only planId + phone are accepted; plan name, network and price are always
+// read from MongoDB — anything price-related sent by the client is ignored.
 const createTestTransaction = async (req, res) => {
-  let created = null;
-
   try {
     const { planId, phone, clientReference } = req.body || {};
 
-    if (!planId) {
+    if (!planId || !mongoose.isValidObjectId(planId)) {
       return res.status(400).json({ success: false, message: "Plan is required." });
     }
 
-    const phoneCheck = validateNigerianPhone(phone);
+    const phoneCheck = validateNigerianPhone(typeof phone === "string" ? phone : "");
     if (!phoneCheck.valid) {
       return res.status(400).json({ success: false, message: phoneCheck.message });
     }
 
-    // Idempotency: if a transaction already exists for this user + reference,
-    // return it instead of creating a duplicate purchase.
-    if (clientReference) {
-      const existing = await Transaction.findOne({ user: req.userId, clientReference });
-      if (existing) {
-        return res.json({ success: true, transaction: serialize(existing), reused: true });
-      }
-    }
-
     const plan = await Plan.findById(planId);
-    if (!plan) {
-      return res.status(400).json({ success: false, message: "Selected plan no longer exists." });
+    if (!plan || plan.active === false) {
+      return res.status(400).json({ success: false, message: "Selected plan is no longer available." });
+    }
+    if (!Number.isFinite(plan.price) || plan.price <= 0) {
+      return res.status(400).json({ success: false, message: "Selected plan is no longer available." });
     }
 
-    created = await Transaction.create({
-      user: req.userId,
-      transactionId: generateTransactionId(),
+    return await startOrder(req, res, {
       type: "data",
       network: plan.network,
-      plan: plan.name,
+      planName: plan.name,
       planId: plan._id,
       phone: phoneCheck.normalized,
       amount: plan.price,
-      status: "pending",
-      paymentStatus: "not_required",
-      providerStatus: "pending",
-      mode: "test",
-      clientReference: clientReference || undefined,
+      clientReference,
     });
-
-    await processOrder(created, plan);
-
-    return res.status(201).json({ success: true, transaction: serialize(created) });
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("transactionController.createTestTransaction:", error.message);
-    }
-    if (created) {
-      created.status = "failed";
-      created.providerStatus = "failed";
-      await created.save().catch(() => {});
-    }
+    logEvent("order.error", { type: "data", message: error && error.message });
     return res.status(502).json({
       success: false,
       message: "Purchase could not be completed. Please try again.",
@@ -206,13 +268,9 @@ const createTestTransaction = async (req, res) => {
   }
 };
 
-// POST /api/transactions/airtime — simulated AIRTIME purchase flow.
-//
-// Same architecture as data: only the network, amount and phone are accepted;
-// the amount range is validated server-side; payment + VTU are simulated.
+// POST /api/transactions/airtime — AIRTIME purchase.
+// Network, amount range and phone are validated server-side.
 const createAirtimeTransaction = async (req, res) => {
-  let created = null;
-
   try {
     const { network, amount, phone, clientReference } = req.body || {};
 
@@ -228,45 +286,22 @@ const createAirtimeTransaction = async (req, res) => {
         .json({ success: false, message: "Amount must be a whole number between ₦100 and ₦10,000." });
     }
 
-    const phoneCheck = validateNigerianPhone(phone);
+    const phoneCheck = validateNigerianPhone(typeof phone === "string" ? phone : "");
     if (!phoneCheck.valid) {
       return res.status(400).json({ success: false, message: phoneCheck.message });
     }
 
-    if (clientReference) {
-      const existing = await Transaction.findOne({ user: req.userId, clientReference });
-      if (existing) {
-        return res.json({ success: true, transaction: serialize(existing), reused: true });
-      }
-    }
-
-    created = await Transaction.create({
-      user: req.userId,
-      transactionId: generateTransactionId(),
+    return await startOrder(req, res, {
       type: "airtime",
       network: networkName,
-      plan: `Airtime ₦${amountCheck.amount}`,
+      planName: `Airtime ₦${amountCheck.amount}`,
+      planId: undefined,
       phone: phoneCheck.normalized,
       amount: amountCheck.amount,
-      status: "pending",
-      paymentStatus: "not_required",
-      providerStatus: "pending",
-      mode: "test",
-      clientReference: clientReference || undefined,
+      clientReference,
     });
-
-    await processOrder(created, null);
-
-    return res.status(201).json({ success: true, transaction: serialize(created) });
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("transactionController.createAirtimeTransaction:", error.message);
-    }
-    if (created) {
-      created.status = "failed";
-      created.providerStatus = "failed";
-      await created.save().catch(() => {});
-    }
+    logEvent("order.error", { type: "airtime", message: error && error.message });
     return res.status(502).json({
       success: false,
       message: "Purchase could not be completed. Please try again.",
@@ -274,9 +309,58 @@ const createAirtimeTransaction = async (req, res) => {
   }
 };
 
+// POST /api/transactions/verify  { reference }
+//
+// Called by the payment callback page after Paystack redirects back. The
+// redirect itself proves nothing: the server asks Paystack, checks the
+// amount/currency/reference, and only then starts delivery. Scoped to the
+// authenticated owner of the order.
+const verifyTransactionPayment = async (req, res) => {
+  const reference = typeof (req.body || {}).reference === "string" ? req.body.reference.trim() : "";
+  if (!PAYMENT_REFERENCE_PATTERN.test(reference)) {
+    return res.status(400).json({ success: false, message: "A valid payment reference is required." });
+  }
+
+  try {
+    const owned = await Transaction.findOne({ paymentReference: reference, user: req.userId });
+    if (!owned) {
+      return res.status(404).json({ success: false, message: "Transaction not found." });
+    }
+    if (owned.paymentStatus === "not_required") {
+      return res.json({ success: true, transaction: serialize(owned) });
+    }
+
+    let tx = owned;
+    try {
+      const result = await lifecycle.confirmPayment(reference, { source: "callback" });
+      tx = result.tx || owned;
+    } catch (error) {
+      logEvent("payment.verify_error", { transactionId: owned.transactionId, code: error && error.code });
+      return res.status(502).json({
+        success: false,
+        message:
+          "We could not confirm your payment yet. If you were debited, it will be confirmed automatically — check your history shortly.",
+        transaction: serialize(owned),
+      });
+    }
+
+    if (tx.paymentStatus === "successful" && tx.providerStatus === "pending") {
+      const fulfilled = await lifecycle.fulfillOrder(tx);
+      tx = fulfilled.tx || tx;
+    }
+
+    return res.json({ success: true, transaction: serialize(tx) });
+  } catch (error) {
+    logEvent("payment.verify_exception", { message: error && error.message });
+    return res.status(500).json({ success: false, message: "Could not check this payment. Please try again." });
+  }
+};
+
 module.exports = {
   getUserTransactions,
   getTransactionById,
   createTestTransaction,
+  createDataTransaction: createTestTransaction,
   createAirtimeTransaction,
+  verifyTransactionPayment,
 };

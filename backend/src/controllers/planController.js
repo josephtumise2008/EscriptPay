@@ -1,9 +1,16 @@
 const Plan = require("../models/Plan");
 
+// Only these fields may be written by the admin endpoints (no mass assignment).
+const PLAN_FIELDS = ["network", "name", "price", "validity", "active"];
+const pickPlanFields = (body = {}) =>
+  Object.fromEntries(Object.entries(body || {}).filter(([key]) => PLAN_FIELDS.includes(key)));
+
 // Get all plans
 const getPlans = async (req, res) => {
   try {
-    const plans = await Plan.find();
+    // Plans explicitly marked inactive are hidden; older plans without the
+    // field are treated as active.
+    const plans = await Plan.find({ active: { $ne: false } });
 
     res.json({
       success: true,
@@ -21,14 +28,7 @@ const getPlans = async (req, res) => {
 // Create a new plan
 const createPlan = async (req, res) => {
   try {
-    const { network, name, price, validity } = req.body;
-
-    const plan = await Plan.create({
-      network,
-      name,
-      price,
-      validity,
-    });
+    const plan = await Plan.create(pickPlanFields(req.body));
 
     res.status(201).json({
       success: true,
@@ -76,9 +76,9 @@ const updatePlan = async (req, res) => {
 
     const updatedPlan = await Plan.findByIdAndUpdate(
       id,
-      req.body,
+      { $set: pickPlanFields(req.body) },
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true,
       }
     );

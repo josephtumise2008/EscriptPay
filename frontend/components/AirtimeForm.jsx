@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NetworkSelector from "@/components/NetworkSelector";
 import { validateNigerianPhone } from "@/lib/validators";
 import { createAirtimeTransaction, errorMessage } from "@/lib/api";
+import { continueAfterOrder } from "@/lib/checkout";
 import { formatNaira } from "@/lib/format";
 import { Smartphone, Banknote, AlertCircle, Wifi } from "lucide-react";
 
@@ -36,6 +37,16 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
   const [processing, setProcessing] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const clientRef = useRef(null);
+
+  // Returning from Paystack with the browser Back button can restore this
+  // page from cache with the button still "processing"; re-enable it.
+  useEffect(() => {
+    const onPageShow = (event) => {
+      if (event.persisted) setProcessing(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   const pickPreset = (value) => {
     setAmount(value);
@@ -70,9 +81,10 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
 
     setProcessing(true);
     try {
-      // TEST MODE purchase. The backend re-validates the network and the
-      // amount range before creating the transaction.
-      const { transaction } = await createAirtimeTransaction({
+      // The backend re-validates the network and the amount range before
+      // creating the transaction. With Paystack enabled the customer is sent
+      // to checkout; delivery only starts after server-side verification.
+      const data = await createAirtimeTransaction({
         network,
         amount: finalAmount,
         phone: phone.trim(),
@@ -80,7 +92,7 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
       });
 
       clientRef.current = null;
-      router.push(`/success?ref=${encodeURIComponent(transaction.transactionId)}`);
+      continueAfterOrder(router, data);
     } catch (error) {
       clientRef.current = null;
       setSubmitError(errorMessage(error, "Purchase could not be completed. Please try again."));
