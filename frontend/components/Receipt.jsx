@@ -53,6 +53,7 @@ export default function Receipt({ transaction }) {
     { label: "Network", value: tx.network || "—" },
     { label: "Plan", value: isAirtime ? `Airtime ${formatNaira(tx.amount)}` : tx.plan || "—" },
     { label: "Phone", value: tx.phone || "—" },
+    { label: "Payment ref", value: tx.paymentReference || "—", mono: Boolean(tx.paymentReference) },
     { label: "Reference", value: tx.providerReference || "—" },
     { label: "Date", value: formatDateTime(tx.createdAt) },
   ];
@@ -100,7 +101,9 @@ export default function Receipt({ transaction }) {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-ink-400">Amount paid</p>
+            <p className="text-xs text-ink-400">
+              {tx.paymentStatus === "successful" ? "Amount paid" : "Amount"}
+            </p>
             <p className="font-display text-2xl font-extrabold tracking-tight gradient-text">
               {formatNaira(tx.amount)}
             </p>
@@ -186,9 +189,11 @@ export default function Receipt({ transaction }) {
           </button>
         </div>
 
-        <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-center text-[11px] font-medium text-amber-700">
-          TEST MODE receipt — no real money moved and no data/airtime was delivered.
-        </p>
+        {tx.mode !== "live" && (
+          <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-center text-[11px] font-medium text-amber-700">
+            TEST MODE receipt — no real money moved and no data/airtime was delivered.
+          </p>
+        )}
       </div>
     </div>
   );

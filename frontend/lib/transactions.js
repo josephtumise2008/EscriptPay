@@ -127,6 +127,88 @@ export const buildRangeSeries = (transactions = [], range = "7d") => {
   }));
 };
 
+// Customer-facing explanation of where an order is. Payment and delivery are
+// separate steps, so "pending" can mean either; this keeps them distinct.
+export const describeTransaction = (tx = {}) => {
+  const what = tx.type === "airtime" ? "airtime" : "data";
+
+  if (tx.status === "successful") {
+    return { tone: "success", title: "Purchase Successful!", message: null };
+  }
+  if (tx.paymentStatus === "pending") {
+    return {
+      tone: "pending",
+      title: "Awaiting payment",
+      message:
+        "We have not received confirmation of your payment yet. If you have paid, this page updates automatically.",
+    };
+  }
+  if (tx.paymentStatus === "expired") {
+    return {
+      tone: "failed",
+      title: "Payment not completed",
+      message: "This checkout expired before payment was confirmed. You have not been charged for this order.",
+    };
+  }
+  if (tx.paymentStatus === "failed") {
+    if (tx.needsReview) {
+      return {
+        tone: "failed",
+        title: "Payment under review",
+        message:
+          "Your payment could not be matched to this order, so nothing was delivered. We will review it — if you were debited, it will be refunded.",
+      };
+    }
+    if (tx.failureReason === "payment_init_failed") {
+      return {
+        tone: "failed",
+        title: "Payment not started",
+        message: "We could not start the payment. You have not been charged.",
+      };
+    }
+    return {
+      tone: "failed",
+      title: "Payment failed",
+      message: "Your payment was not successful, so nothing was delivered.",
+    };
+  }
+
+  // Payment is confirmed (or not required in test mode) from here on.
+  if (tx.providerStatus === "failed") {
+    return {
+      tone: "failed",
+      title: "Delivery failed",
+      message:
+        tx.paymentStatus === "successful"
+          ? `We received your payment but the ${what} could not be delivered. This order has been flagged for a refund review.`
+          : `The ${what} could not be delivered.`,
+    };
+  }
+  if (tx.providerStatus === "unknown") {
+    return {
+      tone: "pending",
+      title: "Confirming delivery",
+      message: `Your payment was received. We are confirming the ${what} delivery with our supplier — please don't buy again for this number until it is resolved.`,
+    };
+  }
+  return {
+    tone: "pending",
+    title: "Delivery in progress",
+    message:
+      tx.paymentStatus === "successful"
+        ? `Payment received. Your ${what} is being delivered.`
+        : `Your ${what} is being processed.`,
+  };
+};
+
+// True while the order may still change on its own (webhook, supplier).
+export const isAwaitingUpdate = (tx) =>
+  Boolean(
+    tx &&
+      tx.status === "pending" &&
+      (tx.paymentStatus === "pending" || ["pending", "processing"].includes(tx.providerStatus))
+  );
+
 export const statusLabel = (status = "") => {
   const map = { successful: "Successful", pending: "Pending", failed: "Failed" };
   return map[status] || status || "Pending";

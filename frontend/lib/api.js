@@ -121,11 +121,12 @@ export const getTransaction = async (id) => {
   return data;
 };
 
-// Test purchase flow (TEST MODE).
-// Sends only the planId + phone; the backend reads price/plan/network
-// from MongoDB, so frontend values can never override the real amount.
-export const createTestTransaction = async ({ planId, phone, clientReference }) => {
-  const { data } = await api.post("/api/transactions/test", {
+// Data purchase. Sends only the planId + phone; the backend reads
+// price/plan/network from MongoDB, so frontend values can never override the
+// real amount. Resolves to { transaction, checkoutUrl? } — when checkoutUrl is
+// present the customer must pay on Paystack before anything is delivered.
+export const createDataTransaction = async ({ planId, phone, clientReference }) => {
+  const { data } = await api.post("/api/transactions/data", {
     planId,
     phone,
     clientReference,
@@ -133,8 +134,24 @@ export const createTestTransaction = async ({ planId, phone, clientReference }) 
   return data;
 };
 
-// Test airtime purchase (TEST MODE). Sends network + amount + phone; the
-// backend re-validates the network and amount range server-side.
+// Original name, kept for existing callers.
+export const createTestTransaction = createDataTransaction;
+
+// Asks the backend to verify a payment with Paystack after the checkout
+// redirect. The redirect itself is never treated as proof of payment.
+export const verifyPayment = async (reference) => {
+  const { data } = await api.post("/api/transactions/verify", { reference });
+  return data;
+};
+
+// Public, non-secret runtime mode (test/live) from the backend.
+export const getAppConfig = async () => {
+  const { data } = await api.get("/api/config");
+  return data.config;
+};
+
+// Airtime purchase. Sends network + amount + phone; the backend re-validates
+// the network and amount range server-side. Same response shape as data.
 export const createAirtimeTransaction = async ({ network, amount, phone, clientReference }) => {
   const { data } = await api.post("/api/transactions/airtime", {
     network,

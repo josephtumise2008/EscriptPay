@@ -55,7 +55,11 @@ export default function LoginPage() {
     // Preserve a safe internal redirect target (e.g. /success?ref=...).
     const params = new URLSearchParams(window.location.search);
     const redirectTo = params.get("next");
-    router.replace(redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard");
+    // Only same-site paths: "//evil.com" and "/\\evil.com" are protocol-relative
+    // URLs that browsers treat as another site.
+    const safe =
+      redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") && !redirectTo.startsWith("/\\");
+    router.replace(safe ? redirectTo : "/dashboard");
   };
 
   return (

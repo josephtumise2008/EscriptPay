@@ -1,18 +1,16 @@
 // Test payment service.
 //
-// TEST MODE: no real money moves and no payment gateway is contacted.
-// When a real provider (e.g. Paystack) is added, create
-//   services/payment/paystackPaymentService.js
-// and switch PAYMENT_SERVICE=paystack in the environment. The purchase
-// controller calls this module through services/index.js and is unaware
-// of which provider is active.
+// TEST MODE: no real money moves and no payment gateway is contacted. Orders
+// are marked paymentStatus "not_required". The order lifecycle only allows
+// this to be followed by SIMULATED delivery — config/payments.js refuses to
+// start if PAYMENT_SERVICE=test is combined with a real VTU supplier.
 //
-// Future interface (kept stable for the controller):
 //   processPayment({ user, transaction, amount }) ->
 //     { paymentStatus, reference, simulated }
 
-const processPayment = async ({ user, transaction }) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+const processPayment = async () => {
+  const delay = Number(process.env.TEST_PAYMENT_DELAY_MS ?? 400);
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
 
   return {
     paymentStatus: "not_required",
@@ -22,4 +20,4 @@ const processPayment = async ({ user, transaction }) => {
   };
 };
 
-module.exports = { processPayment };
+module.exports = { name: "test", requiresCheckout: false, simulated: true, processPayment };

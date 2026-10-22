@@ -29,10 +29,22 @@ const planRoutes = require("./routes/planRoutes");
 const networkRoutes = require("./routes/networkRoutes");
 const authRoutes = require("./routes/authRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 const { rateLimit } = require("./middleware/rateLimit");
+// Loading the service registry validates PAYMENT_SERVICE / VTU_SERVICE and
+// refuses to start with an unsafe combination (see config/payments.js).
+const { publicConfig } = require("./config/payments");
+require("./services");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// Behind Vercel's proxy, trust the first hop so req.ip is the client's IP and
+// the rate limiter does not put every visitor in one bucket. Override with
+// TRUST_PROXY (number of proxy hops) on other hosts.
+if (process.env.TRUST_PROXY || process.env.VERCEL) {
+  app.set("trust proxy", Number(process.env.TRUST_PROXY || 1));
+}
 
 // Comma-separated list of browser origins allowed to send credentialed
 // requests (CORS). Defaults to the local Next.js dev server so local
@@ -54,7 +66,13 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+// The Paystack webhook signature is computed over the exact request bytes,
+// so that one route receives the raw body. It is registered before
+// express.json() and before the database middleware: invalid signatures are
+// rejected without touching MongoDB.
+app.use("/api/payments", express.raw({ type: () => true, limit: "200kb" }), paymentRoutes);
+
+app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 
 // Rate limiting (in-memory, per IP). Auth endpoints are the highest-risk
@@ -72,7 +90,7 @@ app.get(["/", "/api/"], (req, res) => {
   res.json({
     message: "EscriptPay API is running",
     status: "ok",
-    mode: "test",
+    mode: publicConfig().paymentMode,
   });
 });
 
@@ -81,8 +99,13 @@ app.get("/api/health", (req, res) => {
     success: true,
     message: "EscriptPay API is running",
     status: "ok",
-    mode: "test",
+    mode: publicConfig().paymentMode,
   });
+});
+
+// Public, non-secret runtime configuration for the frontend.
+app.get("/api/config", (req, res) => {
+  res.json({ success: true, config: publicConfig() });
 });
 
 // Every data-bearing route below needs MongoDB. Connecting lazily (and
