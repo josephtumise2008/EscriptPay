@@ -4,8 +4,19 @@ import { useId } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { formatNaira } from "@/lib/format";
 
-// Weekly chart computed from the authenticated user's transactions.
-export default function TransactionChart({ data = [], loading = false }) {
+const PERIOD_META = {
+  "7d": { title: "Last 7 days", subtitle: "Successful test purchases." },
+  "30d": { title: "Last 30 days", subtitle: "Successful test purchases." },
+  all: { title: "All time", subtitle: "Successful test purchases by month." },
+};
+
+// Line chart of the user's successful transaction amounts for a selected
+// range ("7d" | "30d" | "all"). `data` is [{ label, amount }].
+export default function TransactionChart({
+  data = [],
+  loading = false,
+  period = "7d",
+}) {
   const gradientId = useId().replace(/:/g, "") + "-grad";
   const lineId = useId().replace(/:/g, "") + "-line";
 
@@ -14,16 +25,18 @@ export default function TransactionChart({ data = [], loading = false }) {
   const padX = 24;
   const padY = 28;
 
+  const meta = PERIOD_META[period] || PERIOD_META["7d"];
+
   if (data.length < 2) {
     return (
       <div className="card p-5 sm:p-6">
-        <h2 className="font-display text-lg font-bold text-ink-800">Weekly Transactions</h2>
-        <p className="mt-0.5 text-xs text-ink-400">Successful test purchases this week.</p>
+        <h2 className="font-display text-lg font-bold text-ink-800">{meta.title}</h2>
+        <p className="mt-0.5 text-xs text-ink-400">{meta.subtitle}</p>
         {loading ? (
           <LoadingSpinner size={32} label="Loading chart..." />
         ) : (
           <p className="py-10 text-center text-sm text-ink-400">
-            No weekly data yet — your test purchases will be charted here.
+            Not enough data to chart yet — your test purchases will appear here.
           </p>
         )}
       </div>
@@ -47,25 +60,26 @@ export default function TransactionChart({ data = [], loading = false }) {
       height - padY
     } Z`;
 
+  // Thin the x-axis labels when there are many buckets.
+  const labelEvery = Math.max(1, Math.ceil(data.length / 8));
+
   return (
     <div className="card p-5 sm:p-6">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink-800">
-            Weekly Transactions
-          </h2>
-          <p className="mt-0.5 text-xs text-ink-400">
-            Successful test purchases this week.
-          </p>
+          <h2 className="font-display text-lg font-bold text-ink-800">{meta.title}</h2>
+          <p className="mt-0.5 text-xs text-ink-400">{meta.subtitle}</p>
         </div>
-        <span className="text-xs font-semibold text-ink-400">{formatNaira(max)} peak</span>
+        <span className="shrink-0 text-xs font-semibold text-ink-400">
+          {formatNaira(max)} peak
+        </span>
       </div>
 
       {loading ? (
         <LoadingSpinner size={32} label="Loading chart..." />
       ) : (
         <>
-          <div className="mt-4" role="img" aria-label="Line chart of transactions across the week">
+          <div className="mt-4" role="img" aria-label={`Line chart of transactions, ${meta.title}`}>
             <svg
               viewBox={`0 0 ${width} ${height}`}
               className="h-52 w-full overflow-visible"
@@ -110,7 +124,7 @@ export default function TransactionChart({ data = [], loading = false }) {
               </linearGradient>
 
               {points.map((p, i) => (
-                <g key={p.day}>
+                <g key={`${p.label}-${i}`}>
                   <circle
                     cx={p.x}
                     cy={p.y}
@@ -119,7 +133,7 @@ export default function TransactionChart({ data = [], loading = false }) {
                     stroke="#38bdf8"
                     strokeWidth="2"
                     className="animate-pop"
-                    style={{ animationDelay: `${0.5 + i * 0.08}s` }}
+                    style={{ animationDelay: `${0.5 + i * 0.05}s` }}
                   />
                 </g>
               ))}
@@ -127,9 +141,11 @@ export default function TransactionChart({ data = [], loading = false }) {
           </div>
 
           <div className="mt-2 grid" style={{ gridTemplateColumns: `repeat(${data.length}, 1fr)` }}>
-            {data.map((d) => (
-              <div key={d.day} className="text-center">
-                <p className="text-xs font-semibold text-ink-500">{d.day}</p>
+            {data.map((d, i) => (
+              <div key={`${d.label}-${i}`} className="text-center">
+                <p className="text-xs font-semibold text-ink-500">
+                  {i % labelEvery === 0 ? d.label : "\u00A0"}
+                </p>
                 <p className="text-[10px] text-ink-400">{formatNaira(d.amount)}</p>
               </div>
             ))}

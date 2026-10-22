@@ -30,6 +30,13 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    // Set for data purchases so the UI can pre-select the exact plan on
+    // "Buy Again". Null for airtime (amount-based).
+    planId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Plan",
+      index: true,
+    },
     phone: {
       type: String,
       required: true,

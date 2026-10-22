@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   X,
-  Bell,
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
@@ -21,6 +20,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import BackgroundGradient from "@/components/BackgroundGradient";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import TestModeBadge from "@/components/TestModeBadge";
+import NotificationBell from "@/components/NotificationBell";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAuth } from "@/lib/auth-context";
 import { initials } from "@/lib/format";
 
@@ -38,6 +39,7 @@ export default function DashboardShell({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -68,6 +70,7 @@ export default function DashboardShell({ children }) {
 
   const handleLogout = () => {
     logout();
+    setLogoutOpen(false);
     router.replace("/login");
   };
 
@@ -133,7 +136,7 @@ export default function DashboardShell({ children }) {
           </div>
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setLogoutOpen(true)}
             className="focus-ring flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-red-50 hover:text-red-600"
           >
             <LogOut size={19} className="text-ink-400" />
@@ -211,7 +214,7 @@ export default function DashboardShell({ children }) {
         <div className="border-t border-slate-100 p-3">
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setLogoutOpen(true)}
             className="focus-ring flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-red-50 hover:text-red-600"
           >
             <LogOut size={19} />
@@ -241,15 +244,8 @@ export default function DashboardShell({ children }) {
           <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
             <TestModeBadge className="hidden sm:inline-flex" />
-            <button
-              type="button"
-              className="focus-ring relative rounded-lg p-1.5 text-ink-500 transition-colors hover:text-cyan-600"
-              aria-label="Notifications"
-            >
-              <Bell size={20} />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-gradient-to-r from-cyan-500 to-purple-lite-500" />
-            </button>
-            <UserMenu />
+            <NotificationBell />
+            <UserMenu onLogoutRequest={() => setLogoutOpen(true)} />
           </div>
         </header>
 
@@ -257,6 +253,16 @@ export default function DashboardShell({ children }) {
           <div className="mx-auto max-w-6xl animate-fade-in">{children}</div>
         </main>
       </div>
+
+      <ConfirmDialog
+        open={logoutOpen}
+        title="Log out of EscriptPay?"
+        description="You will need to sign in again to manage your test transactions."
+        confirmLabel="Log out"
+        cancelLabel="Cancel"
+        onConfirm={handleLogout}
+        onCancel={() => setLogoutOpen(false)}
+      />
     </div>
   );
 }

@@ -11,16 +11,24 @@ import { Smartphone, Banknote, AlertCircle, Wifi } from "lucide-react";
 const PRESET_AMOUNTS = [100, 200, 500, 1000, 2000, 5000];
 const MIN_AMOUNT = 100;
 const MAX_AMOUNT = 10000;
+const KNOWN_NETWORKS = ["MTN", "Airtel", "Glo", "9mobile"];
 
 const makeReference = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
     : `ref_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-export default function AirtimeForm() {
+export default function AirtimeForm({ initialNetwork = "", initialAmount = "" }) {
   const router = useRouter();
-  const [network, setNetwork] = useState("MTN");
-  const [amount, setAmount] = useState(500);
+  const startingNetwork = KNOWN_NETWORKS.includes(initialNetwork) ? initialNetwork : "MTN";
+  const parsedAmount = Number(initialAmount);
+  const startingAmount =
+    Number.isInteger(parsedAmount) && parsedAmount >= MIN_AMOUNT && parsedAmount <= MAX_AMOUNT
+      ? parsedAmount
+      : 500;
+
+  const [network, setNetwork] = useState(startingNetwork);
+  const [amount, setAmount] = useState(startingAmount);
   const [customAmount, setCustomAmount] = useState("");
   const [phone, setPhone] = useState("");
   const [amountError, setAmountError] = useState("");

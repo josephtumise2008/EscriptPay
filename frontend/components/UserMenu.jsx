@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -19,9 +18,8 @@ const ITEMS = [
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
 
-export default function UserMenu({ mobile = false, onClose }) {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -42,10 +40,9 @@ export default function UserMenu({ mobile = false, onClose }) {
   }, [open]);
 
   const handleLogout = () => {
-    logout();
+    onLogoutRequest?.();
     setOpen(false);
     onClose?.();
-    router.push("/login");
   };
 
   if (!user) return null;

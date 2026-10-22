@@ -1,7 +1,33 @@
 import axios from "axios";
 
+// Resolves the API base for the current environment.
+//
+// - Local development:  http://localhost:5001 (the Express dev server)
+// - Production:         "" — same origin. The frontend and the backend share
+//   one Vercel domain, so the browser calls `/api/...` on that domain and the
+//   Vercel rewrite forwards it to the Express service.
+//
+// Endpoints below already include the `/api` prefix (e.g. `/api/plans`), so a
+// base of `/api` would produce `/api/api/plans`. NEXT_PUBLIC_API_URL=/api is
+// therefore normalized to a same-origin relative base.
+const resolveApiBase = () => {
+  const configured = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+  if (configured) {
+    const trimmed = configured.replace(/\/+$/, "");
+    return trimmed === "/api" ? "" : trimmed;
+  }
+  if (process.env.NODE_ENV === "production") return "";
+  return "http://localhost:5001";
+};
+
+const resolvedBase = resolveApiBase();
+
+// Relative bases only work in the browser. If this module ever executes while
+// server-side rendering, resolve the base against the deployment origin.
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  !resolvedBase && typeof window === "undefined" && process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : resolvedBase;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -67,9 +93,26 @@ export const changePassword = async (currentPassword, newPassword) => {
   return data;
 };
 
+// Password reset. forgotPassword always resolves with the same generic
+// message whether or not the account exists (no enumeration).
+export const forgotPassword = async (email) => {
+  const { data } = await api.post("/api/auth/forgot-password", { email });
+  return data;
+};
+
+export const resetPassword = async (token, password) => {
+  const { data } = await api.post("/api/auth/reset-password", { token, password });
+  return data;
+};
+
 // Transactions
-export const getTransactions = async () => {
-  const { data } = await api.get("/api/transactions");
+// Optional query params (all server-side): status, type, network, q,
+// from, to, page, limit.
+export const getTransactions = async (params = {}) => {
+  const clean = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== "" && v !== undefined && v !== null)
+  );
+  const { data } = await api.get("/api/transactions", { params: clean });
   return data;
 };
 

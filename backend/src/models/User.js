@@ -36,6 +36,22 @@ const userSchema = new mongoose.Schema(
       minlength: [8, "Password must be at least 8 characters."],
       select: false,
     },
+    // Access role. "admin" unlocks the plan-management endpoints.
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+      index: true,
+    },
+    // Password-reset token (stored as a one-way hash, not the raw token).
+    resetTokenHash: {
+      type: String,
+      select: false,
+    },
+    resetTokenExpires: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,

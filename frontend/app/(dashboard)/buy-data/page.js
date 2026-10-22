@@ -3,7 +3,11 @@ import TestModeBadge from "@/components/TestModeBadge";
 
 export const metadata = { title: "Buy Data" };
 
-export default function BuyDataPage() {
+export default async function BuyDataPage({ searchParams }) {
+  const sp = await (searchParams ?? {});
+  const network = typeof sp.network === "string" ? sp.network : "";
+  const plan = typeof sp.plan === "string" ? sp.plan : "";
+
   return (
     <div className="space-y-6">
       <header className="animate-fade-up">
@@ -19,7 +23,7 @@ export default function BuyDataPage() {
           <TestModeBadge />
         </div>
       </header>
-      <BuyForm />
+      <BuyForm initialNetwork={network} initialPlanId={plan} />
     </div>
   );
 }

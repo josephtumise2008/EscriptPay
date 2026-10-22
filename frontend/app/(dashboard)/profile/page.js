@@ -7,6 +7,7 @@ import { PrimaryButton } from "@/components/ui/Buttons";
 import { useAuth } from "@/lib/auth-context";
 import { initials, formatDate } from "@/lib/format";
 import { NIGERIAN_STATES } from "@/lib/states";
+import { passwordStrength } from "@/lib/password";
 
 export default function ProfilePage() {
   const { user, saveProfile, savePassword } = useAuth();
@@ -80,6 +81,8 @@ export default function ProfilePage() {
 
   const toggle = (key) => () => setVisible((v) => ({ ...v, [key]: !v[key] }));
 
+  const nextStrength = passwordStrength(pwd.next);
+
   const pwdField = (id, label, key) => (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink-700">
@@ -103,6 +106,22 @@ export default function ProfilePage() {
           {visible[key] ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
+      {key === "next" && pwd.next.length > 0 && (
+        <div className="mt-2">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${nextStrength.color}`}
+                style={{ width: `${(nextStrength.score / 5) * 100}%` }}
+              />
+            </div>
+            <span className={`w-14 shrink-0 text-right text-xs font-semibold ${nextStrength.text}`}>
+              {nextStrength.label}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-ink-400">{nextStrength.hint}</p>
+        </div>
+      )}
     </div>
   );
 
