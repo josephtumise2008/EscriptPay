@@ -4,14 +4,26 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-sora), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #ecfeff;
-  --color-brand-100: #cffafe;
-  --color-brand-200: #a5f3fc;
-  --color-brand-300: #67e8f9;
-  --color-brand-400: #22d3ee;
-  --color-brand-500: #06b6d4;
-  --color-brand-600: #0891b2;
-  --color-brand-700: #0e7490;
+  /* Brand: royal violet (primary) mixed with the original sky blue.
+     The cyan-* scale is remapped to violet so accent utilities follow. */
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-cyan-50: #f5f3ff;
+  --color-cyan-100: #ede9fe;
+  --color-cyan-200: #ddd6fe;
+  --color-cyan-300: #c4b5fd;
+  --color-cyan-400: #a78bfa;
+  --color-cyan-500: #8b5cf6;
+  --color-cyan-600: #7c3aed;
+  --color-cyan-700: #6d28d9;
+  --color-cyan-800: #5b21b6;
+  --color-cyan-900: #4c1d95;
 
   --color-sky-100: #e0f2fe;
   --color-sky-200: #bae6fd;
@@ -49,7 +61,7 @@
   --color-danger: #ef4444;
 
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.1);
-  --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 16px 40px -16px rgb(6 182 212 / 0.18);
+  --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 16px 40px -16px rgb(124 58 237 / 0.2);
 
   /* Motion system: one easing curve, short durations, small distances. */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
@@ -201,8 +213,8 @@ html.js [data-reveal-stagger]:not(.is-visible) > * {
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --gradient-brand: linear-gradient(90deg, #06b6d4 0%, #38bdf8 45%, #818cf8 100%);
-  --gradient-brand-soft: linear-gradient(135deg, #cffafe 0%, #e0f2fe 40%, #ede9fe 100%);
+  --gradient-brand: linear-gradient(90deg, #7c3aed 0%, #6366f1 55%, #38bdf8 100%);
+  --gradient-brand-soft: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 50%, #e0f2fe 100%);
 }
 
 html {
@@ -252,25 +264,25 @@ html {
   --color-ink-800: #d3dbe8;
   --color-ink-900: #eef2f9;
 
-  --color-brand-50: #0b2328;
-  --color-brand-100: #0e2f38;
-  --color-brand-200: #12424f;
-  --color-brand-300: #15596b;
-  --color-brand-400: #22d3ee;
-  --color-brand-500: #38bdf8;
-  --color-brand-600: #22d3ee;
-  --color-brand-700: #67e8f9;
+  --color-brand-50: #1b1535;
+  --color-brand-100: #231b46;
+  --color-brand-200: #2e235d;
+  --color-brand-300: #3d2f7a;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #c4b5fd;
+  --color-brand-700: #ddd6fe;
 
-  --color-cyan-50: #0c2434;
-  --color-cyan-100: #102f44;
-  --color-cyan-200: #143c55;
-  --color-cyan-300: #1a4d6d;
-  --color-cyan-400: #22d3ee;
-  --color-cyan-500: #38bdf8;
-  --color-cyan-600: #22d3ee;
-  --color-cyan-700: #67e8f9;
-  --color-cyan-800: #a5f3fc;
-  --color-cyan-900: #cffafe;
+  --color-cyan-50: #1b1535;
+  --color-cyan-100: #231b46;
+  --color-cyan-200: #2e235d;
+  --color-cyan-300: #3d2f7a;
+  --color-cyan-400: #a78bfa;
+  --color-cyan-500: #8b5cf6;
+  --color-cyan-600: #c4b5fd;
+  --color-cyan-700: #ddd6fe;
+  --color-cyan-800: #ede9fe;
+  --color-cyan-900: #f5f3ff;
 
   --color-sky-50: #0a2138;
   --color-sky-100: #0e2c4a;
@@ -319,7 +331,7 @@ html {
   --color-red-500: #f87171;
   --color-red-600: #fca5a5;
 
-  --gradient-brand-soft: linear-gradient(135deg, #102f44 0%, #0e2c4a 40%, #231a4b 100%);
+  --gradient-brand-soft: linear-gradient(135deg, #231b46 0%, #1c1f4a 50%, #0e2c4a 100%);
 }
 
 /* Fixed white for text sitting on saturated brand gradients (never inverts). */
@@ -375,14 +387,14 @@ body {
 }
 
 .gradient-btn {
-  background-image: linear-gradient(90deg, #06b6d4 0%, #38bdf8 50%, #818cf8 100%);
+  background-image: linear-gradient(90deg, #7c3aed 0%, #6366f1 55%, #38bdf8 100%);
   background-size: 150% 100%;
   transition: background-position 0.35s ease, transform 0.2s ease, box-shadow 0.3s ease;
 }
 
 .gradient-btn:hover {
   background-position: 100% 0;
-  box-shadow: 0 10px 30px -10px rgb(56 189 248 / 0.55);
+  box-shadow: 0 12px 30px -12px rgb(124 58 237 / 0.55);
 }
 
 /* Press feedback: immediate and small. */

@@ -136,7 +136,7 @@ export default function ProfilePage() {
       {/* Identity card */}
       <section className="card card-hover flex flex-col items-center gap-4 p-6 sm:flex-row sm:gap-6 sm:p-7">
         <div className="relative">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-purple-lite-500 font-display text-2xl font-extrabold brand-contrast shadow-[0_10px_25px_-10px_rgb(6_182_212/0.5)]">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-purple-lite-500 font-display text-2xl font-extrabold brand-contrast shadow-[0_10px_25px_-10px_rgb(124_58_237/0.5)]">
             {initials(user.name)}
           </div>
           <button
