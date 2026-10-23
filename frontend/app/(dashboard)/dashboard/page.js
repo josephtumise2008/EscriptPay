@@ -9,7 +9,6 @@ import TransactionChart from "@/components/TransactionChart";
 import TransactionCard from "@/components/TransactionCard";
 import EmptyState from "@/components/EmptyState";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import TestModeBadge from "@/components/TestModeBadge";
 import { useAuth } from "@/lib/auth-context";
 import { getTransactions, errorMessage } from "@/lib/api";
 import { formatNaira } from "@/lib/format";
@@ -84,8 +83,8 @@ export default function DashboardPage() {
   const recent = transactions.slice(0, 5);
 
   return (
-    <div className="space-y-8">
-      <header className="animate-fade-up">
+    <div className="space-y-6 sm:space-y-8">
+      <header>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
@@ -98,19 +97,18 @@ export default function DashboardPage() {
                 : "Manage your EscriptPay account and test transactions."}
             </p>
           </div>
-          <TestModeBadge />
         </div>
       </header>
 
+      <section aria-labelledby="quick-actions-heading">
+        <h2 id="quick-actions-heading" className="sr-only">
+          Quick actions
+        </h2>
+        <QuickActions />
+      </section>
+
       <section aria-label="Account summary">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <SummaryCard
-            icon="balance"
-            title="Demo Wallet"
-            value="Test Mode"
-            sub="No wallet yet — real balance comes with payments"
-            index={0}
-          />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <SummaryCard
             icon="total"
             title="Total Transactions"
@@ -142,12 +140,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section aria-labelledby="quick-actions-heading">
-        <h2 id="quick-actions-heading" className="mb-4 font-display text-lg font-bold text-ink-800">
-          Quick Actions
-        </h2>
-        <QuickActions />
-      </section>
 
       <section aria-labelledby="weekly-heading" className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <div>
@@ -178,7 +170,7 @@ export default function DashboardPage() {
 
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <h2 id="weekly-heading" className="font-display text-lg font-bold text-ink-800">
+            <h2 id="recent-heading" className="font-display text-lg font-bold text-ink-800">
               Recent Transactions
             </h2>
             <Link

@@ -64,14 +64,23 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const logout = useCallback(async () => {
+  // The session lives in an httpOnly cookie that only the server can clear,
+  // so logout only "succeeds" when the server confirms it.
+  // keepLocal: let the caller navigate away first, then call clearSession(),
+  // so protected pages never flash a "signed out" state on the way out.
+  const logout = useCallback(async ({ keepLocal = false } = {}) => {
     try {
       await apiLogout();
-    } catch {
-      // Ignore network errors on logout — clear the local session anyway.
+    } catch (error) {
+      return {
+        error: errorMessage(error, "We couldn't reach the server to log you out. Please try again."),
+      };
     }
-    setUser(null);
+    if (!keepLocal) setUser(null);
+    return {};
   }, []);
+
+  const clearSession = useCallback(() => setUser(null), []);
 
   const saveProfile = useCallback(async (patch) => {
     try {
@@ -94,7 +103,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, saveProfile, savePassword }}
+      value={{ user, loading, login, register, logout, clearSession, saveProfile, savePassword }}
     >
       {children}
     </AuthContext.Provider>

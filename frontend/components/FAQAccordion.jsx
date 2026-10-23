@@ -1,42 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, MessageCircleQuestion } from "lucide-react";
+import { Plus } from "lucide-react";
 import { FAQ_ITEMS } from "@/lib/data";
-import { useRevealObserver } from "@/hooks/useRevealObserver";
+import FaqStatusCard from "@/components/FaqStatusCard";
 
+// Accessible accordion: real buttons with aria-expanded/aria-controls, one
+// panel open at a time, height animated via grid rows (no JS measuring).
 export default function FAQAccordion() {
-  useRevealObserver();
   const [open, setOpen] = useState(0);
 
   return (
-    <div className="flex flex-col items-center gap-8">
-      <div className="text-center" data-reveal>
-        <span className="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-100">
-          <MessageCircleQuestion size={14} />
-          Have questions?
-        </span>
-        <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-ink-900 sm:text-4xl">
-          Frequently Asked{" "}
-          <span className="gradient-text">Questions</span>
+    <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+      <div className="lg:sticky lg:top-24 lg:self-start">
+        <p className="text-sm font-semibold uppercase tracking-wider text-cyan-600">FAQ</p>
+        <h2 id="faq-heading" className="mt-2 font-display text-3xl font-extrabold tracking-tight text-ink-900 sm:text-4xl">
+          Questions, answered
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-sm text-ink-500 sm:text-base">
-          Everything you need to know about buying data with EscriptPay.
+        <p className="mt-3 text-sm leading-relaxed text-ink-500 sm:text-base">
+          What to expect when buying data and airtime with EscriptPay — including what works today and what is still in test mode.
         </p>
+        <FaqStatusCard />
       </div>
 
-      <div className="w-full max-w-3xl space-y-3">
+      <div className="divide-y divide-slate-200 border-y border-slate-200" data-reveal>
         {FAQ_ITEMS.map((item, i) => {
           const isOpen = open === i;
           return (
-            <div
-              key={i}
-              data-reveal
-              style={{ transitionDelay: `${(i % 4) * 40}ms` }}
-              className={`card overflow-hidden transition-shadow duration-300 ${
-                isOpen ? "shadow-[var(--shadow-card-hover)] border-cyan-100" : ""
-              }`}
-            >
+            <div key={item.question}>
               <h3>
                 <button
                   type="button"
@@ -44,43 +35,31 @@ export default function FAQAccordion() {
                   aria-expanded={isOpen}
                   aria-controls={`faq-panel-${i}`}
                   id={`faq-button-${i}`}
-                  className="focus-ring flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                  className="focus-ring group flex w-full items-center justify-between gap-4 rounded-lg py-5 text-left"
                 >
-                  <span className="flex items-center gap-3">
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors duration-200 ${
-                        isOpen
-                          ? "gradient-btn brand-contrast"
-                          : "bg-cyan-50 text-cyan-700"
-                      }`}
-                    >
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="text-sm font-semibold text-ink-800 sm:text-[15px]">
-                      {item.question}
-                    </span>
+                  <span className="text-[15px] font-semibold text-ink-900 group-hover:text-cyan-700 sm:text-base">
+                    {item.question}
                   </span>
-                  <ChevronDown
-                    size={18}
+                  <span
                     aria-hidden="true"
-                    className={`shrink-0 text-ink-400 transition-transform duration-300 ${
-                      isOpen ? "rotate-180 text-cyan-500" : ""
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-[transform,background-color,border-color] duration-200 ${
+                      isOpen ? "rotate-45 border-cyan-400 bg-cyan-50 text-cyan-700" : "border-slate-200 text-ink-500"
                     }`}
-                  />
+                  >
+                    <Plus size={16} />
+                  </span>
                 </button>
               </h3>
               <div
                 id={`faq-panel-${i}`}
                 role="region"
                 aria-labelledby={`faq-button-${i}`}
-                className={`grid transition-all duration-300 ease-in-out ${
+                className={`grid transition-[grid-template-rows,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                   isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                 }`}
               >
-                <div className="overflow-hidden">
-                  <p className="px-5 pb-5 pl-16 text-sm leading-relaxed text-ink-600">
-                    {item.answer}
-                  </p>
+                <div className="overflow-hidden" inert={!isOpen}>
+                  <p className="pb-5 pr-12 text-sm leading-relaxed text-ink-600 sm:text-[15px]">{item.answer}</p>
                 </div>
               </div>
             </div>

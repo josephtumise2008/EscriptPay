@@ -16,7 +16,7 @@ export const isTrustedCheckoutUrl = (url) => {
 };
 
 // Returns "redirecting" when the browser is leaving for checkout.
-export const continueAfterOrder = (router, data) => {
+export const continueAfterOrder = (router, data, from = "") => {
   if (data && data.checkoutUrl) {
     if (!isTrustedCheckoutUrl(data.checkoutUrl)) {
       throw new Error("Unexpected payment page. Please contact support.");
@@ -24,6 +24,9 @@ export const continueAfterOrder = (router, data) => {
     window.location.assign(data.checkoutUrl);
     return "redirecting";
   }
-  router.push(`/success?ref=${encodeURIComponent(data.transaction.transactionId)}`);
+  // `from` lets the order page's Back button return to the right form even
+  // when the page is reopened later (refresh, shared link).
+  const origin = from ? `&from=${encodeURIComponent(from)}` : "";
+  router.push(`/success?ref=${encodeURIComponent(data.transaction.transactionId)}${origin}`);
   return "done";
 };

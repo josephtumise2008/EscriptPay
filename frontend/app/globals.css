@@ -51,10 +51,13 @@
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.1);
   --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 16px 40px -16px rgb(6 182 212 / 0.18);
 
-  --animate-fade-in: fade-in 0.5s ease both;
-  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-fade-down: fade-down 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-scale-in: scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Motion system: one easing curve, short durations, small distances. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade-in: fade-in 0.25s ease both;
+  --animate-fade-up: fade-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-down: fade-down 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-scale-in: scale-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-page-in: page-in 0.2s ease-out;
   --animate-pop: pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
@@ -72,13 +75,18 @@
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fade-down {
-  from { opacity: 0; transform: translateY(-8px); }
+  from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes page-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes scale-in {
@@ -133,6 +141,62 @@
   to { transform: scaleY(1); }
 }
 
+/* ---------- Showcase motion (homepage) ---------- */
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(28px) rotate(-3deg) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes line-in {
+  from { opacity: 0; transform: translateY(0.45em); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.06); }
+}
+
+.anim-rise { animation: rise-in 0.9s var(--ease-out-soft) both; }
+.anim-line { display: block; animation: line-in 0.7s var(--ease-out-soft) both; }
+.anim-pop { animation: pop-in 0.6s var(--ease-out-soft) both; }
+.anim-float { animation: float-soft 6s ease-in-out infinite; }
+.anim-glow { animation: glow-pulse 7s ease-in-out infinite; }
+.gradient-text.anim-shine {
+  background-size: 200% 100%;
+  animation: gradient-x 6s ease infinite;
+}
+
+/* Pointer-driven 3D tilt for the hero device (values set from JS). */
+.tilt-stage { perspective: 1200px; }
+.tilt-card {
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transform-style: preserve-3d;
+  transition: transform 0.35s var(--ease-out-soft);
+  will-change: transform;
+}
+
+/* Staggered reveal for groups of cards: children appear one after another. */
+html.js [data-reveal-stagger]:not(.is-visible) > * {
+  opacity: 0;
+  transform: translateY(16px);
+}
+[data-reveal-stagger] > * {
+  transition: opacity 0.55s var(--ease-out-soft), transform 0.55s var(--ease-out-soft);
+  transition-delay: calc(var(--i, 0) * 90ms);
+}
+
 /* Class-based dark mode. Toggle `.dark` on <html>. */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -143,6 +207,16 @@
 
 html {
   scroll-behavior: smooth;
+  /* Anchor jumps (/#faq, /#contact …) stop below the sticky 64px header. */
+  scroll-padding-top: 5rem;
+}
+
+/* Theme switch: a single short crossfade of the whole page (see
+   ThemeProvider → document.startViewTransition). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
 }
 
 /* ---------- Dark theme palette ----------
@@ -285,7 +359,6 @@ html {
 body {
   @apply bg-slate-50 text-ink-800 antialiased;
   font-feature-settings: "cv11", "ss01";
-  transition: background-color 0.35s ease, color 0.35s ease;
 }
 
 ::selection {
@@ -312,14 +385,20 @@ body {
   box-shadow: 0 10px 30px -10px rgb(56 189 248 / 0.55);
 }
 
-.card {
-  @apply rounded-2xl border border-slate-100 bg-white shadow-[var(--shadow-card)];
-  transition: background-color 0.35s ease, box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+/* Press feedback: immediate and small. */
+.gradient-btn:active:not(:disabled),
+.btn-secondary:active:not(:disabled),
+.press:active:not(:disabled) {
+  transform: scale(0.98);
+  transition-duration: 80ms;
 }
 
+
+
+
+/* Hover emphasis without movement: static content should not jump. */
 .card-hover:hover {
   @apply border-cyan-100 shadow-[var(--shadow-card-hover)];
-  transform: translateY(-2px);
 }
 
 .glass {
@@ -333,23 +412,38 @@ body {
   @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
 }
 
-.input-base {
-  @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-ink-800 placeholder:text-slate-400 transition-all duration-200;
-}
 
-.input-base:focus {
-  @apply border-cyan-300 outline-none ring-4 ring-cyan-100/70;
-}
 
-.reveal {
+/* Scroll reveals. Content is hidden ONLY when JavaScript is running (the
+   inline script in app/layout.js adds .js to <html>), so it stays visible if
+   scripts fail or are disabled. */
+html.js [data-reveal]:not(.is-visible) {
   opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(12px);
 }
 
-.reveal.is-visible {
+[data-reveal] {
+  transition: opacity 0.45s var(--ease-out-soft), transform 0.45s var(--ease-out-soft);
+}
+
+/* Dropdown / popover open-close (kept mounted so closing can animate). */
+.popover {
+  transform-origin: top right;
+  transition: opacity 0.16s ease, transform 0.16s var(--ease-out-soft), visibility 0s linear 0.16s;
+}
+
+.popover[data-state="closed"] {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.popover[data-state="open"] {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -363,6 +457,15 @@ body {
 
 /* Accessible reduced motion */
 @media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal]:not(.is-visible) {
+    opacity: 1;
+    transform: none;
+  }
+  html.js [data-reveal-stagger]:not(.is-visible) > * {
+    opacity: 1;
+    transform: none;
+  }
+  .tilt-card { transform: none !important; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -394,5 +497,37 @@ body {
   }
   .no-print {
     display: none !important;
+  }
+}
+/* Component classes live in the components layer so utility classes passed
+   alongside them (e.g. "btn-secondary py-2", "input-base pl-10") win. */
+@layer components {
+.card {
+  @apply rounded-2xl border border-slate-100 bg-white shadow-[var(--shadow-card)];
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-ink-700 shadow-sm hover:border-cyan-300 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60;
+}
+/* Square icon button used in headers (theme toggle, bell, menu). */
+.icon-btn {
+  @apply relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-500 hover:bg-slate-100 hover:text-ink-800 active:scale-95;
+}
+.input-base {
+  @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-ink-800 placeholder:text-slate-400 transition-all duration-200;
+}
+.input-base:focus {
+  @apply border-cyan-300 outline-none ring-4 ring-cyan-100/70;
+}
+
+  .select-base {
+    @apply w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-3.5 pr-9 text-sm font-medium text-ink-800 hover:border-slate-300;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+  }
+
+  .select-base:focus {
+    @apply border-cyan-300 outline-none ring-4 ring-cyan-100/70;
   }
 }

@@ -61,26 +61,12 @@ export default function Receipt({ transaction }) {
   return (
     <div className="receipt-sheet card overflow-hidden">
       {/* Receipt header */}
-      <div className="gradient-btn px-6 py-5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 brand-contrast">
-            <div className="rounded-xl bg-white/15 p-2 backdrop-blur-sm">
-              <Logo size={26} />
-            </div>
-            <div>
-              <p className="font-display text-base font-extrabold leading-none">EscriptPay</p>
-              <p className="mt-0.5 text-[11px] font-medium opacity-80">
-                Payment receipt — {tx.mode === "test" ? "Test" : "Live"}
-              </p>
-            </div>
-          </div>
-          <span className="rounded-lg bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest brand-contrast backdrop-blur-sm">
-            Receipt
-          </span>
-        </div>
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
+        <Logo size={28} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">Receipt</span>
       </div>
 
-      <div className="p-6">
+      <div className="p-5 sm:p-6">
         {/* Status + amount */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-dashed border-slate-200 pb-5">
           <div className="flex items-center gap-3">
@@ -95,16 +81,14 @@ export default function Receipt({ transaction }) {
               <p className="font-display text-base font-bold text-ink-800">
                 {statusLabel(tx.status)}
               </p>
-              <p className="text-xs text-ink-400">
-                {tx.mode === "test" ? "Simulated (TEST MODE)" : "Live purchase"}
-              </p>
+              <p className="text-xs text-ink-400">{formatDateTime(tx.createdAt)}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-xs text-ink-400">
               {tx.paymentStatus === "successful" ? "Amount paid" : "Amount"}
             </p>
-            <p className="font-display text-2xl font-extrabold tracking-tight gradient-text">
+            <p className="font-display text-2xl font-extrabold tracking-tight text-ink-900">
               {formatNaira(tx.amount)}
             </p>
           </div>
@@ -143,7 +127,7 @@ export default function Receipt({ transaction }) {
         </div>
 
         {/* Payment pipeline status */}
-        <div className="mt-5 grid grid-cols-3 gap-3 rounded-xl bg-slate-50 p-4 text-center">
+        <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-center">
           <div>
             <p className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-400">
               <Landmark size={11} aria-hidden="true" />
@@ -161,13 +145,6 @@ export default function Receipt({ transaction }) {
             <p className="mt-1 text-xs font-semibold capitalize text-ink-700">
               {tx.providerStatus || "—"}
             </p>
-          </div>
-          <div>
-            <p className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-400">
-              <ShieldCheck size={11} aria-hidden="true" />
-              Mode
-            </p>
-            <p className="mt-1 text-xs font-semibold uppercase text-ink-700">{tx.mode || "test"}</p>
           </div>
         </div>
 
@@ -189,11 +166,6 @@ export default function Receipt({ transaction }) {
           </button>
         </div>
 
-        {tx.mode !== "live" && (
-          <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-center text-[11px] font-medium text-amber-700">
-            TEST MODE receipt — no real money moved and no data/airtime was delivered.
-          </p>
-        )}
       </div>
     </div>
   );

@@ -70,16 +70,17 @@ export default function PlanList({ network, selectedPlan, onSelect }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filter plans">
+      <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Filter plans">
         {FILTERS.map((f) => (
           <button
             key={f.id}
             type="button"
             onClick={() => setFilter(f.id)}
-            className={`focus-ring rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 ${
+            aria-pressed={filter === f.id}
+            className={`focus-ring shrink-0 rounded-full px-4 py-2 text-xs font-semibold ${
               filter === f.id
-                ? "gradient-btn brand-contrast shadow-sm"
-                : "bg-white text-ink-600 ring-1 ring-slate-200 hover:ring-cyan-300 hover:text-cyan-700"
+                ? "bg-ink-900 text-white dark:bg-cyan-500 dark:text-slate-950"
+                : "bg-white text-ink-600 ring-1 ring-slate-200 hover:text-ink-900 hover:ring-slate-300"
             }`}
           >
             {f.label}
@@ -124,39 +125,39 @@ export default function PlanList({ network, selectedPlan, onSelect }) {
       )}
 
       {!loading && filtered.length > 0 && (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3">
           {filtered.map((plan) => {
             const active = selectedPlan?._id === plan._id;
             return (
-              <li key={plan._id} className="animate-fade-up" style={{ animationDelay: "0ms" }}>
+              <li key={plan._id}>
                 <button
                   type="button"
                   onClick={() => onSelect(plan)}
                   aria-pressed={active}
-                  className={`focus-ring relative h-full w-full rounded-2xl border p-4 text-left transition-all duration-200 ${
+                  className={`focus-ring press relative flex h-full w-full flex-col rounded-2xl border bg-white p-3 text-left sm:p-4 ${
                     active
-                      ? "border-cyan-400 bg-gradient-to-br from-cyan-50 via-sky-50 to-purple-lite-100 shadow-[0_10px_28px_-12px_rgb(6_182_212/0.4)]"
-                      : "card border-slate-100 hover:border-cyan-200 hover:shadow-[var(--shadow-card)]"
+                      ? "border-cyan-400 bg-cyan-50 shadow-[0_0_0_1px_var(--color-cyan-400)]"
+                      : "border-slate-200 hover:border-slate-300 hover:shadow-[var(--shadow-card)]"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-100">
+                      <span className="hidden items-center gap-1.5 rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-100 sm:inline-flex">
                         {plan.network}
                       </span>
-                      <p className="mt-2 font-display text-[15px] font-bold leading-snug text-ink-800">
+                      <p className="font-display text-sm font-bold leading-snug text-ink-800 sm:mt-2 sm:text-[15px]">
                         {plan.name}
                       </p>
                     </div>
                     {active && (
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-cyan-500 to-purple-lite-500 brand-contrast">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500 brand-contrast">
                         <Check size={12} aria-hidden="true" />
                       </span>
                     )}
                   </div>
 
-                  <div className="mt-3 flex items-end justify-between">
-                    <p className="font-display text-lg font-extrabold tracking-tight gradient-text">
+                  <div className="mt-auto flex flex-col gap-0.5 pt-3 sm:flex-row sm:items-end sm:justify-between">
+                    <p className="font-display text-base font-extrabold tracking-tight text-ink-900 sm:text-lg">
                       {formatNaira(plan.price)}
                     </p>
                     <span className="inline-flex items-center gap-1 text-xs text-ink-500">
@@ -166,10 +167,9 @@ export default function PlanList({ network, selectedPlan, onSelect }) {
                   </div>
 
                   <span
-                    className={`mt-3 inline-flex w-full items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold transition-colors duration-200 ${
-                      active
-                        ? "bg-gradient-to-r from-cyan-500 to-purple-lite-500 brand-contrast"
-                        : "bg-slate-50 text-ink-600 ring-1 ring-slate-200 hover:bg-cyan-50 hover:text-cyan-700 hover:ring-cyan-200"
+                    aria-hidden="true"
+                    className={`mt-3 hidden w-full items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold sm:inline-flex ${
+                      active ? "bg-cyan-500 brand-contrast" : "bg-slate-100 text-ink-600"
                     }`}
                   >
                     {active ? "Selected" : "Select"}

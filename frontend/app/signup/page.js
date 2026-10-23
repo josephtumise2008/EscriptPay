@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import AuthLayout, { Field } from "@/components/AuthLayout";
 import { PrimaryButton } from "@/components/ui/Buttons";
 import BackgroundGradient from "@/components/BackgroundGradient";
@@ -165,16 +165,8 @@ export default function SignupPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-ink-500">
-            <CheckCircle2 size={15} className="shrink-0 text-cyan-500" />
-            <span>
-              Authentication is mock/local for V1. Real sign-in will be hooked up to
-              the API soon.
-            </span>
-          </div>
-
           <PrimaryButton type="submit" loading={submitting} className="w-full" disabled={submitting}>
-            {submitting ? "Creating account..." : "Create Account"}
+            {submitting ? "Creating account…" : "Create account"}
           </PrimaryButton>
         </form>
       </AuthLayout>

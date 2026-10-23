@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import TransactionCard from "@/components/TransactionCard";
 import EmptyState from "@/components/EmptyState";
+import Select from "@/components/ui/Select";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import TestModeBadge from "@/components/TestModeBadge";
 import { getTransactions, getNetworks, errorMessage } from "@/lib/api";
 import { formatDateTime, formatNaira } from "@/lib/format";
 import { statusLabel, statusBadge } from "@/lib/transactions";
@@ -181,25 +181,24 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-6">
-      <header className="animate-fade-up">
+      <header>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
               Transaction History
             </h1>
             <p className="mt-1.5 text-sm text-ink-500 sm:text-base">
-              All your test purchases in one place{pagination.total > 0 ? ` — ${pagination.total} total.` : "."}
+              All your purchases in one place{pagination.total > 0 ? ` — ${pagination.total} total.` : "."}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <TestModeBadge />
             {rows.length > 0 && (
               <button
                 type="button"
                 onClick={exportCSV}
-                className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-ink-600 transition-colors hover:border-cyan-300 hover:text-cyan-700"
+                className="focus-ring btn-secondary px-3.5 py-2"
               >
-                <Download size={15} />
+                <Download size={15} aria-hidden="true" />
                 Export CSV
               </button>
             )}
@@ -207,11 +206,11 @@ export default function HistoryPage() {
         </div>
       </header>
 
-      <div className="card animate-fade-up p-4 sm:p-5">
+      <div className="card p-4 sm:p-5">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400">
                 <Search size={17} aria-hidden="true" />
               </span>
               <label htmlFor="tx-search" className="sr-only">
@@ -223,77 +222,52 @@ export default function HistoryPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by network, plan, phone or ID..."
-                className="input-base pl-10"
+                className="input-base pl-11 text-base sm:text-sm"
               />
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:flex lg:gap-3 [&>div]:lg:w-44">
               <div>
-                <label htmlFor="tx-date" className="sr-only">
-                  Filter by date
-                </label>
-                <select
+                <Select
                   id="tx-date"
+                  label="Filter by date"
                   value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="input-base w-auto cursor-pointer"
-                >
-                  <option value="all">All dates</option>
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                </select>
+                  onChange={setDateFilter}
+                  options={[
+                    { value: "all", label: "All dates" },
+                    { value: "7d", label: "Last 7 days" },
+                    { value: "30d", label: "Last 30 days" },
+                  ]}
+                />
               </div>
               <div>
-                <label htmlFor="tx-type" className="sr-only">
-                  Filter by type
-                </label>
-                <select
+                <Select
                   id="tx-type"
+                  label="Filter by type"
                   value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="input-base w-auto cursor-pointer"
-                >
-                  {TYPE_OPTIONS.map((t) => (
-                    <option key={t} value={t}>
-                      {t === "all" ? "All types" : t === "data" ? "Data" : "Airtime"}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setType}
+                  align="right"
+                  options={TYPE_OPTIONS.map((t) => ({ value: t, label: t === "all" ? "All types" : t === "data" ? "Data" : "Airtime" }))}
+                />
               </div>
               <div>
-                <label htmlFor="tx-network" className="sr-only">
-                  Filter by network
-                </label>
-                <select
+                <Select
                   id="tx-network"
+                  label="Filter by network"
                   value={network}
-                  onChange={(e) => setNetwork(e.target.value)}
-                  className="input-base w-auto cursor-pointer"
-                >
-                  <option value="all">All networks</option>
-                  {networks.map((n) => (
-                    <option key={n.code} value={n.name}>
-                      {n.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setNetwork}
+                  options={[{ value: "all", label: "All networks" }, ...networks.map((n) => ({ value: n.name, label: n.name }))]}
+                />
               </div>
               <div>
-                <label htmlFor="tx-status" className="sr-only">
-                  Filter by status
-                </label>
-                <select
+                <Select
                   id="tx-status"
+                  label="Filter by status"
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="input-base w-auto cursor-pointer"
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s === "all" ? "All statuses" : statusLabel(s)}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setStatus}
+                  align="right"
+                  options={STATUS_OPTIONS.map((st) => ({ value: st, label: st === "all" ? "All statuses" : statusLabel(st) }))}
+                />
               </div>
             </div>
           </div>
@@ -315,13 +289,13 @@ export default function HistoryPage() {
       </div>
 
       {loading && (
-        <div className="card animate-fade-up p-6">
+        <div className="card p-6">
           <LoadingSpinner size={32} label="Loading transactions..." />
         </div>
       )}
 
       {!loading && error && (
-        <div className="card animate-fade-up p-6">
+        <div className="card p-6">
           <p className="flex items-center gap-2 text-sm font-medium text-red-600">
             <Inbox size={18} />
             {error}
@@ -330,11 +304,11 @@ export default function HistoryPage() {
       )}
 
       {!loading && !error && pagination.total === 0 && (
-        <div className="animate-fade-up">{emptyState}</div>
+        <div>{emptyState}</div>
       )}
 
       {!loading && !error && pagination.total > 0 && rows.length === 0 && (
-        <div className="animate-fade-up">{emptyState}</div>
+        <div>{emptyState}</div>
       )}
 
       {!loading && !error && rows.length > 0 && (
@@ -359,7 +333,7 @@ export default function HistoryPage() {
                 {rows.map((t) => (
                   <tr
                     key={t._id}
-                    className="card animate-fade-up transition-shadow duration-200 hover:shadow-[var(--shadow-card-hover)]"
+                    className="card transition-shadow duration-200 hover:shadow-[var(--shadow-card-hover)]"
                   >
                     <td className="rounded-l-2xl px-4 py-3.5">
                       <Link
@@ -398,23 +372,17 @@ export default function HistoryPage() {
           </div>
 
           {/* Pagination */}
-          <div className="animate-fade-up flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
             <div className="flex items-center gap-2 text-sm text-ink-500">
-              <label htmlFor="page-size" className="sr-only">
-                Results per page
-              </label>
-              <select
+              <Select
                 id="page-size"
+                label="Results per page"
+                size="sm"
+                className="w-36"
                 value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                className="input-base w-auto cursor-pointer py-2 text-xs"
-              >
-                {PAGE_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s} per page
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setPageSize(Number(v))}
+                options={PAGE_SIZES.map((n) => ({ value: n, label: `${n} per page` }))}
+              />
               <span>
                 Page {pagination.page} of {pagination.pages} ({pagination.total} result
                 {pagination.total === 1 ? "" : "s"})
