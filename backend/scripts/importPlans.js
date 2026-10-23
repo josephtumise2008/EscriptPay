@@ -26,8 +26,21 @@ const askHidden = (question) =>
     });
   });
 
+// Reads MONGO_URI from backend/.env.atlas (a private file Git ignores).
+const fromAtlasFile = () => {
+  const fs = require("fs");
+  const path = require("path");
+  const file = path.join(__dirname, "..", ".env.atlas");
+  if (!fs.existsSync(file)) return "";
+  const line = fs
+    .readFileSync(file, "utf8")
+    .split(/\r?\n/)
+    .find((l) => l.trim().startsWith("MONGO_URI="));
+  return line ? line.trim().slice("MONGO_URI=".length).trim().replace(/^["']|["']$/g, "") : "";
+};
+
 const run = async () => {
-  let uri = (process.env.MONGO_URI || "").trim();
+  let uri = (process.env.MONGO_URI || "").trim() || fromAtlasFile();
   if (!uri && process.stdin.isTTY) {
     uri = (await askHidden("Paste your MongoDB Atlas connection string (it won't show), then press Enter: ")).trim();
   }
