@@ -31,7 +31,7 @@ function CallbackContent() {
     (async () => {
       try {
         const { transaction } = await verifyPayment(reference);
-        router.replace(`/success?ref=${encodeURIComponent(transaction.transactionId)}`);
+        router.replace(`/success?ref=${encodeURIComponent(transaction.transactionId)}&from=${transaction.type === "airtime" ? "airtime" : "data"}`);
       } catch (err) {
         const status = err?.response?.status;
         if (status === 401) {
@@ -42,7 +42,7 @@ function CallbackContent() {
         // page shows the real state and keeps refreshing.
         const tx = err?.response?.data?.transaction;
         if (tx?.transactionId) {
-          router.replace(`/success?ref=${encodeURIComponent(tx.transactionId)}`);
+          router.replace(`/success?ref=${encodeURIComponent(tx.transactionId)}&from=${tx.type === "airtime" ? "airtime" : "data"}`);
           return;
         }
         setError(errorMessage(err, "We could not confirm this payment yet."));

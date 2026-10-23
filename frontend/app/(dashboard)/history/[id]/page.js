@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Printer, ShoppingBag, History, AlertCircle, Inbox } from "lucide-react";
+import { Printer, ShoppingBag, History, Inbox } from "lucide-react";
 import Receipt from "@/components/Receipt";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import TestModeBadge from "@/components/TestModeBadge";
 import { getTransaction, errorMessage } from "@/lib/api";
 import { maskPhone } from "@/lib/format";
 
@@ -93,56 +92,38 @@ export default function TransactionDetailPage() {
 
   return (
     <div className="space-y-6">
-      <header className="animate-fade-up">
+      <header>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <Link
-              href="/history"
-              className="focus-ring inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-600 transition-colors hover:text-cyan-700"
-            >
-              <ArrowLeft size={15} />
-              Back to history
-            </Link>
-            <h1 className="mt-1.5 font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
+            <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
               Transaction details
             </h1>
             <p className="mt-1.5 text-sm text-ink-500">
               {transaction.network} · {transaction.plan} · {maskPhone(transaction.phone)}
             </p>
           </div>
-          <TestModeBadge />
         </div>
       </header>
 
-      <div className="no-print flex flex-wrap gap-3">
+      <div className="no-print grid grid-cols-2 gap-2.5 sm:flex sm:gap-3">
         <button
           type="button"
           onClick={() => window.print()}
-          className="gradient-btn focus-ring inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold brand-contrast"
+          className="gradient-btn focus-ring inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold brand-contrast"
         >
-          <Printer size={16} />
-          Print Receipt
+          <Printer size={16} aria-hidden="true" />
+          Print receipt
         </button>
-        <Link
-          href={buyAgainHref}
-          className="focus-ring inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-ink-700 transition-all hover:border-cyan-300 hover:text-cyan-700"
-        >
-          <ShoppingBag size={16} />
-          Buy Again
+        <Link href={buyAgainHref} className="focus-ring btn-secondary">
+          <ShoppingBag size={16} aria-hidden="true" />
+          Buy again
         </Link>
       </div>
 
-      <div className="animate-fade-up">
+      <div>
         <Receipt transaction={transaction} />
       </div>
 
-      {transaction.mode !== "live" && (
-        <p className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-          <AlertCircle size={16} className="mt-0.5 shrink-0" />
-          This is a test-mode purchase — no real money moved and no data or
-          airtime was delivered.
-        </p>
-      )}
     </div>
   );
 }

@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import NetworkSelector from "@/components/NetworkSelector";
 import PlanList from "@/components/PlanList";
 import OrderSummary from "@/components/OrderSummary";
+import MobileCheckoutBar from "@/components/MobileCheckoutBar";
 import { validateNigerianPhone } from "@/lib/validators";
 import { createDataTransaction, getPlanById, errorMessage } from "@/lib/api";
 import { continueAfterOrder } from "@/lib/checkout";
 import { PackageOpen, AlertCircle } from "lucide-react";
+import { formatNaira } from "@/lib/format";
 
 const makeReference = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -69,6 +71,9 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
     const check = validateNigerianPhone(phone);
     if (!check.valid) {
       setPhoneError(check.message);
+      const input = document.getElementById("recipient-phone");
+      input?.scrollIntoView({ block: "center", behavior: "smooth" });
+      input?.focus({ preventScroll: true });
       return;
     }
     setPhoneError("");
@@ -89,7 +94,7 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
       });
 
       clientRef.current = null;
-      continueAfterOrder(router, data);
+      continueAfterOrder(router, data, "data");
     } catch (error) {
       // Reset the idempotency key so a genuine retry creates a fresh order.
       clientRef.current = null;
@@ -98,29 +103,30 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
     }
   };
 
+  const stepHeading = "mb-3 flex items-center gap-2 font-display text-base font-bold text-ink-800";
+  const stepNumber = "flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-ink-600";
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr]">
-      <div className="space-y-6">
+      <div className="space-y-7">
         <section aria-labelledby="network-heading">
-          <h2 id="network-heading" className="mb-3 font-display text-base font-bold text-ink-800">
-            Choose network
+          <h2 id="network-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">1</span>
+            Network
           </h2>
-          <NetworkSelector selected={network} onSelect={setNetwork} />
-        </section>
-
-        <section aria-labelledby="plan-heading">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 id="plan-heading" className="font-display text-base font-bold text-ink-800">
-              Select a data plan
-            </h2>
-            <span className="text-xs text-ink-400">{network} plans</span>
-          </div>
-          <PlanList network={network} selectedPlan={selectedPlan} onSelect={selectPlan} />
+          <NetworkSelector
+            selected={network}
+            onSelect={(n) => {
+              setNetwork(n);
+              if (selectedPlan && selectedPlan.network !== n) setSelectedPlan(null);
+            }}
+          />
         </section>
 
         <section aria-labelledby="phone-heading">
-          <h2 id="phone-heading" className="mb-3 font-display text-base font-bold text-ink-800">
-            Phone number to receive data
+          <h2 id="phone-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">2</span>
+            Phone number
           </h2>
           <label htmlFor="recipient-phone" className="sr-only">
             Recipient phone number
@@ -139,46 +145,45 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
             }}
             aria-invalid={phoneError ? "true" : "false"}
             aria-describedby={phoneError ? "phone-error" : "phone-hint"}
-            className="input-base"
+            className={`input-base text-base ${phoneError ? "border-red-300" : ""}`}
           />
           {phoneError ? (
-            <p
-              id="phone-error"
-              role="alert"
-              className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-500"
-            >
-              <AlertCircle size={14} />
+            <p id="phone-error" role="alert" className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-500">
+              <AlertCircle size={14} aria-hidden="true" />
               {phoneError}
             </p>
           ) : (
             <p id="phone-hint" className="mt-1.5 text-xs text-ink-400">
-              Enter a valid Nigerian number, e.g. 08012345678.
+              The number that will receive the data, e.g. 08012345678.
             </p>
           )}
         </section>
+
+        <section aria-labelledby="plan-heading">
+          <h2 id="plan-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">3</span>
+            {network} data plan
+          </h2>
+          <PlanList network={network} selectedPlan={selectedPlan} onSelect={selectPlan} />
+        </section>
       </div>
 
-      <aside className="lg:sticky lg:top-24 lg:self-start">
+      <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
         {selectedPlan ? (
           <OrderSummary plan={selectedPlan} phone={phone.trim()} onBuyNow={buyNow} processing={processing} />
         ) : (
           <div className="card flex flex-col items-center gap-3 px-6 py-10 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-100 to-purple-lite-100 text-cyan-600">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
               <PackageOpen size={22} aria-hidden="true" />
             </span>
             <p className="font-display text-base font-bold text-ink-800">No plan selected</p>
-            <p className="text-sm text-ink-500">
-              Pick a {network} plan and your order summary will appear here.
-            </p>
+            <p className="text-sm text-ink-500">Pick a {network} plan and your order summary will appear here.</p>
           </div>
         )}
 
         {submitError && (
-          <div
-            role="alert"
-            className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
-          >
-            <AlertCircle size={17} className="mt-0.5 shrink-0" />
+          <div role="alert" className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            <AlertCircle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span>
               {submitError}{" "}
               <button
@@ -193,6 +198,16 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
           </div>
         )}
       </aside>
+
+      <MobileCheckoutBar
+        title={selectedPlan ? selectedPlan.name : "No plan selected"}
+        subtitle={selectedPlan ? `${selectedPlan.network} · ${selectedPlan.validity}${phone ? ` · ${phone}` : ""}` : `Choose a ${network} plan above`}
+        amountLabel={selectedPlan ? formatNaira(selectedPlan.price) : ""}
+        ready={Boolean(selectedPlan)}
+        processing={processing}
+        onBuy={buyNow}
+        error={submitError}
+      />
     </div>
   );
 }

@@ -47,9 +47,6 @@ export default function OrderSummary({ plan, phone, onBuyNow, processing = false
         >
           {processing ? "Processing payment..." : "BUY NOW"}
         </button>
-        <p className="mt-3 text-center text-xs text-ink-400">
-          Test mode — no real money moves and no data is actually delivered.
-        </p>
       </div>
     </div>
   );

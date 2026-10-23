@@ -6,6 +6,7 @@ import NetworkSelector from "@/components/NetworkSelector";
 import { validateNigerianPhone } from "@/lib/validators";
 import { createAirtimeTransaction, errorMessage } from "@/lib/api";
 import { continueAfterOrder } from "@/lib/checkout";
+import MobileCheckoutBar from "@/components/MobileCheckoutBar";
 import { formatNaira } from "@/lib/format";
 import { Smartphone, Banknote, AlertCircle, Wifi } from "lucide-react";
 
@@ -72,6 +73,9 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
     const check = validateNigerianPhone(phone);
     if (!check.valid) {
       setPhoneError(check.message);
+      const input = document.getElementById("airtime-phone");
+      input?.scrollIntoView({ block: "center", behavior: "smooth" });
+      input?.focus({ preventScroll: true });
       return;
     }
 
@@ -92,7 +96,7 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
       });
 
       clientRef.current = null;
-      continueAfterOrder(router, data);
+      continueAfterOrder(router, data, "airtime");
     } catch (error) {
       clientRef.current = null;
       setSubmitError(errorMessage(error, "Purchase could not be completed. Please try again."));
@@ -101,75 +105,33 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
   };
 
   const showAmountInput = customAmount !== "";
+  const finalAmount = customAmount ? Number(customAmount) : amount;
+  const amountValid = Number.isInteger(finalAmount) && finalAmount >= MIN_AMOUNT && finalAmount <= MAX_AMOUNT;
+
+  const stepHeading = "mb-3 flex items-center gap-2 font-display text-base font-bold text-ink-800";
+  const stepNumber = "flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-ink-600";
+
+  const summaryRows = [
+    { label: "Network", value: network, icon: Wifi },
+    { label: "Amount", value: amountValid ? formatNaira(finalAmount) : "—", icon: Banknote, emphasize: true },
+    { label: "Phone", value: phone || "—", icon: Smartphone },
+  ];
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr]">
-      <div className="space-y-6">
+      <div className="space-y-7">
         <section aria-labelledby="airtime-network-heading">
-          <h2 id="airtime-network-heading" className="mb-3 font-display text-base font-bold text-ink-800">
-            Choose network
+          <h2 id="airtime-network-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">1</span>
+            Network
           </h2>
           <NetworkSelector selected={network} onSelect={setNetwork} />
         </section>
 
-        <section aria-labelledby="airtime-amount-heading">
-          <h2 id="airtime-amount-heading" className="mb-3 font-display text-base font-bold text-ink-800">
-            Airtime amount
-          </h2>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {PRESET_AMOUNTS.map((value) => {
-              const active = !showAmountInput && amount === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => pickPreset(value)}
-                  aria-pressed={active}
-                  className={`focus-ring rounded-2xl border px-3 py-4 text-center transition-all duration-200 ${
-                    active
-                      ? "border-cyan-300 bg-gradient-to-br from-cyan-50 to-purple-lite-100 shadow-[0_8px_24px_-12px_rgb(6_182_212/0.35)]"
-                      : "card border-slate-100 hover:border-cyan-200"
-                  }`}
-                >
-                  <span className={`block font-display text-sm font-extrabold ${active ? "gradient-text" : "text-ink-800"}`}>
-                    {formatNaira(value)}
-                  </span>
-                  <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-ink-400">
-                    {network} airtime
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-3">
-            <label htmlFor="airtime-custom" className="mb-1.5 block text-sm font-semibold text-ink-700">
-              Or enter a custom amount
-            </label>
-            <input
-              id="airtime-custom"
-              type="number"
-              inputMode="numeric"
-              min={MIN_AMOUNT}
-              max={MAX_AMOUNT}
-              step="50"
-              placeholder={`${formatNaira(MIN_AMOUNT)} – ${formatNaira(MAX_AMOUNT)}`}
-              value={customAmount}
-              onChange={(e) => handleCustom(e.target.value)}
-              className="input-base"
-            />
-            {amountError && (
-              <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-500">
-                <AlertCircle size={14} />
-                {amountError}
-              </p>
-            )}
-          </div>
-        </section>
-
         <section aria-labelledby="airtime-phone-heading">
-          <h2 id="airtime-phone-heading" className="mb-3 font-display text-base font-bold text-ink-800">
-            Phone number to recharge
+          <h2 id="airtime-phone-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">2</span>
+            Phone number
           </h2>
           <label htmlFor="airtime-phone" className="sr-only">
             Phone number to recharge
@@ -188,86 +150,110 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
             }}
             aria-invalid={phoneError ? "true" : "false"}
             aria-describedby={phoneError ? "airtime-phone-error" : "airtime-phone-hint"}
-            className="input-base"
+            className={`input-base text-base ${phoneError ? "border-red-300" : ""}`}
           />
           {phoneError ? (
-            <p
-              id="airtime-phone-error"
-              role="alert"
-              className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-500"
-            >
-              <AlertCircle size={14} />
+            <p id="airtime-phone-error" role="alert" className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-500">
+              <AlertCircle size={14} aria-hidden="true" />
               {phoneError}
             </p>
           ) : (
             <p id="airtime-phone-hint" className="mt-1.5 text-xs text-ink-400">
-              Enter a valid Nigerian number, e.g. 08012345678.
+              The number to recharge, e.g. 08012345678.
             </p>
           )}
         </section>
-      </div>
 
-      <aside className="lg:sticky lg:top-24 lg:self-start">
-        <div className="card card-hover overflow-hidden">
-          <div className="gradient-btn px-5 py-4">
-            <h2 className="font-display text-sm font-bold uppercase tracking-wider brand-contrast">
-              Order Summary
-            </h2>
+        <section aria-labelledby="airtime-amount-heading">
+          <h2 id="airtime-amount-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">3</span>
+            Amount
+          </h2>
+          <div role="group" aria-label="Preset amounts" className="grid grid-cols-3 gap-2.5 sm:grid-cols-6 sm:gap-3">
+            {PRESET_AMOUNTS.map((value) => {
+              const active = !showAmountInput && amount === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => pickPreset(value)}
+                  aria-pressed={active}
+                  className={`focus-ring press rounded-xl border bg-white px-2 py-3.5 text-center font-display text-sm font-bold ${
+                    active
+                      ? "border-cyan-400 bg-cyan-50 text-cyan-800 shadow-[0_0_0_1px_var(--color-cyan-400)]"
+                      : "border-slate-200 text-ink-800 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {formatNaira(value)}
+                </button>
+              );
+            })}
           </div>
 
+          <div className="mt-3">
+            <label htmlFor="airtime-custom" className="mb-1.5 block text-sm font-semibold text-ink-700">
+              Or enter an amount
+            </label>
+            <input
+              id="airtime-custom"
+              type="number"
+              inputMode="numeric"
+              min={MIN_AMOUNT}
+              max={MAX_AMOUNT}
+              step="50"
+              placeholder={`${formatNaira(MIN_AMOUNT)} – ${formatNaira(MAX_AMOUNT)}`}
+              value={customAmount}
+              onChange={(e) => handleCustom(e.target.value)}
+              aria-invalid={amountError ? "true" : "false"}
+              className="input-base text-base"
+            />
+            {amountError && (
+              <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-500">
+                <AlertCircle size={14} aria-hidden="true" />
+                {amountError}
+              </p>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
+        <div className="card overflow-hidden">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h2 className="font-display text-base font-bold text-ink-900">Order summary</h2>
+          </div>
           <div className="p-5">
             <ul className="space-y-3">
-              <li className="flex items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-cyan-50 to-purple-lite-100 text-cyan-600">
-                  <Wifi size={16} aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-ink-400">Network</p>
-                  <p className="truncate text-sm font-semibold text-ink-800">{network}</p>
-                </div>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-cyan-50 to-purple-lite-100 text-cyan-600">
-                  <Banknote size={16} aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-ink-400">Amount</p>
-                  <p className="font-display text-lg font-extrabold gradient-text">
-                    {formatNaira(customAmount ? Number(customAmount) : amount)}
-                  </p>
-                </div>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-cyan-50 to-purple-lite-100 text-cyan-600">
-                  <Smartphone size={16} aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-ink-400">Phone</p>
-                  <p className="truncate text-sm font-semibold text-ink-800">{phone || "—"}</p>
-                </div>
-              </li>
+              {summaryRows.map((row) => (
+                <li key={row.label} className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-ink-500">
+                    <row.icon size={16} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-ink-500">{row.label}</p>
+                    <p className={`truncate ${row.emphasize ? "font-display text-lg font-bold text-ink-900" : "text-sm font-semibold text-ink-800"}`}>
+                      {row.value}
+                    </p>
+                  </div>
+                </li>
+              ))}
             </ul>
 
             <button
               type="button"
               onClick={buyNow}
               disabled={processing}
-              className="gradient-btn focus-ring mt-6 w-full rounded-xl px-5 py-3.5 text-sm font-bold brand-contrast disabled:cursor-not-allowed disabled:opacity-60"
+              className="gradient-btn focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold brand-contrast disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {processing ? "Processing payment..." : "BUY NOW"}
+              {processing && <span aria-hidden="true" className="brand-spin inline-block h-4 w-4 animate-spin rounded-full" />}
+              {processing ? "Processing…" : amountValid ? `Buy airtime · ${formatNaira(finalAmount)}` : "Buy airtime"}
             </button>
-            <p className="mt-3 text-center text-xs text-ink-400">
-              Test mode — no real money moves and no real airtime is delivered.
-            </p>
           </div>
         </div>
 
         {submitError && (
-          <div
-            role="alert"
-            className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
-          >
-            <AlertCircle size={17} className="mt-0.5 shrink-0" />
+          <div role="alert" className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            <AlertCircle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span>
               {submitError}{" "}
               <button
@@ -282,6 +268,16 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
           </div>
         )}
       </aside>
+
+      <MobileCheckoutBar
+        title={`${network} airtime`}
+        subtitle={phone ? `To ${phone}` : "Enter the number above"}
+        amountLabel={amountValid ? formatNaira(finalAmount) : ""}
+        ready={amountValid}
+        processing={processing}
+        onBuy={buyNow}
+        error={submitError || amountError}
+      />
     </div>
   );
 }

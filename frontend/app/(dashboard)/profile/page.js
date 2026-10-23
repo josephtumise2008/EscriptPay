@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Camera, Mail, Phone, ShieldCheck, Save, Eye, EyeOff, MapPin } from "lucide-react";
 import { PrimaryButton } from "@/components/ui/Buttons";
 import { useAuth } from "@/lib/auth-context";
 import { initials, formatDate } from "@/lib/format";
+import Select from "@/components/ui/Select";
 import { NIGERIAN_STATES } from "@/lib/states";
 import { passwordStrength } from "@/lib/password";
 
 export default function ProfilePage() {
   const { user, saveProfile, savePassword } = useAuth();
-  const router = useRouter();
   const [profile, setProfile] = useState({
     fullName: user?.name || "",
     email: user?.email || "",
@@ -25,10 +24,8 @@ export default function ProfilePage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPwd, setSavingPwd] = useState(false);
 
-  if (!user) {
-    router.replace("/login");
-    return null;
-  }
+  // DashboardShell redirects signed-out visitors; never navigate during render.
+  if (!user) return null;
 
   const updateProfileField = (key) => (e) => {
     setProfile((p) => ({ ...p, [key]: e.target.value }));
@@ -127,7 +124,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <header className="animate-fade-up">
+      <header>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
           Profile
         </h1>
@@ -137,7 +134,7 @@ export default function ProfilePage() {
       </header>
 
       {/* Identity card */}
-      <section className="card card-hover animate-fade-up flex flex-col items-center gap-4 p-6 sm:flex-row sm:gap-6 sm:p-7">
+      <section className="card card-hover flex flex-col items-center gap-4 p-6 sm:flex-row sm:gap-6 sm:p-7">
         <div className="relative">
           <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-purple-lite-500 font-display text-2xl font-extrabold brand-contrast shadow-[0_10px_25px_-10px_rgb(6_182_212/0.5)]">
             {initials(user.name)}
@@ -173,7 +170,7 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Personal information */}
-        <section className="card card-hover animate-fade-up p-6" aria-labelledby="personal-heading">
+        <section className="card card-hover p-6" aria-labelledby="personal-heading">
           <div className="mb-5 flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-100 to-sky-100 text-cyan-600">
               <Camera size={17} aria-hidden="true" />
@@ -222,22 +219,15 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label htmlFor="pf-state" className="mb-1.5 block text-sm font-semibold text-ink-700">
-                State of Residence
-              </label>
-              <select
+              <Select
                 id="pf-state"
+                label="State of Residence"
+                hideLabel={false}
                 value={profile.state}
-                onChange={updateProfileField("state")}
-                className="input-base cursor-pointer"
-              >
-                <option value="">Select your state</option>
-                {NIGERIAN_STATES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => updateProfileField("state")({ target: { value: v } })}
+                placeholder="Select your state"
+                options={NIGERIAN_STATES.map((st) => ({ value: st, label: st }))}
+              />
               <p className="mt-1.5 text-xs text-ink-400">
                 Used to show the local time greeting on your dashboard.
               </p>
@@ -264,7 +254,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Security */}
-        <section className="card card-hover animate-fade-up p-6" aria-labelledby="security-heading">
+        <section className="card card-hover p-6" aria-labelledby="security-heading">
           <div className="mb-5 flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-lite-100 to-indigo-100 text-purple-lite-600">
               <ShieldCheck size={17} aria-hidden="true" />

@@ -121,14 +121,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 text-ink-600">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400"
-              />
-              Remember me
-            </label>
+          <div className="-mt-1 flex justify-end text-sm">
             <Link
               href="/forgot-password"
               className="font-medium text-cyan-600 transition-colors hover:text-cyan-700"
@@ -138,17 +131,10 @@ export default function LoginPage() {
           </div>
 
           <PrimaryButton type="submit" loading={submitting} className="w-full" disabled={submitting}>
-            {submitting ? "Signing in..." : "Login"}
+            {submitting ? "Signing in…" : "Log in"}
           </PrimaryButton>
         </form>
 
-        <div className="mt-5 rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-ink-500">
-          Verify builds: sign in with any email you registered on{" "}
-          <Link href="/signup" className="font-semibold text-cyan-600">
-            Create Account
-          </Link>{" "}
-          — authentication is local for V1.
-        </div>
       </AuthLayout>
     </>
   );

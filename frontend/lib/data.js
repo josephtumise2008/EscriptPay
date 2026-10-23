@@ -1,65 +1,86 @@
 // ------------------------------------------------------------------
-// STATIC CONTENT (FAQ + contact placeholders)
+// STATIC CONTENT (FAQ + contact details)
 // ------------------------------------------------------------------
-// No financial/live data lives here. Transactions, wallet and weekly
-// charts read from the backend only.
+// Only statements the product actually supports today. Plans, prices and
+// transactions always come from the backend.
 
-// FAQ content (original EscriptPay copy)
 export const FAQ_ITEMS = [
   {
-    question: "How do I pay for my data?",
+    question: "Is EscriptPay live yet?",
     answer:
-      "For now EscriptPay supports in-app purchases via a simple checkout flow. In the coming update we are integrating secure card payments, so you will be able to pay with a debit card right inside the app. Existing customers can also complete orders with their account balance.",
+      "Not yet. EscriptPay is currently in test mode: you can create an account and place orders to try the full flow, but no money is charged and no data or airtime is delivered. The site will clearly say when real purchases are switched on.",
   },
   {
-    question: "Will I be able to check my data balance?",
+    question: "Which networks can I buy for?",
     answer:
-      "Yes. After your purchase is delivered, you will typically receive a confirmation SMS from your network provider. For many plans you can also dial the network's official balance check code (for example *131# on MTN) to confirm your remaining data.",
+      "MTN, Airtel, Glo and 9mobile. Data bundles are listed per network with their price and validity, and airtime can be bought in any whole amount from ₦100 to ₦10,000.",
+  },
+  {
+    question: "How will I pay?",
+    answer:
+      "Payments will go through a secure hosted checkout. EscriptPay never asks for or stores your card details. Your order is only processed after our server has confirmed the payment with the payment provider — a browser redirect alone is never treated as proof of payment.",
+  },
+  {
+    question: "Is the price I see the price I pay?",
+    answer:
+      "Yes. Prices are set on our server and shown before you confirm. The amount is calculated on the server for every order, so it cannot be changed from your browser.",
+  },
+  {
+    question: "How do I know what happened to my order?",
+    answer:
+      "Every order gets a transaction ID and a receipt. Your transaction history shows whether payment and delivery are pending, successful or failed, so you never have to guess.",
   },
   {
     question: "Can I share my data with my friends?",
     answer:
-      "The plans marked as 'Share' are giftable and transferable bundles. They let you send data to other numbers on the same network. Regular plans (without the Share tag) are for personal use on your line only.",
+      "Plans marked 'Share' are bundles your network lets you share or gift to other numbers on the same network. Plans without the Share tag are for use on the receiving line only. Exact sharing rules are set by each network.",
   },
   {
     question: "Will this data plan work with my device?",
     answer:
-      "Yes. EscriptPay data plans are device-agnostic. As long as your phone is on the same network you purchased from and your line is active, the data will work on smartphones, feature phones, tablets, MiFi, and mobile hotspots.",
+      "Data is added to the phone number you enter, so it works on any device using that SIM — phones, tablets, MiFi or hotspots — as long as the line is active on the network you selected.",
   },
   {
     question: "How long does the data last?",
     answer:
-      "Each plan shows its validity period clearly on the plan card — from 1-day plans up to 30-day monthly bundles. Your data expires at the end of that validity window, exactly as your network provider specifies.",
+      "Each plan shows its validity (for example 1 day, 7 days or 30 days) before you buy. Expiry, rollover and stacking rules are set by your network provider.",
   },
   {
-    question: "Can my data bundle be rolled-over or topped-up?",
+    question: "How can I check my data balance?",
     answer:
-      "Rollover depends entirely on your network provider's current policy. Some providers automatically roll over unused data, others do not. You can top up anytime by purchasing another plan — new data is added to your line based on your provider's stack-up rules.",
+      "Use your network's official balance-check code or app. Your network will usually also send a confirmation SMS once data or airtime arrives.",
   },
   {
-    question: "How long will it take to get the data?",
+    question: "Can I resell EscriptPay products?",
     answer:
-      "Most purchases are delivered within seconds of a successful order. Once your order is confirmed you should receive a delivery SMS from your network shortcode. If anything is ever delayed, our support team is one message away.",
-  },
-  {
-    question: "How can I work with you and resell your products to my customers?",
-    answer:
-      "We are building a reseller program for businesses and individuals who want to offer data and airtime to their customers. If you are interested, send us a message through the contact section and we will let you know when reseller accounts open up.",
-  },
-  {
-    question: "Why should I trust EscriptPay?",
-    answer:
-      "EscriptPay is built as a modern, transparent vending platform. We keep your orders clear and traceable, show every amount before you pay, and only confirm a purchase once your provider has accepted it. We are committed to honest pricing and a support team that actually responds.",
-  },
-  {
-    question: "Have any further questions?",
-    answer:
-      "Absolutely — reach out through the contact section below. Send us an email or give us a call and a member of the EscriptPay team will get back to you as soon as possible.",
+      "A reseller program is planned but not available yet. It will be announced on this site once it opens.",
   },
 ];
 
+// Contact details. `published: false` means the values below are NOT real
+// support channels yet: the site labels them as placeholders and the contact
+// form stays disabled. Replace the values and set `published: true` once the
+// official support email/phone exist.
+export const CONTACT = {
+  published: false,
+  email: "support@escriptpay.com",
+  phone: "+234 800 000 0000",
+  hours: "To be announced",
+};
+
+// Kept for any older imports.
 export const CONTACT_PLACEHOLDERS = {
-  email: "support@escriptpay.com (placeholder)",
-  phone: "+234 800 000 0000 (placeholder)",
-  supportHours: "Monday – Saturday, 9:00am – 6:00pm WAT (tentative)",
+  email: `${CONTACT.email} (placeholder)`,
+  phone: `${CONTACT.phone} (placeholder)`,
+  supportHours: CONTACT.hours,
+};
+
+// Optional hero photo for the homepage. Put the image file in
+// frontend/public/images/ and set `src` (e.g. "/images/hero-customer.jpg").
+// While `src` is empty the hero shows the live price list in a phone frame.
+// Use a photo you own or have the rights to; it is decorative, not a customer
+// testimonial.
+export const HERO_PHOTO = {
+  src: "",
+  alt: "Smiling customer buying mobile data on EscriptPay with a smartphone",
 };
