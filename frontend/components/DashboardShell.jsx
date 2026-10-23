@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wifi, Phone, History, UserRound, Settings, LogOut, Home, ChevronLeft } from "lucide-react";
+import { LayoutDashboard, Wifi, Phone, History, UserRound, Settings, LogOut, Home, ChevronLeft, Wallet } from "lucide-react";
 import Logo from "@/components/Logo";
+import WalletPill from "@/components/WalletBalance";
 import UserMenu from "@/components/UserMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import BackgroundGradient from "@/components/BackgroundGradient";
@@ -17,6 +18,7 @@ import { recordVisit, labelFor, resetTrail } from "@/lib/navHistory";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/buy-data", label: "Buy Data", icon: Wifi },
   { href: "/buy-airtime", label: "Buy Airtime", icon: Phone },
   { href: "/history", label: "Transactions", icon: History },
@@ -81,6 +83,9 @@ const BACK_ROUTES = [
     },
   },
   { match: (p) => p === "/settings", fallback: () => "/profile" },
+  // Every other dashboard page (Wallet, Buy Data, Buy Airtime, Transactions,
+  // Profile…) can go back too; only the dashboard home shows the greeting.
+  { match: (p) => p !== "/dashboard", fallback: () => "/dashboard" },
 ];
 
 function BackButton({ previous, fallbackUrl }) {
@@ -92,16 +97,21 @@ function BackButton({ previous, fallbackUrl }) {
   // appears to "do nothing".) Arriving at the previous trail entry pops the
   // current page off the trail (see lib/navHistory.recordVisit).
   const goBack = () => router.push(target);
+  const label = labelFor(target);
   return (
     <button
       type="button"
       onClick={goBack}
-      aria-label={`Back to ${labelFor(target)}`}
-      className="focus-ring press -ml-1.5 inline-flex h-10 items-center gap-0.5 rounded-xl pl-1 pr-3 text-sm font-semibold text-ink-700 hover:bg-slate-100"
+      aria-label={`Back to ${label}`}
+      className="focus-ring press group -ml-0.5 flex min-w-0 items-center gap-2.5 rounded-2xl pr-2 text-left"
     >
-      <ChevronLeft size={20} aria-hidden="true" />
-      <span className="sm:hidden">Back</span>
-      <span className="hidden sm:inline">Back to {labelFor(target)}</span>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-ink-700 shadow-[0_1px_2px_rgb(15_23_42/0.06)] transition-all duration-200 group-hover:-translate-x-0.5 group-hover:border-cyan-300 group-hover:text-cyan-700">
+        <ChevronLeft size={20} strokeWidth={2.25} aria-hidden="true" />
+      </span>
+      <span className="min-w-0 leading-tight">
+        <span className="block text-[11px] font-medium text-ink-500 sm:text-xs">Back to</span>
+        <span className="block truncate font-display text-[15px] font-extrabold text-ink-900 sm:text-base">{label}</span>
+      </span>
     </button>
   );
 }
@@ -181,6 +191,7 @@ export default function DashboardShell({ children }) {
   if (!user) return null;
 
   const back = BACK_ROUTES.find((r) => r.match(pathname));
+  const firstName = (user.name || "").split(" ")[0] || "there";
   const openLogout = () => logout();
 
   return (
@@ -238,13 +249,23 @@ export default function DashboardShell({ children }) {
               {back ? (
                 <BackButton previous={previousUrl} fallbackUrl={back.fallback(currentSearch)} />
               ) : (
-                <Link href="/dashboard" className="focus-ring rounded-lg lg:hidden" aria-label="EscriptPay dashboard">
-                  <Logo size={28} />
+                <Link href="/dashboard" className="focus-ring flex min-w-0 items-center gap-2.5 rounded-2xl pr-2" aria-label="Dashboard home">
+                  <span className="shrink-0 rounded-xl shadow-[0_8px_18px_-8px_rgb(124_58_237/0.7)] lg:hidden">
+                    <Logo size={38} withWordmark={false} />
+                  </span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="block text-[11px] font-medium text-ink-500 sm:text-xs">Welcome back,</span>
+                    <span className="block truncate font-display text-[15px] font-extrabold text-ink-900 sm:text-base">
+                      {firstName}
+                    </span>
+                  </span>
                 </Link>
               )}
             </div>
 
             <div className="flex items-center gap-1 sm:gap-1.5">
+              {/* The dashboard and wallet page already show the balance large. */}
+              {!["/dashboard", "/wallet"].includes(pathname) && <WalletPill className="mr-0.5 sm:mr-1" />}
               <ThemeToggle className="hidden lg:inline-flex" />
               <NotificationBell />
               <span className="ml-1">

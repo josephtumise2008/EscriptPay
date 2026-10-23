@@ -168,8 +168,11 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
 
     const outcome = ["delivered", "accepted", "failed"].includes(result && result.outcome) ? result.outcome : "unknown";
     const paid = claimed.paymentStatus === "successful";
-    const set = {};
+    const set = { lastStatusCheckAt: new Date() };
     if (result && result.reference) set.providerReference = result.reference;
+    if (result && (result.statusCode !== undefined && result.statusCode !== null)) set.providerStatusCode = String(result.statusCode);
+    else if (result && result.status) set.providerStatusCode = String(result.status).slice(0, 40);
+    if (result && result.attention) logEvent("vtu.attention", { transactionId: claimed.transactionId, statusCode: set.providerStatusCode });
 
     if (outcome === "delivered") {
       Object.assign(set, { providerStatus: "successful", status: "successful", deliveredAt: new Date() });
@@ -202,7 +205,78 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     return { outcome, tx: updated || (await reload(claimed._id)) };
   };
 
-  return { confirmPayment, fulfillOrder, canFulfill };
+  // Asks the supplier for the final result of an order that was accepted but
+  // not confirmed ("processing"), or whose outcome was ambiguous ("unknown",
+  // e.g. a timeout). Idempotent and throttled; never re-sends the purchase.
+  //   -> { outcome: "delivered" | "failed" | "pending" | "skipped", tx }
+  const reconcileOrder = async (txOrId, { minIntervalMs, source = "poll" } = {}) => {
+    const interval = Number.isFinite(minIntervalMs) ? minIntervalMs : config.statusCheckIntervalMs || 20000;
+    const tx = txOrId && txOrId._id ? txOrId : await reload(txOrId);
+    if (!tx || !["processing", "unknown"].includes(tx.providerStatus) || typeof vtu.queryStatus !== "function") {
+      return { outcome: "skipped", tx };
+    }
+    // An order claimed seconds ago may still be waiting on its first response.
+    const started = tx.fulfillmentStartedAt ? new Date(tx.fulfillmentStartedAt).getTime() : 0;
+    if (tx.providerStatus === "processing" && !tx.providerReference && Date.now() - started < 30 * 1000) {
+      return { outcome: "skipped", tx };
+    }
+    const last = tx.lastStatusCheckAt ? new Date(tx.lastStatusCheckAt).getTime() : 0;
+    if (Date.now() - last < interval) return { outcome: "skipped", tx };
+
+    // Claim this check so parallel pollers don't all hit the supplier.
+    const claimed = await Transaction.findOneAndUpdate(
+      {
+        _id: tx._id,
+        providerStatus: { $in: ["processing", "unknown"] },
+        $or: [{ lastStatusCheckAt: { $exists: false } }, { lastStatusCheckAt: { $lte: new Date(Date.now() - interval) } }],
+      },
+      { $set: { lastStatusCheckAt: new Date() } },
+      AFTER
+    );
+    if (!claimed) return { outcome: "skipped", tx: await reload(tx._id) };
+
+    let result;
+    try {
+      result = await vtu.queryStatus({ transaction: claimed });
+    } catch (error) {
+      logEvent("reconcile.error", { transactionId: claimed.transactionId, code: error && error.code });
+      return { outcome: "pending", tx: claimed };
+    }
+
+    const set = {};
+    if (result.reference && !claimed.providerReference) set.providerReference = result.reference;
+    if (result.statusCode !== undefined && result.statusCode !== null) set.providerStatusCode = String(result.statusCode);
+
+    let outcome = "pending";
+    if (result.outcome === "delivered") {
+      outcome = "delivered";
+      Object.assign(set, { providerStatus: "successful", status: "successful", deliveredAt: new Date(), needsReview: false });
+    } else if (result.outcome === "failed") {
+      outcome = "failed";
+      const paid = claimed.paymentStatus === "successful";
+      Object.assign(set, {
+        providerStatus: "failed",
+        status: "failed",
+        failureReason: "delivery_failed",
+        // Wallet orders are refunded automatically by the caller; card
+        // payments need a person to refund.
+        needsReview: paid && claimed.paymentProvider !== "wallet",
+      });
+    }
+
+    const update = { $set: set };
+    if (outcome === "delivered") update.$unset = { failureReason: "" };
+    const updated = await Transaction.findOneAndUpdate(
+      { _id: claimed._id, providerStatus: { $in: ["processing", "unknown"] } },
+      update,
+      AFTER
+    );
+    logEvent("reconcile.result", { transactionId: claimed.transactionId, outcome, source, statusCode: set.providerStatusCode });
+    if (result.attention) logEvent("vtu.attention", { transactionId: claimed.transactionId, statusCode: set.providerStatusCode });
+    return { outcome, tx: updated || (await reload(claimed._id)) };
+  };
+
+  return { confirmPayment, fulfillOrder, canFulfill, reconcileOrder };
 };
 
 module.exports = { createOrderLifecycle, PAYMENT_CONFIRMABLE };

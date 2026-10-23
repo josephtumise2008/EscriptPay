@@ -9,7 +9,10 @@
     "seed:plans": "node scripts/seedPlans.js",
     "test": "NODE_ENV=test node --test \"test/unit/**/*.test.js\"",
     "test:integration": "NODE_ENV=test node --test --test-concurrency=1 \"test/integration/**/*.test.js\"",
-    "import:plans": "node scripts/importPlans.js"
+    "import:plans": "node scripts/importPlans.js",
+    "vtu:balance": "node scripts/vtuBalance.js",
+    "vtu:plans": "node scripts/vtuPlans.js",
+    "vtu:test-order": "node scripts/vtuTestOrder.js"
   },
   "keywords": [],
   "author": "",

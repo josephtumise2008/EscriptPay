@@ -53,7 +53,14 @@ export default function Receipt({ transaction }) {
     { label: "Network", value: tx.network || "—" },
     { label: "Plan", value: isAirtime ? `Airtime ${formatNaira(tx.amount)}` : tx.plan || "—" },
     { label: "Phone", value: tx.phone || "—" },
-    { label: "Payment ref", value: tx.paymentReference || "—", mono: Boolean(tx.paymentReference) },
+    {
+      label: "Paid with",
+      value: tx.paymentProvider === "wallet" ? "Wallet balance" : tx.paymentProvider === "paystack" ? "Paystack" : "Direct",
+    },
+    ...(tx.paymentProvider === "wallet"
+      ? []
+      : [{ label: "Payment ref", value: tx.paymentReference || "—", mono: Boolean(tx.paymentReference) }]),
+    ...(tx.failureReason === "delivery_failed_refunded" ? [{ label: "Refund", value: "Returned to your wallet" }] : []),
     { label: "Reference", value: tx.providerReference || "—" },
     { label: "Date", value: formatDateTime(tx.createdAt) },
   ];

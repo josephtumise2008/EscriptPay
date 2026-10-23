@@ -286,11 +286,11 @@ function HeroVisual() {
   }
 
   return (
-    <div ref={stageRef} className="tilt-stage relative mx-auto w-full max-w-[16rem] sm:max-w-[17rem] lg:mr-0 lg:ml-auto lg:max-w-[30rem]">
+    <div ref={stageRef} className="tilt-stage relative mx-auto w-full max-w-[21rem] sm:max-w-[20rem] lg:mr-0 lg:ml-auto lg:max-w-[30rem]">
       <div aria-hidden="true" className="anim-glow absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-300/50 via-sky-200/40 to-purple-lite-300/50 blur-3xl lg:left-1/3" />
       {/* Phone sits on the right on desktop; the notes fill the space to its
           left, overlapping only the bezel edge — never the screen content. */}
-      <div className="anim-rise relative mx-auto w-[16rem] sm:w-[17rem] lg:mr-6 lg:ml-auto" style={{ animationDelay: "120ms" }}>
+      <div className="anim-rise relative mx-auto w-[min(21rem,calc(100vw-2.5rem))] sm:w-[20rem] lg:mr-6 lg:ml-auto lg:w-[17rem]" style={{ animationDelay: "120ms" }}>
         <div ref={cardRef} className="tilt-card">
           <PhoneFrame>
             <PhoneScreen rows={4} />

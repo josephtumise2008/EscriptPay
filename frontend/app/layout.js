@@ -1,5 +1,6 @@
 import { Inter, Sora } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
+import { WalletProvider } from "@/lib/wallet-context";
 import ThemeProvider from "@/components/ThemeProvider";
 import "./globals.css";
 
@@ -37,7 +38,9 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <WalletProvider>{children}</WalletProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

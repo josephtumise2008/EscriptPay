@@ -11,6 +11,8 @@ import { createDataTransaction, getPlanById, errorMessage } from "@/lib/api";
 import { continueAfterOrder } from "@/lib/checkout";
 import { PackageOpen, AlertCircle } from "lucide-react";
 import { formatNaira } from "@/lib/format";
+import PaymentMethodPicker, { usePayWith } from "@/components/PaymentMethodPicker";
+import { useWallet } from "@/lib/wallet-context";
 
 const makeReference = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -29,6 +31,8 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
   const [processing, setProcessing] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const clientRef = useRef(null);
+  const pay = usePayWith(selectedPlan ? selectedPlan.price : NaN);
+  const { applyBalance, refresh: refreshWallet } = useWallet();
 
   // Returning from Paystack with the browser Back button can restore this
   // page from cache with the button still "processing"; re-enable it.
@@ -79,6 +83,11 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
     setPhoneError("");
     setSubmitError("");
 
+    if (pay.value === "wallet" && !pay.enough) {
+      setSubmitError("Your wallet balance is too low for this plan. Fund your wallet or choose another payment method.");
+      return;
+    }
+
     if (!clientRef.current) clientRef.current = makeReference();
 
     setProcessing(true);
@@ -91,15 +100,18 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
         planId: selectedPlan._id,
         phone: phone.trim(),
         clientReference: clientRef.current,
+        payWith: pay.value,
       });
 
       clientRef.current = null;
+      if (data.wallet) applyBalance(data.wallet.balance);
       continueAfterOrder(router, data, "data");
     } catch (error) {
       // Reset the idempotency key so a genuine retry creates a fresh order.
       clientRef.current = null;
       setSubmitError(errorMessage(error, "Purchase could not be completed. Please try again."));
       setProcessing(false);
+      if (pay.value === "wallet") refreshWallet();
     }
   };
 
@@ -166,11 +178,32 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
           </h2>
           <PlanList network={network} selectedPlan={selectedPlan} onSelect={selectPlan} />
         </section>
+
+        <section aria-labelledby="pay-heading">
+          <h2 id="pay-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">4</span>
+            Pay with
+          </h2>
+          <PaymentMethodPicker
+            amount={selectedPlan ? selectedPlan.price : NaN}
+            value={pay.value}
+            onChange={(v) => {
+              pay.setValue(v);
+              setSubmitError("");
+            }}
+          />
+        </section>
       </div>
 
       <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
         {selectedPlan ? (
-          <OrderSummary plan={selectedPlan} phone={phone.trim()} onBuyNow={buyNow} processing={processing} />
+          <OrderSummary
+            plan={selectedPlan}
+            phone={phone.trim()}
+            onBuyNow={buyNow}
+            processing={processing}
+            payWith={pay.value}
+          />
         ) : (
           <div className="card flex flex-col items-center gap-3 px-6 py-10 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">

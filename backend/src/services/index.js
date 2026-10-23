@@ -26,6 +26,7 @@ const PAYMENT_PROVIDERS = {
 
 const VTU_PROVIDERS = {
   test: () => require("./vtu/testVtuService"),
+  clubkonnect: () => require("./vtu/clubkonnectVtuService"),
 };
 
 const payment = PAYMENT_PROVIDERS[config.paymentProvider]();

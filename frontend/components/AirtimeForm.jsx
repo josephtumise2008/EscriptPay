@@ -8,7 +8,9 @@ import { createAirtimeTransaction, errorMessage } from "@/lib/api";
 import { continueAfterOrder } from "@/lib/checkout";
 import MobileCheckoutBar from "@/components/MobileCheckoutBar";
 import { formatNaira } from "@/lib/format";
-import { Smartphone, Banknote, AlertCircle, Wifi } from "lucide-react";
+import PaymentMethodPicker, { usePayWith } from "@/components/PaymentMethodPicker";
+import { useWallet } from "@/lib/wallet-context";
+import { Smartphone, Banknote, AlertCircle, Wifi, Wallet, CreditCard } from "lucide-react";
 
 const PRESET_AMOUNTS = [100, 200, 500, 1000, 2000, 5000];
 const MIN_AMOUNT = 100;
@@ -38,6 +40,9 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
   const [processing, setProcessing] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const clientRef = useRef(null);
+  const currentAmount = customAmount ? Number(customAmount) : amount;
+  const pay = usePayWith(currentAmount);
+  const { applyBalance, refresh: refreshWallet } = useWallet();
 
   // Returning from Paystack with the browser Back button can restore this
   // page from cache with the button still "processing"; re-enable it.
@@ -81,6 +86,12 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
 
     setPhoneError("");
     setSubmitError("");
+
+    if (pay.value === "wallet" && !pay.enough) {
+      setSubmitError("Your wallet balance is too low for this amount. Fund your wallet or choose another payment method.");
+      return;
+    }
+
     if (!clientRef.current) clientRef.current = makeReference();
 
     setProcessing(true);
@@ -93,14 +104,17 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
         amount: finalAmount,
         phone: phone.trim(),
         clientReference: clientRef.current,
+        payWith: pay.value,
       });
 
       clientRef.current = null;
+      if (data.wallet) applyBalance(data.wallet.balance);
       continueAfterOrder(router, data, "airtime");
     } catch (error) {
       clientRef.current = null;
       setSubmitError(errorMessage(error, "Purchase could not be completed. Please try again."));
       setProcessing(false);
+      if (pay.value === "wallet") refreshWallet();
     }
   };
 
@@ -115,6 +129,9 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
     { label: "Network", value: network, icon: Wifi },
     { label: "Amount", value: amountValid ? formatNaira(finalAmount) : "—", icon: Banknote, emphasize: true },
     { label: "Phone", value: phone || "—", icon: Smartphone },
+    pay.value === "wallet"
+      ? { label: "Pay with", value: "Wallet balance", icon: Wallet }
+      : { label: "Pay with", value: "Card / bank", icon: CreditCard },
   ];
 
   return (
@@ -215,6 +232,21 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
             )}
           </div>
         </section>
+
+        <section aria-labelledby="airtime-pay-heading">
+          <h2 id="airtime-pay-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">4</span>
+            Pay with
+          </h2>
+          <PaymentMethodPicker
+            amount={amountValid ? finalAmount : NaN}
+            value={pay.value}
+            onChange={(v) => {
+              pay.setValue(v);
+              setSubmitError("");
+            }}
+          />
+        </section>
       </div>
 
       <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
@@ -246,7 +278,13 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
               className="gradient-btn focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold brand-contrast disabled:cursor-not-allowed disabled:opacity-60"
             >
               {processing && <span aria-hidden="true" className="brand-spin inline-block h-4 w-4 animate-spin rounded-full" />}
-              {processing ? "Processing…" : amountValid ? `Buy airtime · ${formatNaira(finalAmount)}` : "Buy airtime"}
+              {processing
+                ? "Processing…"
+                : amountValid
+                  ? pay.value === "wallet"
+                    ? `Pay ${formatNaira(finalAmount)} from wallet`
+                    : `Buy airtime · ${formatNaira(finalAmount)}`
+                  : "Buy airtime"}
             </button>
           </div>
         </div>

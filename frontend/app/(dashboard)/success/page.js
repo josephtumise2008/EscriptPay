@@ -13,6 +13,7 @@ import {
   Clock,
 } from "lucide-react";
 import { getTransaction, errorMessage } from "@/lib/api";
+import { useWallet } from "@/lib/wallet-context";
 import { formatDateTime, formatNaira } from "@/lib/format";
 import { statusLabel, describeTransaction, isAwaitingUpdate } from "@/lib/transactions";
 import { isTrustedCheckoutUrl } from "@/lib/checkout";
@@ -71,7 +72,8 @@ function SuccessContent() {
   }, [unauthorized, ref, router]);
 
   // While payment confirmation (webhook) or delivery is still in flight,
-  // refresh the order every few seconds for up to ~2 minutes.
+  // refresh the order every few seconds for up to ~5 minutes (real suppliers
+  // can take a few minutes to confirm delivery).
   const awaiting = isAwaitingUpdate(transaction);
   const txRef = transaction?.transactionId || "";
   useEffect(() => {
@@ -80,7 +82,7 @@ function SuccessContent() {
     let tries = 0;
     const timer = setInterval(async () => {
       tries += 1;
-      if (tries > 30) {
+      if (tries > 60) {
         clearInterval(timer);
         return;
       }
@@ -90,12 +92,19 @@ function SuccessContent() {
       } catch {
         // Transient network error: try again on the next tick.
       }
-    }, 4000);
+    }, 5000);
     return () => {
       active = false;
       clearInterval(timer);
     };
   }, [awaiting, txRef]);
+
+  // A wallet order that finishes (or is refunded) changes the balance.
+  const { refresh: refreshWallet } = useWallet();
+  const finalStatus = transaction?.status;
+  useEffect(() => {
+    if (finalStatus && finalStatus !== "pending") refreshWallet();
+  }, [finalStatus, refreshWallet]);
 
   if (loading) {
     return (

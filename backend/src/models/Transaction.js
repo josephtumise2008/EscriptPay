@@ -91,7 +91,7 @@ const transactionSchema = new mongoose.Schema(
     // ---- Payment (Paystack) ----
     paymentProvider: {
       type: String,
-      enum: ["test", "paystack"],
+      enum: ["test", "paystack", "wallet"],
       default: "test",
     },
     // Reference sent to the payment provider. No default: the sparse unique
@@ -137,6 +137,15 @@ const transactionSchema = new mongoose.Schema(
     },
     deliveredAt: {
       type: Date,
+    },
+    // Last time the supplier was asked about this order (reconciliation).
+    lastStatusCheckAt: {
+      type: Date,
+    },
+    // Supplier's own status code/text, for support and disputes.
+    providerStatusCode: {
+      type: String,
+      trim: true,
     },
 
     // ---- Operations ----

@@ -30,6 +30,9 @@ const networkRoutes = require("./routes/networkRoutes");
 const authRoutes = require("./routes/authRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const walletRoutes = require("./routes/walletRoutes");
+const contactRoutes = require("./routes/contactRoutes");
+const vtuRoutes = require("./routes/vtuRoutes");
 const { rateLimit } = require("./middleware/rateLimit");
 // Loading the service registry validates PAYMENT_SERVICE / VTU_SERVICE and
 // refuses to start with an unsafe combination (see config/payments.js).
@@ -84,6 +87,10 @@ app.use(
   "/api/transactions",
   rateLimit({ windowMs: 60 * 1000, max: 60, namespace: "purchase" })
 );
+app.use("/api/wallet", rateLimit({ windowMs: 60 * 1000, max: 60, namespace: "wallet" }));
+// Contact form: a handful of messages per visitor per 10 minutes.
+app.use("/api/contact", rateLimit({ windowMs: 10 * 60 * 1000, max: 5, namespace: "contact" }));
+app.use("/api/vtu", rateLimit({ windowMs: 60 * 1000, max: 120, namespace: "vtu" }));
 
 // Health endpoints (no database access, safe to answer during a DB outage).
 app.get(["/", "/api/"], (req, res) => {
@@ -127,6 +134,9 @@ app.use("/api/plans", planRoutes);
 app.use("/api/networks", networkRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api/contact", contactRoutes);
+app.use("/api/vtu", vtuRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found." });

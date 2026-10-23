@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { History, UserRound, Settings, LogOut, ChevronDown, Home, LayoutDashboard, Sun, Moon, Monitor } from "lucide-react";
+import { History, UserRound, Settings, LogOut, ChevronDown, Home, LayoutDashboard, Sun, Moon, Monitor, Wallet, Plus } from "lucide-react";
+import { BalanceAmount, HideBalanceButton } from "@/components/WalletBalance";
 import { useAuth } from "@/lib/auth-context";
 import { initials } from "@/lib/format";
 import { useDismiss, handleMenuKeyDown } from "@/hooks/useDismiss";
@@ -56,6 +57,7 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
     inDashboard
       ? { href: "/", label: "Back to website", icon: Home }
       : { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/profile", label: "Profile", icon: UserRound },
     { href: "/history", label: "Transactions", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
@@ -134,6 +136,32 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
           <div className="min-w-0">
             <p className="truncate text-[15px] font-bold text-ink-900">{user.name}</p>
             <p className="truncate text-xs text-ink-500">{user.email}</p>
+          </div>
+        </div>
+
+        {/* Wallet balance card */}
+        <div className="relative mx-0.5 mb-2 overflow-hidden rounded-xl wallet-gradient p-3.5 brand-contrast">
+          <span aria-hidden="true" className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-[#ffffff]/15 blur-sm" />
+          <span aria-hidden="true" className="pointer-events-none absolute -bottom-10 right-10 h-20 w-20 rounded-full bg-[#ffffff]/10" />
+          <div className="relative flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#ffffff]/80">
+              <Wallet size={14} aria-hidden="true" />
+              Wallet balance
+            </span>
+            <HideBalanceButton className="h-7 w-7 text-[#ffffff]/80 hover:bg-[#ffffff]/15 hover:text-[#ffffff]" size={15} />
+          </div>
+          <div className="relative mt-1 flex items-end justify-between gap-3">
+            <BalanceAmount className="font-display text-2xl font-extrabold tracking-tight" skeletonClass="h-7 w-24 bg-[#ffffff]/30" />
+            <Link
+              href="/wallet?fund=1"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={close}
+              className="focus-ring press inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-[#ffffff] px-3 text-xs font-bold text-[#6d28d9] shadow-sm hover:bg-[#f5f3ff]"
+            >
+              <Plus size={14} aria-hidden="true" />
+              Fund
+            </Link>
           </div>
         </div>
 

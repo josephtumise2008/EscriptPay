@@ -9,7 +9,7 @@
 const SUPPORTED_PAYMENT_PROVIDERS = ["test", "paystack"];
 // Real suppliers are added here only after their adapter is implemented from
 // official documentation and tested (see docs/PAYMENTS.md).
-const SUPPORTED_VTU_PROVIDERS = ["test"];
+const SUPPORTED_VTU_PROVIDERS = ["test", "clubkonnect"];
 
 const DEFAULT_PAYMENT_EXPIRY_MINUTES = 60;
 
@@ -54,6 +54,12 @@ const readConfig = (env = process.env) => {
       "VTU_SERVICE is a real supplier but LIVE_DELIVERY_ENABLED is not \"true\". Real delivery is disabled."
     );
   }
+  if (vtuProvider === "clubkonnect") {
+    const missing = ["CLUBKONNECT_USER_ID", "CLUBKONNECT_API_KEY"].filter((name) => !(env[name] || "").trim());
+    if (missing.length) {
+      throw new Error(`VTU_SERVICE=clubkonnect requires the ${missing.join(" and ")} environment variable(s).`);
+    }
+  }
 
   let paymentMode = "test";
   if (paymentProvider === "paystack") {
@@ -71,6 +77,15 @@ const readConfig = (env = process.env) => {
     } else if (!key.startsWith("sk_test_")) {
       throw new Error("PAYSTACK_SECRET_KEY must be a Paystack secret key (sk_test_... or sk_live_...).");
     }
+  }
+
+  // Real airtime/data must only ever be paid for with real money: Paystack
+  // test cards (and wallet balances funded with them) are free.
+  if (realDelivery && paymentMode !== "live") {
+    throw new Error(
+      "VTU_SERVICE is a real supplier but payments are in test mode. Refusing to start: " +
+        "test payments would receive real airtime/data. Use live Paystack keys (LIVE_PAYMENTS_ENABLED=true)."
+    );
   }
 
   // Customers must never pay real money for simulated delivery.
@@ -93,6 +108,8 @@ const readConfig = (env = process.env) => {
     deliveryMode: realDelivery ? "live" : "test",
     currency: "NGN",
     paymentExpiryMinutes: positiveInt(env.PAYMENT_EXPIRY_MINUTES, DEFAULT_PAYMENT_EXPIRY_MINUTES),
+    // Minimum gap between supplier status checks for the same order.
+    statusCheckIntervalMs: positiveInt(env.VTU_STATUS_CHECK_INTERVAL_SECONDS, 20) * 1000,
     appUrl,
   });
 };

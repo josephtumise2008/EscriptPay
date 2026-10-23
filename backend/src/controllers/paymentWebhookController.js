@@ -1,6 +1,7 @@
 const connectDB = require("../config/db");
 const { payment, config } = require("../services");
 const lifecycle = require("../services/lifecycle");
+const wallet = require("../services/wallet");
 const { logEvent } = require("../utils/logger");
 
 const REFERENCE_PATTERN = /^[A-Za-z0-9.=-]{1,100}$/;
@@ -49,7 +50,9 @@ const paystackWebhook = async (req, res) => {
     await connectDB();
     const result = await lifecycle.confirmPayment(reference, { source: "webhook" });
     if (result.outcome === "not_found") {
-      logEvent("webhook.ignored", { reason: "unknown_reference" });
+      // Not an order: it may be a wallet top-up.
+      const funding = await wallet.confirmFunding(reference, { source: "webhook" });
+      if (funding.outcome === "not_found") logEvent("webhook.ignored", { reason: "unknown_reference" });
       return res.status(200).json({ received: true });
     }
     if (result.tx && result.tx.paymentStatus === "successful" && result.tx.providerStatus === "pending") {

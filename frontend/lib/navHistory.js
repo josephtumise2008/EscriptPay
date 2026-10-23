@@ -52,6 +52,7 @@ const LABELS = [
   [/^\/success$/, "Order status"],
   [/^\/profile$/, "Profile"],
   [/^\/settings$/, "Settings"],
+  [/^\/wallet$/, "Wallet"],
 ];
 
 export const labelFor = (url) => {

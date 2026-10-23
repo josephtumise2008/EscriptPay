@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Plus, Wallet, ChevronRight } from "lucide-react";
+import { HideBalanceButton, BalanceAmount } from "@/components/WalletBalance";
 import SummaryCard from "@/components/SummaryCard";
 import QuickActions from "@/components/QuickActions";
 import TransactionChart from "@/components/TransactionChart";
@@ -84,21 +85,56 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <header>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
-              Welcome back,{" "}
-              <span className="gradient-text">{firstName}</span>
-            </h1>
-            <p className="mt-1.5 text-sm text-ink-500 sm:text-base">
-              {lagos
-                ? `${lagos.period} — it's ${lagos.time} WAT in ${user?.state || "Lagos"}.`
-                : "Manage your EscriptPay account and test transactions."}
+      <h1 className="sr-only">Dashboard</h1>
+      <section
+        aria-label="Wallet"
+        className="wallet-gradient relative overflow-hidden rounded-3xl p-5 brand-contrast shadow-[0_30px_60px_-34px_rgb(91_79_240/0.8)] sm:p-6"
+      >
+        <div aria-hidden="true" className="wallet-sheen pointer-events-none absolute inset-0" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-16 h-48 w-48 rounded-full border border-[#ffffff]/15" />
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-[#ffffff]/80">
+              {lagos ? `${lagos.period}, ${firstName}` : `Hello, ${firstName}`}
+            </p>
+            <p className="mt-0.5 text-xs text-[#ffffff]/65">
+              {lagos ? `${lagos.time} WAT · ${user?.state || "Lagos"}` : "Your EscriptPay wallet"}
             </p>
           </div>
+          <HideBalanceButton className="h-9 w-9 shrink-0 text-[#ffffff]/85 hover:bg-[#ffffff]/15 hover:text-[#ffffff]" size={18} />
         </div>
-      </header>
+
+        <div className="relative mt-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#ffffff]/70">
+              <Wallet size={14} aria-hidden="true" />
+              Wallet balance
+            </p>
+            <div className="mt-1.5">
+              <BalanceAmount
+                className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl"
+                skeletonClass="mt-1 h-9 w-36 bg-[#ffffff]/25"
+              />
+            </div>
+          </div>
+          <div className="flex w-full gap-2.5 sm:w-auto">
+            <Link
+              href="/wallet?fund=1"
+              className="focus-ring press inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#ffffff] px-5 text-sm font-bold text-[#5b21b6] shadow-[0_10px_24px_-12px_rgb(15_23_42/0.6)] hover:bg-[#f5f3ff] sm:flex-none"
+            >
+              <Plus size={17} aria-hidden="true" />
+              Fund wallet
+            </Link>
+            <Link
+              href="/wallet"
+              className="focus-ring press inline-flex h-11 flex-1 items-center justify-center gap-1 rounded-xl bg-[#ffffff]/15 px-4 text-sm font-semibold text-[#ffffff] hover:bg-[#ffffff]/25 sm:flex-none"
+            >
+              View wallet
+              <ChevronRight size={16} aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </section>
 
       <section aria-labelledby="quick-actions-heading">
         <h2 id="quick-actions-heading" className="sr-only">

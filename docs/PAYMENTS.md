@@ -121,3 +121,84 @@ db.transactions.find({ paymentStatus: "successful", providerStatus: { $ne: "succ
 
 Never "fix" an `unknown` delivery by re-sending: check the supplier dashboard
 or status API first, then update the record.
+
+## Wallet
+
+Customers can top up a wallet and pay for data/airtime from it.
+
+- **Balances** are integers in kobo on `User.walletBalances.test` / `.live`,
+  chosen by the payment mode. Money added with test payments can never pay for
+  live orders.
+- **Funding** (`POST /api/wallet/fund`, ₦100 – ₦500,000):
+  - `PAYMENT_SERVICE=test`: credited instantly, no real money.
+  - `PAYMENT_SERVICE=paystack`: returns a Paystack checkout URL (reference
+    `ESCW-…`). The wallet is credited only after the server verifies the
+    reference, exact amount and currency with Paystack — from the callback page
+    (`POST /api/wallet/verify`) or the `charge.success` webhook. Credits are
+    idempotent (callback + webhook races and retries credit once).
+- **Paying from the wallet**: send `payWith: "wallet"` to
+  `/api/transactions/data` or `/airtime`. The amount is taken with one atomic
+  conditional update (never below zero, safe under concurrent purchases), the
+  order is created as paid, and delivery uses the normal guarded fulfilment.
+- **Refunds**: if the supplier definitively fails a wallet-paid order, the
+  amount is returned to the wallet automatically (once, keyed by `RF-<order id>`).
+  Ambiguous supplier results (`unknown`) are *not* refunded — they are flagged
+  `needsReview`, because the airtime/data may have been delivered.
+- **Ledger**: every balance change has a `WalletEntry` (funding / purchase /
+  refund) shown on the Wallet page. Entries stuck in `crediting` or with
+  `needsReview: true` need a person to check them.
+
+## Real delivery: ClubKonnect
+
+Adapter: `backend/src/services/vtu/clubkonnectVtuService.js`, built from
+ClubKonnect's official API docs (https://www.clubkonnect.com/APIDocs).
+
+- **Requests** (HTTPS GET to `https://www.nellobytesystems.com/`):
+  `APIAirtimeV1.asp` (airtime), `APIDatabundleV1.asp` (data, `DataPlan` = the
+  plan's `providerPlanId`), `APIQueryV1.asp` (status by OrderID or RequestID),
+  `APIWalletBalanceV1.asp`, `APIDatabundlePlansV2.asp`. Network codes:
+  MTN 01, Glo 02, 9mobile 03, Airtel 04. `RequestID` = our transaction ID.
+- **Asynchronous results.** A purchase normally returns `100 ORDER_RECEIVED`
+  (the order stays "processing"). The final result comes from:
+  - the order page, which polls the order; the server asks ClubKonnect at most
+    every 20 s (`VTU_STATUS_CHECK_INTERVAL_SECONDS`);
+  - ClubKonnect's callback `GET/POST /api/vtu/clubkonnect/callback`. Its
+    content is never trusted: it only triggers an authenticated status query.
+- **Status mapping:** 200 → delivered. 100 / 201 / 300 / 412 / 600–606
+  (except 602) → still processing. 400–418, 500–598, 602, 899 → failed (not
+  delivered). Unspecified codes (x99) and timeouts → `unknown` +
+  `needsReview`; they are re-queried by RequestID and **never re-sent**.
+- **Failures after payment:** wallet orders are refunded to the wallet
+  automatically. Paystack orders are flagged `needsReview` for a manual refund.
+- **Data plans** must be linked to a ClubKonnect plan code; unlinked plans and
+  plans priced below `costPrice` cannot be bought. The supplier code and cost
+  are never sent to browsers.
+- **Safety:** `VTU_SERVICE=clubkonnect` needs `CLUBKONNECT_USER_ID`,
+  `CLUBKONNECT_API_KEY`, `LIVE_DELIVERY_ENABLED=true` **and live Paystack
+  payments**. Any other combination refuses to start.
+- **Credentials** travel in ClubKonnect's query string, so request URLs are
+  never logged.
+
+### Admin scripts (run on your computer)
+
+Put your credentials in `backend/.env.clubkonnect` (Git ignores it):
+
+```
+CLUBKONNECT_USER_ID=...
+CLUBKONNECT_API_KEY=...
+```
+
+| Command | What it does | Spends money? |
+| --- | --- | --- |
+| `npm run vtu:balance` | Checks the credentials and shows your ClubKonnect balance | No |
+| `npm run vtu:plans` | Lists ClubKonnect data plans with your cost | No |
+| `npm run vtu:plans -- --apply --markup 30` | Adds/refreshes plans in the database (asks first, never deletes) | No |
+| `npm run vtu:test-order -- --network MTN --amount 50 --phone 080…` | Sends ONE real airtime order (asks first) | **Yes** |
+
+### Open questions before going live
+
+- **IP whitelisting:** ClubKonnect's API page has a "whitelist server IP"
+  option. Vercel functions do not have a fixed IP, so if ClubKonnect requires
+  whitelisting for your account, calls from Vercel will be refused and a fixed
+  outbound IP (e.g. a paid static-IP option or a small proxy) is needed. Check
+  `npm run vtu:balance` from your computer first, then from the deployed site.

@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, History } from "lucide-react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { verifyPayment, errorMessage } from "@/lib/api";
+import { verifyPayment, verifyWalletFunding, errorMessage } from "@/lib/api";
 
 const REFERENCE_PATTERN = /^[A-Za-z0-9.=-]{1,100}$/;
 
@@ -19,6 +19,8 @@ function CallbackContent() {
   const params = useSearchParams();
   const reference = (params.get("reference") || params.get("trxref") || "").trim();
   const validReference = REFERENCE_PATTERN.test(reference);
+  // Wallet top-ups come back with ?purpose=wallet and an ESCW- reference.
+  const isWallet = params.get("purpose") === "wallet" || reference.startsWith("ESCW-");
   const [error, setError] = useState("");
   const started = useRef(false);
 
@@ -29,6 +31,20 @@ function CallbackContent() {
     started.current = true;
 
     (async () => {
+      if (isWallet) {
+        try {
+          await verifyWalletFunding(reference);
+        } catch (err) {
+          if (err?.response?.status === 401) {
+            router.replace(`/login?next=${encodeURIComponent(`/payment/callback?purpose=wallet&reference=${reference}`)}`);
+            return;
+          }
+          // Not confirmed yet: the wallet page shows the pending top-up and
+          // the webhook credits it once Paystack confirms.
+        }
+        router.replace(`/wallet?funded=${encodeURIComponent(reference)}`);
+        return;
+      }
       try {
         const { transaction } = await verifyPayment(reference);
         router.replace(`/success?ref=${encodeURIComponent(transaction.transactionId)}&from=${transaction.type === "airtime" ? "airtime" : "data"}`);
@@ -48,7 +64,7 @@ function CallbackContent() {
         setError(errorMessage(err, "We could not confirm this payment yet."));
       }
     })();
-  }, [reference, validReference, router]);
+  }, [reference, validReference, isWallet, router]);
 
   const message = !validReference ? "This payment link is missing a valid reference." : error;
 

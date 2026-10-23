@@ -43,6 +43,13 @@ const userSchema = new mongoose.Schema(
       default: "user",
       index: true,
     },
+    // Wallet balances in kobo, kept separate per payment mode so money added
+    // with test payments can never pay for live orders. Only ever changed by
+    // atomic $inc updates in services/wallet.js.
+    walletBalances: {
+      test: { type: Number, default: 0, min: 0 },
+      live: { type: Number, default: 0, min: 0 },
+    },
     // Password-reset token (stored as a one-way hash, not the raw token).
     resetTokenHash: {
       type: String,

@@ -125,11 +125,14 @@ export const getTransaction = async (id) => {
 // price/plan/network from MongoDB, so frontend values can never override the
 // real amount. Resolves to { transaction, checkoutUrl? } — when checkoutUrl is
 // present the customer must pay on Paystack before anything is delivered.
-export const createDataTransaction = async ({ planId, phone, clientReference }) => {
+// payWith: "wallet" pays from the wallet balance (no checkout); anything else
+// uses the configured payment provider.
+export const createDataTransaction = async ({ planId, phone, clientReference, payWith }) => {
   const { data } = await api.post("/api/transactions/data", {
     planId,
     phone,
     clientReference,
+    payWith,
   });
   return data;
 };
@@ -152,13 +155,43 @@ export const getAppConfig = async () => {
 
 // Airtime purchase. Sends network + amount + phone; the backend re-validates
 // the network and amount range server-side. Same response shape as data.
-export const createAirtimeTransaction = async ({ network, amount, phone, clientReference }) => {
+export const createAirtimeTransaction = async ({ network, amount, phone, clientReference, payWith }) => {
   const { data } = await api.post("/api/transactions/airtime", {
     network,
     amount,
     phone,
     clientReference,
+    payWith,
   });
+  return data;
+};
+
+// Wallet. Balances are computed and changed only by the server.
+export const getWallet = async (params = {}) => {
+  const { data } = await api.get("/api/wallet", { params });
+  return data;
+};
+
+export const getWalletBalance = async () => {
+  const { data } = await api.get("/api/wallet/balance");
+  return data.wallet;
+};
+
+// Resolves to { entry, wallet, checkoutUrl? } — with Paystack enabled the
+// customer pays on checkout and the wallet is credited after verification.
+export const fundWallet = async ({ amount, clientReference }) => {
+  const { data } = await api.post("/api/wallet/fund", { amount, clientReference });
+  return data;
+};
+
+export const verifyWalletFunding = async (reference) => {
+  const { data } = await api.post("/api/wallet/verify", { reference });
+  return data;
+};
+
+// Website contact form. `website` is a hidden honeypot (left empty by people).
+export const sendContactMessage = async ({ name, email, message, website = "" }) => {
+  const { data } = await api.post("/api/contact", { name, email, message, website });
   return data;
 };
 

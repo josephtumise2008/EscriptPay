@@ -13,7 +13,7 @@ test("defaults to fully simulated test mode", () => {
 
 test("rejects unknown providers instead of loading arbitrary modules", () => {
   assert.throws(() => readConfig({ PAYMENT_SERVICE: "../../evil" }), /Unsupported PAYMENT_SERVICE/);
-  assert.throws(() => readConfig({ VTU_SERVICE: "clubkonnect" }), /Unsupported VTU_SERVICE/);
+  assert.throws(() => readConfig({ VTU_SERVICE: "../vtu/evil" }), /Unsupported VTU_SERVICE/);
 });
 
 test("paystack requires a secret key", () => {
@@ -66,4 +66,32 @@ test("app URL comes from APP_URL, else the first CLIENT_ORIGIN", () => {
     readConfig({ CLIENT_ORIGIN: "https://a.example.com, https://b.example.com" }).appUrl,
     "https://a.example.com"
   );
+});
+
+const LIVE_PAYSTACK = { PAYMENT_SERVICE: "paystack", PAYSTACK_SECRET_KEY: "sk_live_x", LIVE_PAYMENTS_ENABLED: "true" };
+const CK = { VTU_SERVICE: "clubkonnect", CLUBKONNECT_USER_ID: "CK1", CLUBKONNECT_API_KEY: "KEYSECRET", LIVE_DELIVERY_ENABLED: "true" };
+
+test("clubkonnect is refused with test payments (free real airtime)", () => {
+  assert.throws(() => readConfig({ ...CK }), /PAYMENT_SERVICE=test/);
+  assert.throws(
+    () => readConfig({ ...CK, PAYMENT_SERVICE: "paystack", PAYSTACK_SECRET_KEY: "sk_test_x" }),
+    /payments are in test mode/
+  );
+});
+
+test("clubkonnect requires LIVE_DELIVERY_ENABLED and both credentials", () => {
+  assert.throws(() => readConfig({ ...LIVE_PAYSTACK, ...CK, LIVE_DELIVERY_ENABLED: "" }), /LIVE_DELIVERY_ENABLED/);
+  assert.throws(() => readConfig({ ...LIVE_PAYSTACK, ...CK, CLUBKONNECT_API_KEY: "" }), /CLUBKONNECT_API_KEY/);
+  try {
+    readConfig({ ...LIVE_PAYSTACK, ...CK, CLUBKONNECT_USER_ID: "" });
+  } catch (error) {
+    assert.ok(!error.message.includes("KEYSECRET"));
+  }
+});
+
+test("live payments + clubkonnect + both switches is the only live combination", () => {
+  const c = readConfig({ ...LIVE_PAYSTACK, ...CK });
+  assert.equal(c.paymentMode, "live");
+  assert.equal(c.deliveryMode, "live");
+  assert.equal(c.vtuProvider, "clubkonnect");
 });

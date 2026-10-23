@@ -8,6 +8,9 @@ const { toKobo } = require("../utils/money");
 const { logEvent } = require("../utils/logger");
 const { payment, config } = require("../services");
 const lifecycle = require("../services/lifecycle");
+const wallet = require("../services/wallet");
+const { vtu } = require("../services");
+const { refreshOrder } = require("../services/orderStatus");
 
 const serialize = (tx) => tx.toJSON();
 
@@ -64,6 +67,8 @@ const startOrder = async (req, res, spec) => {
   if (!user) {
     return res.status(401).json({ success: false, message: "Not authenticated." });
   }
+
+  if (spec.payWith === "wallet") return startWalletOrder(req, res, spec, clientReference);
 
   const checkout = payment.requiresCheckout === true;
   const transactionId = generateTransactionId();
@@ -134,6 +139,70 @@ const startOrder = async (req, res, spec) => {
   await payment.processPayment({ user: req.userId, transaction: created, amount: created.amount });
   const { tx } = await lifecycle.fulfillOrder(created);
   return res.status(201).json({ success: true, transaction: serialize(tx) });
+};
+
+// Pays for the order from the wallet balance: the amount is taken with one
+// atomic conditional update (never below zero), the order is created as paid,
+// and delivery starts through the same guarded fulfilment path. A definitive
+// supplier failure refunds the wallet automatically.
+const startWalletOrder = async (req, res, spec, clientReference) => {
+  const amountKobo = toKobo(spec.amount);
+  const balanceKobo = await wallet.debitForOrder(req.userId, amountKobo);
+  if (balanceKobo === null) {
+    return res.status(400).json({
+      success: false,
+      code: "insufficient_funds",
+      message: "Your wallet balance is too low for this purchase. Fund your wallet or pay with card.",
+    });
+  }
+
+  let created;
+  try {
+    created = await Transaction.create({
+      user: req.userId,
+      transactionId: generateTransactionId(),
+      type: spec.type,
+      network: spec.network,
+      plan: spec.planName,
+      planId: spec.planId,
+      phone: spec.phone,
+      amount: spec.amount,
+      status: "pending",
+      paymentStatus: "successful",
+      providerStatus: "pending",
+      mode: config.paymentMode,
+      paymentProvider: "wallet",
+      paymentAmountKobo: amountKobo,
+      currency: config.currency,
+      paidAt: new Date(),
+      clientReference,
+    });
+  } catch (error) {
+    await wallet.reverseDebit(req.userId, amountKobo);
+    if (error && error.code === 11000 && clientReference) {
+      const existing = await findByClientReference(req.userId, clientReference);
+      if (existing) return reusedResponse(res, existing);
+    }
+    throw error;
+  }
+
+  try {
+    await wallet.recordPurchase({ userId: req.userId, tx: created, balanceKobo });
+  } catch (error) {
+    logEvent("wallet.ledger_error", { transactionId: created.transactionId, message: error && error.message });
+  }
+  logEvent("wallet.paid", { transactionId: created.transactionId });
+
+  let { tx } = await lifecycle.fulfillOrder(created);
+  if (tx && tx.providerStatus === "failed") {
+    const refunded = await wallet.refundOrder(tx);
+    tx = refunded.tx || tx;
+  }
+  return res.status(201).json({
+    success: true,
+    transaction: serialize(tx),
+    wallet: { balance: (await wallet.getBalanceKobo(req.userId)) / 100 },
+  });
 };
 
 // GET /api/transactions — all transactions for the authenticated user.
@@ -215,9 +284,18 @@ const getTransactionById = async (req, res) => {
       ? { _id: id, user: req.userId }
       : { transactionId: String(id).toUpperCase(), user: req.userId };
 
-    const tx = await Transaction.findOne(query);
+    let tx = await Transaction.findOne(query);
     if (!tx) {
       return res.status(404).json({ success: false, message: "Transaction not found." });
+    }
+    // The order page polls this while delivery is pending: ask the supplier
+    // for the final result (throttled; never re-sends the purchase).
+    if (["processing", "unknown"].includes(tx.providerStatus)) {
+      try {
+        tx = (await refreshOrder(tx, { source: "poll" })).tx || tx;
+      } catch (error) {
+        logEvent("reconcile.poll_error", { transactionId: tx.transactionId, message: error && error.message });
+      }
     }
     return res.json({ success: true, transaction: serialize(tx) });
   } catch (error) {
@@ -231,7 +309,7 @@ const getTransactionById = async (req, res) => {
 // read from MongoDB — anything price-related sent by the client is ignored.
 const createTestTransaction = async (req, res) => {
   try {
-    const { planId, phone, clientReference } = req.body || {};
+    const { planId, phone, clientReference, payWith } = req.body || {};
 
     if (!planId || !mongoose.isValidObjectId(planId)) {
       return res.status(400).json({ success: false, message: "Plan is required." });
@@ -249,6 +327,14 @@ const createTestTransaction = async (req, res) => {
     if (!Number.isFinite(plan.price) || plan.price <= 0) {
       return res.status(400).json({ success: false, message: "Selected plan is no longer available." });
     }
+    if (vtu.requiresPlanMapping && (!plan.providerPlanId || plan.provider !== vtu.name)) {
+      logEvent("order.plan_not_mapped", { planId: String(plan._id) });
+      return res.status(400).json({ success: false, message: "Selected plan is no longer available." });
+    }
+    if (Number.isFinite(plan.costPrice) && plan.price < plan.costPrice) {
+      logEvent("order.below_cost", { planId: String(plan._id) });
+      return res.status(400).json({ success: false, message: "Selected plan is no longer available." });
+    }
 
     return await startOrder(req, res, {
       type: "data",
@@ -258,6 +344,7 @@ const createTestTransaction = async (req, res) => {
       phone: phoneCheck.normalized,
       amount: plan.price,
       clientReference,
+      payWith: payWith === "wallet" ? "wallet" : "card",
     });
   } catch (error) {
     logEvent("order.error", { type: "data", message: error && error.message });
@@ -272,7 +359,7 @@ const createTestTransaction = async (req, res) => {
 // Network, amount range and phone are validated server-side.
 const createAirtimeTransaction = async (req, res) => {
   try {
-    const { network, amount, phone, clientReference } = req.body || {};
+    const { network, amount, phone, clientReference, payWith } = req.body || {};
 
     const networkName = normalizeNetwork(network);
     if (!networkName) {
@@ -299,6 +386,7 @@ const createAirtimeTransaction = async (req, res) => {
       phone: phoneCheck.normalized,
       amount: amountCheck.amount,
       clientReference,
+      payWith: payWith === "wallet" ? "wallet" : "card",
     });
   } catch (error) {
     logEvent("order.error", { type: "airtime", message: error && error.message });
