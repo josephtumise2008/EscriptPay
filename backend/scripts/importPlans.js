@@ -1,6 +1,7 @@
 // SAFE plan import for a new (e.g. MongoDB Atlas) database.
 //
-//   MONGO_URI="<your Atlas connection string>" node scripts/importPlans.js
+//   npm run import:plans        (asks for the connection string, hidden)
+//   MONGO_URI="<connection string>" npm run import:plans
 //
 // Unlike seedPlans.js (local development only — it DELETES all plans first),
 // this script never deletes or overwrites anything: it refuses to run if the
@@ -11,12 +12,34 @@ const mongoose = require("mongoose");
 const Plan = require("../src/models/Plan");
 const { ALL_PLANS } = require("./planCatalog");
 
+// Asks for the connection string without echoing it to the screen.
+const askHidden = (question) =>
+  new Promise((resolve) => {
+    const readline = require("readline");
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    process.stdout.write(question);
+    rl._writeToOutput = () => {}; // hide what is typed/pasted
+    rl.question("", (answer) => {
+      rl.close();
+      process.stdout.write("\n");
+      resolve(answer);
+    });
+  });
+
 const run = async () => {
-  const uri = (process.env.MONGO_URI || "").trim();
+  let uri = (process.env.MONGO_URI || "").trim();
+  if (!uri && process.stdin.isTTY) {
+    uri = (await askHidden("Paste your MongoDB Atlas connection string (it won't show), then press Enter: ")).trim();
+  }
   if (!uri) {
-    console.error('MONGO_URI is not set. Run: MONGO_URI="<connection string>" npm run import:plans');
+    console.error("No connection string was given. Nothing was changed.");
     process.exit(1);
   }
+  if (!/^mongodb(\+srv)?:\/\//.test(uri) || /[<>]/.test(uri)) {
+    console.error("That doesn't look like a finished connection string (it should start with mongodb+srv:// and contain no < or >). Nothing was changed.");
+    process.exit(1);
+  }
+  console.log("Connecting to MongoDB Atlas…");
 
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 15000 });
   const dbName = mongoose.connection.name;
