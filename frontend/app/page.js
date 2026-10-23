@@ -483,7 +483,7 @@ export default function HomePage() {
         {/* Closing call to action */}
         <section aria-labelledby="cta-heading" className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
           <div className="relative overflow-hidden rounded-3xl bg-ink-900 px-6 py-12 text-center sm:px-12 dark:bg-slate-100" data-reveal>
-            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgb(6_182_212/0.35),transparent)]" />
+            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgb(124_58_237/0.4),transparent)]" />
             <h2 id="cta-heading" className="relative font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl dark:text-ink-900">
               Ready to try EscriptPay?
             </h2>

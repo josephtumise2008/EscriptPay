@@ -87,8 +87,8 @@ export default function TransactionChart({
             >
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.32" />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
                 </linearGradient>
               </defs>
 
@@ -118,9 +118,9 @@ export default function TransactionChart({
                 className="animate-draw"
               />
               <linearGradient id="chartLine" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#06b6d4" />
-                <stop offset="60%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#818cf8" />
+                <stop offset="0%" stopColor="#7c3aed" />
+                <stop offset="60%" stopColor="#6366f1" />
+                <stop offset="100%" stopColor="#38bdf8" />
               </linearGradient>
 
               {points.map((p, i) => (
@@ -130,7 +130,7 @@ export default function TransactionChart({
                     cy={p.y}
                     r="4"
                     fill="white"
-                    stroke="#38bdf8"
+                    stroke="#7c3aed"
                     strokeWidth="2"
                     className="animate-pop"
                     style={{ animationDelay: `${0.5 + i * 0.05}s` }}

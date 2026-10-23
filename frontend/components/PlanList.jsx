@@ -79,7 +79,7 @@ export default function PlanList({ network, selectedPlan, onSelect }) {
             aria-pressed={filter === f.id}
             className={`focus-ring shrink-0 rounded-full px-4 py-2 text-xs font-semibold ${
               filter === f.id
-                ? "bg-ink-900 text-white dark:bg-cyan-500 dark:text-slate-950"
+                ? "bg-ink-900 text-white dark:bg-cyan-500 dark:text-[#ffffff]"
                 : "bg-white text-ink-600 ring-1 ring-slate-200 hover:text-ink-900 hover:ring-slate-300"
             }`}
           >

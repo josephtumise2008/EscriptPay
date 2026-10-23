@@ -19,9 +19,9 @@ export default function Logo({ size = 36, withWordmark = true, inverted = false 
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#06b6d4" />
-            <stop offset="0.5" stopColor="#38bdf8" />
-            <stop offset="1" stopColor="#818cf8" />
+            <stop stopColor="#7c3aed" />
+            <stop offset="0.55" stopColor="#6366f1" />
+            <stop offset="1" stopColor="#38bdf8" />
           </linearGradient>
         </defs>
         <rect x="2" y="2" width="44" height="44" rx="13" fill={`url(#${gradientId})`} />
