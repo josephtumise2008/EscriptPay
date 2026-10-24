@@ -136,11 +136,11 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color,box-shadow] duration-200 ${
+      className={`sticky top-[env(safe-area-inset-top)] z-50 border-b transition-[background-color,border-color,box-shadow] duration-200 ${
         mobileOpen
           ? "border-slate-200 bg-white"
           : scrolled
-            ? "border-slate-200/70 bg-white/85 shadow-[0_8px_24px_-20px_rgb(15_23_42/0.35)] backdrop-blur-xl"
+            ? "border-slate-200/70 bg-white shadow-[0_8px_24px_-20px_rgb(15_23_42/0.35)] lg:bg-white/85 lg:backdrop-blur-xl"
             : "border-transparent bg-transparent"
       }`}
     >

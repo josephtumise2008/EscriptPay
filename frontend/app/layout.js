@@ -47,6 +47,12 @@ export const metadata = {
 };
 
 export const viewport = {
+  // Draw to the very edges of iPhones. Chrome on iPhone otherwise leaves a
+  // strip under the bottom tab bar where the page scrolls through. Headers
+  // sit below the status bar via `top: env(safe-area-inset-top)` (not
+  // padding, so nothing jumps when the browser bars slide in and out) and
+  // the cover below paints the status-bar area.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0b1124" },
@@ -64,6 +70,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-[env(safe-area-inset-top)] bg-white" />
         <ThemeProvider>
           <AuthProvider>
             <WalletProvider>{children}</WalletProvider>
