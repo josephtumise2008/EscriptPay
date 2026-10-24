@@ -39,8 +39,12 @@ function MobileTabBar({ pathname }) {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
+      {/* Phone browsers (Chrome, Safari) slide their toolbars in and out
+          while scrolling; this keeps the strip below the bar covered so the
+          page never shows through underneath it. */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-full h-24 bg-white" />
       <ul className="mx-auto grid h-16 max-w-md grid-cols-5">
         {TAB_ITEMS.map((tab) => {
           const active = tab.match.some((m) => pathname === m || pathname.startsWith(`${m}/`));
