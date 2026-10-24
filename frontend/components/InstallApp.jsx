@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Download, Share, PlusSquare, X, MoreVertical, Smartphone } from "lucide-react";
+import { Download, Share, PlusSquare, X, MoreVertical, Smartphone, Compass } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useInstallApp } from "@/lib/pwa";
 import { useScrollLock } from "@/hooks/useScrollLock";
@@ -17,11 +17,11 @@ const STEPS = {
   },
   "ios-other": {
     steps: [
-      { icon: Share, text: <>Tap the <b>Share</b> button at the top right, next to the address.</> },
-      { icon: PlusSquare, text: <>Scroll to the bottom of the list and tap <b>Add to Home Screen</b>. Not there? Tap <b>Edit Actions</b> or <b>More</b> to find it.</> },
-      { icon: Smartphone, text: <>Tap <b>Add</b>. EscriptPay now opens from your home screen like an app.</> },
+      { icon: Compass, text: <>Open <b>escriptpay.com</b> in <b>Safari</b>. iPhones only install apps from Safari.</> },
+      { icon: Share, text: <>Tap <b>⋯</b> then <b>Share</b> (or the <b>Share</b> button), and choose <b>Add to Home Screen</b>.</> },
+      { icon: Smartphone, text: <>Tap <b>Add</b>. EscriptPay then opens from your home screen like an app.</> },
     ],
-    note: "Easiest in Safari: open escriptpay.com in Safari and use Share → Add to Home Screen.",
+    note: "Once it's on your home screen, it works no matter which browser you normally use.",
   },
   android: {
     steps: [
