@@ -39,8 +39,10 @@ function MobileTabBar({ pathname }) {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
+      {/* Covers anything below the bar (browser toolbars that float over the page). */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-full h-24 bg-white" />
       <ul className="mx-auto grid h-16 max-w-md grid-cols-5">
         {TAB_ITEMS.map((tab) => {
           const active = tab.match.some((m) => pathname === m || pathname.startsWith(`${m}/`));
