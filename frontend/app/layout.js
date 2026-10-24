@@ -47,9 +47,6 @@ export const metadata = {
 };
 
 export const viewport = {
-  // Lets the bottom tab bar reach the bottom edge of iPhones (behind the home
-  // indicator) instead of leaving a strip where the page shows through.
-  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0b1124" },
