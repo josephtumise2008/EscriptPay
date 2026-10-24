@@ -16,14 +16,41 @@ const sora = Sora({
   display: "swap",
 });
 
+const SITE_URL = "https://escriptpay.com";
+const TITLE = "EscriptPay — Cheaper data. Instant airtime.";
+const DESCRIPTION =
+  "Buy MTN, Airtel, Glo and 9mobile data and airtime in seconds. Fund your wallet once and buy in one tap, with a receipt for every order.";
+
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "EscriptPay — Buy Data. Stay Connected.",
+    default: TITLE,
     template: "%s | EscriptPay",
   },
-  description:
-    "Fast, simple and reliable data and airtime purchases in Nigeria with EscriptPay.",
-  keywords: ["EscriptPay", "buy data", "airtime", "Nigeria", "fintech"],
+  description: DESCRIPTION,
+  applicationName: "EscriptPay",
+  keywords: ["EscriptPay", "buy data", "cheap data", "airtime", "MTN", "Airtel", "Glo", "9mobile", "Nigeria"],
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "EscriptPay",
+    title: TITLE,
+    description: DESCRIPTION,
+    locale: "en_NG",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  appleWebApp: { title: "EscriptPay", capable: true, statusBarStyle: "black-translucent" },
+};
+
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1124" },
+  ],
 };
 
 export default function RootLayout({ children }) {

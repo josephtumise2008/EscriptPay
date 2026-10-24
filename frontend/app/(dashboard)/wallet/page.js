@@ -20,6 +20,7 @@ import {
 import { HideBalanceButton, MASKED } from "@/components/WalletBalance";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useWallet } from "@/lib/wallet-context";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { getWallet, fundWallet, getFundingQuote, errorMessage } from "@/lib/api";
 import { isTrustedCheckoutUrl } from "@/lib/checkout";
 import { formatNaira, formatDateTime } from "@/lib/format";
@@ -143,9 +144,17 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
   const total = quote && quote.amount === value ? quote.total : null;
   const fee = quote && quote.amount === value ? quote.fee : 0;
 
+  // Opens as a sheet over the page, so the amounts and the pay button are
+  // on screen straight away without scrolling.
+  useScrollLock(true);
   useEffect(() => {
-    panelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }, []);
+    panelRef.current?.focus({ preventScroll: true });
+    const onKey = (event) => {
+      if (event.key === "Escape" && !busy) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [busy, onClose]);
 
   useEffect(() => {
     const onPageShow = (event) => {
@@ -182,8 +191,21 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
   };
 
   return (
-    <section ref={panelRef} aria-labelledby="fund-heading" className="card scroll-mt-24 overflow-hidden animate-page-in">
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+    <div role="dialog" aria-modal="true" aria-labelledby="fund-heading" className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Close"
+        onClick={() => !busy && onClose()}
+        className="absolute inset-0 cursor-default bg-slate-950/55 backdrop-blur-[2px] animate-fade-in"
+      />
+    <section
+      ref={panelRef}
+      tabIndex={-1}
+      className="card relative flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-b-none rounded-t-3xl outline-none animate-fade-up sm:rounded-3xl"
+    >
+      <div aria-hidden="true" className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-slate-200 sm:hidden" />
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-3.5 sm:py-4">
         <h2 id="fund-heading" className="font-display text-base font-bold text-ink-900">
           Fund your wallet
         </h2>
@@ -197,7 +219,8 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
         </button>
       </div>
 
-      <form onSubmit={submit} className="space-y-5 p-5">
+      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-5">
         <div role="group" aria-label="Quick amounts" className="grid grid-cols-3 gap-2.5">
           {QUICK_AMOUNTS.filter((v) => v >= min && v <= max).map((v) => {
             const active = !custom && amount === v;
@@ -285,6 +308,9 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
           </span>
         </div>
 
+        </div>
+
+        <div className="shrink-0 border-t border-slate-100 px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
         <button
           type="submit"
           disabled={busy || !valid}
@@ -298,10 +324,14 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
               ? "Enter an amount"
               : fee > 0 && total
                 ? `Pay ${formatNaira(total)}`
-                : `Add ${formatNaira(value)} to wallet`}
+                : mode === "live"
+                  ? `Pay ${formatNaira(value)}`
+                  : `Add ${formatNaira(value)} to wallet`}
         </button>
+        </div>
       </form>
     </section>
+    </div>
   );
 }
 
