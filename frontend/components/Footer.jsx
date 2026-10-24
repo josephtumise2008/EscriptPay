@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import Logo from "./Logo";
 
 const GROUPS = [
@@ -62,7 +63,22 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-2 border-t border-slate-200/70 pt-6 text-xs text-ink-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} EscriptPay. Made in Nigeria.</p>
+          <p>© {new Date().getFullYear()} EscriptPay. All rights reserved.</p>
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="inline-flex items-center gap-1.5">
+              <Lock size={12} className="text-emerald-500" aria-hidden="true" />
+              Payments secured by Paystack
+            </span>
+            <span className="inline-flex items-center gap-1.5" aria-label="Supported networks: MTN, Airtel, Glo, 9mobile">
+              <span aria-hidden="true" className="flex -space-x-0.5">
+                <span className="h-2 w-2 rounded-full bg-yellow-400 ring-2 ring-white" />
+                <span className="h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                <span className="h-2 w-2 rounded-full bg-lime-500 ring-2 ring-white" />
+              </span>
+              All Nigerian networks
+            </span>
+          </p>
         </div>
       </div>
     </footer>

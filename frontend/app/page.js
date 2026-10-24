@@ -26,6 +26,7 @@ import { formatNaira } from "@/lib/format";
 import Image from "next/image";
 import PhoneFrame from "@/components/PhoneFrame";
 import TrustReceipt from "@/components/TrustReceipt";
+import HeroBackdrop from "@/components/HeroBackdrop";
 import { HERO_PHOTO } from "@/lib/data";
 
 const NETWORKS = [
@@ -354,10 +355,7 @@ export default function HomePage() {
       <main>
         {/* Hero */}
         <section aria-labelledby="hero-heading" className="relative overflow-hidden">
-          {/* Backdrop: aurora glows + a faint grid that fades out */}
-          <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
-          <div aria-hidden="true" className="anim-glow pointer-events-none absolute -left-32 -top-40 h-[30rem] w-[30rem] rounded-full bg-violet-500/25 blur-3xl" />
-          <div aria-hidden="true" className="anim-glow pointer-events-none absolute -right-32 top-24 h-[28rem] w-[28rem] rounded-full bg-sky-400/25 blur-3xl" style={{ animationDelay: "-3s" }} />
+          <HeroBackdrop />
 
           <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-8 sm:px-6 sm:pt-14 lg:grid-cols-[1.15fr_1fr] lg:gap-8 lg:px-8 lg:pb-20 lg:pt-12">
             <div className="text-center lg:text-left">
@@ -373,11 +371,26 @@ export default function HomePage() {
                 id="hero-heading"
                 className="mt-6 font-display text-[2.6rem] font-extrabold leading-[1.04] tracking-tight text-ink-900 sm:text-6xl lg:text-[4.2rem]"
               >
-                <span className="anim-line" style={{ animationDelay: "80ms" }}>Cheaper data.</span>
-                <span className="anim-line" style={{ animationDelay: "180ms" }}>
-                  <span className="gradient-text anim-shine">Instant</span> airtime.
-                </span>
-                <span className="anim-line" style={{ animationDelay: "280ms" }}>Zero stress.</span>
+                {[
+                  [["Cheaper", ""], ["data.", ""]],
+                  [["Instant", "gradient-text anim-shine"], ["airtime.", ""]],
+                  [["Zero", ""], ["stress.", ""]],
+                ].map((line, li) => (
+                  <span key={li} className="block">
+                    {line.map(([word, cls], wi) => (
+                      <span
+                        key={word}
+                        className="hero-word"
+                        style={{ animationDelay: `${120 + (li * 2 + wi) * 110}ms` }}
+                      >
+                        {/* Gradient text lives on an inner span: combining it with
+                            the blur-in animation on one element hides the word. */}
+                        {cls ? <span className={cls}>{word}</span> : word}
+                        {wi < line.length - 1 ? "\u00A0" : ""}
+                      </span>
+                    ))}
+                  </span>
+                ))}
               </h1>
 
               <p className="anim-line mx-auto mt-5 max-w-xl text-base leading-relaxed text-ink-500 sm:text-lg lg:mx-0" style={{ animationDelay: "380ms" }}>

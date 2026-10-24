@@ -562,8 +562,10 @@ body {
   max-width: 100%;
   overflow-x: clip;
 }
+/* Older browsers without overflow:clip: hidden on <html> only (it applies to
+   the viewport); hidden on <body> would break the sticky headers. */
 @supports not (overflow: clip) {
-  body {
+  html {
     overflow-x: hidden;
   }
 }
@@ -589,4 +591,57 @@ body {
   background-image:
     linear-gradient(to right, rgb(167 139 250 / 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(167 139 250 / 0.08) 1px, transparent 1px);
+}
+
+/* ---------- Hero backdrop motion ---------- */
+@keyframes hero-blob {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(6%, 8%, 0) scale(1.12); }
+  66% { transform: translate3d(-5%, 4%, 0) scale(0.92); }
+}
+.hero-blob { animation: hero-blob 18s ease-in-out infinite; will-change: transform; }
+
+@keyframes hero-wave { from { transform: translateX(0); } to { transform: translateX(-1200px); } }
+.hero-wave { animation: hero-wave 10s linear infinite; will-change: transform; }
+
+@keyframes hero-ring {
+  0% { transform: translate(-50%, -50%) scale(0.35); opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+}
+.hero-ring { animation: hero-ring 4.8s cubic-bezier(0.2, 0.7, 0.3, 1) infinite; }
+
+@keyframes hero-packet {
+  0% { transform: translate3d(0, 0, 0) scale(0.7); opacity: 0; }
+  12% { opacity: 1; }
+  50% { transform: translate3d(14px, -45vh, 0) scale(1); }
+  85% { opacity: 0.9; }
+  100% { transform: translate3d(-10px, -95vh, 0) scale(0.85); opacity: 0; }
+}
+.hero-packet { animation: hero-packet 14s ease-in-out infinite; will-change: transform, opacity; }
+
+/* Headline words land with a soft blur-in. */
+@keyframes hero-word {
+  from { opacity: 0; transform: translateY(18px); filter: blur(10px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+.hero-word { display: inline-block; opacity: 0; animation: hero-word 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+html:not(.js) .hero-word { opacity: 1; animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-blob, .hero-wave, .hero-ring, .hero-packet { animation: none !important; }
+  .hero-packet, .hero-ring { display: none; }
+  .hero-word { opacity: 1; animation: none; filter: none; }
+}
+
+/* Log out: one consistent look — brand surface with a clear touch of red. */
+.logout-icon {
+  background-image: linear-gradient(135deg, #f43f5e 0%, #dc2626 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px -10px rgb(220 38 38 / 0.75);
+}
+
+/* Waves fade out at both edges so they never end abruptly. */
+.hero-waves {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
 }

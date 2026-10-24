@@ -3,19 +3,35 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, LayoutDashboard, ChevronRight, LogOut } from "lucide-react";
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  ChevronRight,
+  LogOut,
+  Home,
+  ListChecks,
+  ShieldCheck,
+  HelpCircle,
+  MessageCircle,
+  ArrowRight,
+  Wallet,
+} from "lucide-react";
+import { BalanceAmount } from "./WalletBalance";
+import { initials } from "@/lib/format";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import ThemeToggle from "./ThemeToggle";
 import { useLogout, LogoutErrorToast } from "@/hooks/useLogout";
 import { useAuth } from "@/lib/auth-context";
+import { useScrollLock, releaseScrollLock } from "@/hooks/useScrollLock";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/#why-escriptpay", label: "Why EscriptPay" },
-  { href: "/#faq", label: "FAQ" },
-  { href: "/#contact", label: "Contact" },
+  { href: "/", label: "Home", icon: Home },
+  { href: "/#how-it-works", label: "How it works", icon: ListChecks },
+  { href: "/#why-escriptpay", label: "Why EscriptPay", icon: ShieldCheck },
+  { href: "/#faq", label: "FAQ", icon: HelpCircle },
+  { href: "/#contact", label: "Contact", icon: MessageCircle },
 ];
 
 export default function Navbar() {
@@ -37,15 +53,14 @@ export default function Navbar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  // While the menu is open the page behind it must not scroll. Locking both
-  // <html> and <body> works on iOS Safari too (body alone does not).
+  // While the menu is open the page behind it must not scroll. Only <html>
+  // is locked: putting overflow:hidden on <body> turns it into its own scroll
+  // container, which un-sticks this sticky header (it scrolled off-screen
+  // with the page, taking the close button with it). The dimmed backdrop also
+  // blocks touch scrolling, and the panel contains its own overscroll.
+  useScrollLock(mobileOpen);
   useEffect(() => {
     if (!mobileOpen) return undefined;
-    const html = document.documentElement;
-    const body = document.body;
-    const previous = { html: html.style.overflow, body: body.style.overflow };
-    html.style.overflow = "hidden";
-    body.style.overflow = "hidden";
     const onKey = (e) => {
       if (e.key === "Escape") {
         setMobileOpen(false);
@@ -60,8 +75,6 @@ export default function Navbar() {
     return () => {
       document.removeEventListener("keydown", onKey);
       desktop.removeEventListener("change", onDesktop);
-      html.style.overflow = previous.html;
-      body.style.overflow = previous.body;
     };
   }, [mobileOpen]);
 
@@ -100,8 +113,7 @@ export default function Navbar() {
     closeMobile();
     if (pathname !== "/") return; // let the router load the homepage + hash
     e.preventDefault();
-    document.documentElement.style.overflow = "";
-    document.body.style.overflow = "";
+    releaseScrollLock();
     const id = href.split("#")[1];
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const behavior = reduce ? "auto" : "smooth";
@@ -211,68 +223,109 @@ export default function Navbar() {
         id="mobile-menu"
         data-state={mobileOpen ? "open" : "closed"}
         inert={!mobileOpen}
-        className="popover fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top)+0.5rem)] z-50 max-h-[calc(100dvh-5.5rem-env(safe-area-inset-top))] overflow-y-auto overscroll-contain rounded-2xl border border-slate-200/80 bg-white p-2 shadow-[0_24px_60px_-20px_rgb(15_23_42/0.5)] lg:hidden"
+        className="popover fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top))] z-50 max-h-[calc(100dvh-4rem-env(safe-area-inset-top))] overflow-y-auto overscroll-contain rounded-b-[1.75rem] border-b border-slate-200/80 bg-white px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_30px_60px_-24px_rgb(15_23_42/0.55)] lg:hidden"
         style={{ transformOrigin: "top center" }}
       >
-        <ul>
-          {NAV_LINKS.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                onClick={(e) => onNavClick(e, link.href)}
-                aria-current={isCurrent(link.href) ? "true" : undefined}
-                className={`focus-ring flex items-center justify-between rounded-xl px-3 py-3 text-[15px] font-semibold hover:bg-slate-50 ${
-                  isCurrent(link.href) ? "bg-cyan-50 text-cyan-800" : "text-ink-800"
-                }`}
-              >
-                {link.label}
-                <ChevronRight size={17} className="text-ink-400" aria-hidden="true" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-1 border-t border-slate-100 px-1 pb-1 pt-3">
-          {user ? (
-            <div className="space-y-2">
-              <p className="px-2 text-xs text-ink-500">
-                Signed in as <span className="font-semibold text-ink-800">{user.name}</span>
-              </p>
-              <div className="grid grid-cols-[1fr_auto] gap-2">
-                <Link
-                  href="/dashboard"
-                  onClick={closeMobile}
-                  className="focus-ring gradient-btn flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold brand-contrast"
-                >
-                  <LayoutDashboard size={16} aria-hidden="true" />
-                  Go to dashboard
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeMobile();
-                    logout();
-                  }}
-                  className="focus-ring inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-red-600 hover:bg-red-50"
-                >
-                  <LogOut size={15} aria-hidden="true" />
-                  Log out
-                </button>
+        {user && (
+          <div className="wallet-gradient relative mb-3 overflow-hidden rounded-2xl p-4 brand-contrast">
+            <div aria-hidden="true" className="wallet-sheen pointer-events-none absolute inset-0" />
+            <div className="relative flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ffffff]/20 text-sm font-bold ring-2 ring-[#ffffff]/30">
+                {initials(user.name)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-bold">{user.name}</p>
+                <p className="truncate text-xs text-[#ffffff]/75">{user.email}</p>
+              </div>
+              <div className="text-right">
+                <p className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#ffffff]/70">
+                  <Wallet size={11} aria-hidden="true" />
+                  Balance
+                </p>
+                <BalanceAmount className="block font-display text-base font-extrabold" skeletonClass="mt-1 h-4 w-14 bg-[#ffffff]/30" />
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              <Link href="/login" onClick={closeMobile} className="focus-ring btn-secondary w-full py-3 text-sm">
-                Log in
+          </div>
+        )}
+
+        <ul className="space-y-1">
+          {NAV_LINKS.map((link) => {
+            const current = isCurrent(link.href);
+            return (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  onClick={(e) => onNavClick(e, link.href)}
+                  aria-current={current ? "true" : undefined}
+                  className={`focus-ring group flex items-center gap-3 rounded-2xl px-2 py-2 ${
+                    current ? "bg-cyan-50" : "hover:bg-slate-50 active:bg-slate-100"
+                  }`}
+                >
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                      current ? "wallet-gradient brand-contrast" : "bg-slate-100 text-ink-600 group-hover:text-cyan-700"
+                    }`}
+                  >
+                    <link.icon size={18} aria-hidden="true" />
+                  </span>
+                  <span className={`flex-1 text-[15px] font-semibold ${current ? "text-cyan-800" : "text-ink-800"}`}>
+                    {link.label}
+                  </span>
+                  <ChevronRight
+                    size={17}
+                    aria-hidden="true"
+                    className={`transition-transform group-hover:translate-x-0.5 ${current ? "text-cyan-600" : "text-ink-300"}`}
+                  />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="mt-4 space-y-2.5">
+          {user ? (
+            <>
+              <Link
+                href="/dashboard"
+                onClick={closeMobile}
+                className="focus-ring gradient-btn press flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-bold brand-contrast shadow-[0_16px_32px_-16px_rgb(124_58_237/0.8)]"
+              >
+                <LayoutDashboard size={18} aria-hidden="true" />
+                Go to dashboard
+                <ArrowRight size={17} aria-hidden="true" />
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMobile();
+                  logout();
+                }}
+                className="focus-ring press flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl border border-red-200/70 bg-red-50/60 text-[15px] font-semibold text-red-600 hover:bg-red-50"
+              >
+                <span className="logout-icon flex h-7 w-7 items-center justify-center rounded-lg">
+                  <LogOut size={15} aria-hidden="true" />
+                </span>
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
               <Link
                 href="/signup"
                 onClick={closeMobile}
-                className="gradient-btn focus-ring flex w-full items-center justify-center rounded-xl px-3 py-3 text-sm font-semibold brand-contrast"
+                className="focus-ring gradient-btn press flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-bold brand-contrast shadow-[0_16px_32px_-16px_rgb(124_58_237/0.8)]"
               >
-                Create account
+                Create free account
+                <ArrowRight size={17} aria-hidden="true" />
               </Link>
-            </div>
+              <Link
+                href="/login"
+                onClick={closeMobile}
+                className="focus-ring press flex h-12 w-full items-center justify-center rounded-2xl border border-slate-200 bg-white text-[15px] font-semibold text-ink-800 hover:bg-slate-50"
+              >
+                Log in
+              </Link>
+            </>
           )}
         </div>
       </div>

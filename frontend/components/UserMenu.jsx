@@ -7,6 +7,7 @@ import { History, UserRound, Settings, LogOut, ChevronDown, Home, LayoutDashboar
 import { BalanceAmount, HideBalanceButton } from "@/components/WalletBalance";
 import { useAuth } from "@/lib/auth-context";
 import { initials } from "@/lib/format";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { useDismiss, handleMenuKeyDown } from "@/hooks/useDismiss";
 import { useTheme, THEME_OPTIONS } from "@/components/ThemeProvider";
 
@@ -35,6 +36,8 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
 
   const close = useCallback(() => setOpen(false), []);
   useDismiss({ open, onClose: close, containerRef, triggerRef });
+  // Phones show this menu as a sheet over the page: keep the page still.
+  useScrollLock(open, "(max-width: 639px)");
 
   useEffect(() => {
     setOpen(false);
@@ -74,8 +77,12 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
           </Link>
         ))}
         {onLogoutRequest && (
-          <button type="button" onClick={requestLogout} className={`${rowClass} text-red-600 hover:bg-red-50`}>
-            <span className={`${iconBox} bg-red-50 text-red-600`}><LogOut size={17} aria-hidden="true" /></span>
+          <button
+            type="button"
+            onClick={requestLogout}
+            className={`${rowClass} mt-1 border border-red-200/70 bg-red-50/60 font-semibold text-red-600 hover:bg-red-50`}
+          >
+            <span className={`${iconBox} logout-icon`}><LogOut size={17} aria-hidden="true" /></span>
             Log out
           </button>
         )}
@@ -116,7 +123,7 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
       <div
         aria-hidden="true"
         onClick={close}
-        className={`fixed inset-0 top-[calc(3.5rem+env(safe-area-inset-top))] z-40 bg-slate-950/40 transition-opacity duration-200 sm:hidden ${
+        className={`fixed inset-0 top-[calc(3.5rem+env(safe-area-inset-top))] z-40 touch-none bg-slate-950/40 transition-opacity duration-200 sm:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
@@ -129,7 +136,7 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
         data-state={open ? "open" : "closed"}
         inert={!open}
         onKeyDown={(e) => handleMenuKeyDown(e, menuRef.current)}
-        className="popover fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] z-50 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-[0_24px_60px_-20px_rgb(15_23_42/0.45)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72"
+        className="popover fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] z-50 max-h-[calc(100dvh-4.75rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain rounded-2xl sm:max-h-none sm:overflow-visible border border-slate-200/80 bg-white p-2 shadow-[0_24px_60px_-20px_rgb(15_23_42/0.45)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72"
       >
         <div className="flex items-center gap-3 px-2.5 pb-3 pt-2">
           <Avatar name={user.name} size="h-11 w-11 text-sm" />
@@ -213,9 +220,9 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
                 role="menuitem"
                 tabIndex={-1}
                 onClick={requestLogout}
-                className={`${rowClass} text-red-600 hover:bg-red-50 focus-visible:bg-red-50`}
+                className={`${rowClass} border border-red-200/70 bg-red-50/60 font-semibold text-red-600 hover:bg-red-50 focus-visible:bg-red-50`}
               >
-                <span className={`${iconBox} bg-red-50 text-red-600`}><LogOut size={17} aria-hidden="true" /></span>
+                <span className={`${iconBox} logout-icon`}><LogOut size={17} aria-hidden="true" /></span>
                 Log out
               </button>
             </div>

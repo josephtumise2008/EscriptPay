@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { getTransactions } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { listFromTransactions, getReadIds, markRead, markAllRead } from "@/lib/notifications";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { useDismiss } from "@/hooks/useDismiss";
 
 const KIND_META = {
@@ -52,6 +53,8 @@ export default function NotificationBell() {
 
   const close = useCallback(() => setOpen(false), []);
   useDismiss({ open, onClose: close, containerRef, triggerRef });
+  // Phones show this menu as a sheet over the page: keep the page still.
+  useScrollLock(open, "(max-width: 639px)");
 
   const readSet = useMemo(() => new Set(readIds), [readIds]);
   const unread = useMemo(() => items.filter((i) => !readSet.has(i.id)).length, [items, readSet]);
@@ -95,13 +98,22 @@ export default function NotificationBell() {
         )}
       </button>
 
+      {/* Phones: dim the page behind the panel; tapping it closes the panel. */}
+      <div
+        aria-hidden="true"
+        onClick={close}
+        className={`fixed inset-0 top-[calc(3.5rem+env(safe-area-inset-top))] z-40 touch-none bg-slate-950/40 transition-opacity duration-200 sm:hidden ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+
       <div
         id="notifications-panel"
         role="dialog"
         aria-label="Notifications"
         data-state={open ? "open" : "closed"}
         inert={!open}
-        className="popover fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] z-50 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_24px_60px_-24px_rgb(15_23_42/0.35)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[22rem]"
+        className="popover fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] z-50 flex max-h-[calc(100dvh-4.75rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl sm:block sm:max-h-none border border-slate-200/80 bg-white shadow-[0_24px_60px_-24px_rgb(15_23_42/0.35)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[22rem]"
       >
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <div>

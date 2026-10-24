@@ -231,9 +231,11 @@ export default function DashboardShell({ children }) {
             type="button"
             onClick={openLogout}
             disabled={loggingOut}
-            className="focus-ring flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-600 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+            className="focus-ring mt-1 flex w-full items-center gap-3 rounded-xl border border-red-200/70 bg-red-50/60 px-2.5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
           >
-            <LogOut size={19} aria-hidden="true" />
+            <span className="logout-icon flex h-8 w-8 items-center justify-center rounded-lg">
+              <LogOut size={16} aria-hidden="true" />
+            </span>
             {loggingOut ? "Logging out…" : "Log out"}
           </button>
         </div>
@@ -243,7 +245,7 @@ export default function DashboardShell({ children }) {
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         {/* No backdrop-filter on phones: it would become the containing block for
             the fixed-position menus and backdrops opened from this header. */}
-        <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white pt-[env(safe-area-inset-top)] lg:bg-white/85 lg:backdrop-blur-xl">
+        <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white pt-[env(safe-area-inset-top)] lg:bg-white/85 lg:backdrop-blur-xl">
           <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:h-16 lg:px-8">
             <div className="flex min-w-0 items-center">
               {back ? (
