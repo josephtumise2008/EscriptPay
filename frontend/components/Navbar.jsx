@@ -137,7 +137,7 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-[env(safe-area-inset-top)] z-50 border-b transition-[background-color,border-color,box-shadow] duration-200 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-[env(safe-area-inset-top)] before:bg-inherit before:content-[''] ${
+      className={`sticky top-[var(--top-inset)] z-50 border-b transition-[background-color,border-color,box-shadow] duration-200 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-[var(--top-inset)] before:bg-inherit before:content-[''] ${
         mobileOpen
           ? "border-slate-200 bg-white"
           : scrolled
@@ -215,7 +215,7 @@ export default function Navbar() {
       <div
         aria-hidden="true"
         onClick={closeMobile}
-        className={`fixed inset-x-0 bottom-0 top-[calc(4rem+env(safe-area-inset-top))] z-40 touch-none bg-slate-950/45 transition-opacity duration-200 lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 top-[calc(4rem+var(--top-inset))] z-40 touch-none bg-slate-950/45 transition-opacity duration-200 lg:hidden ${
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
@@ -224,7 +224,7 @@ export default function Navbar() {
         id="mobile-menu"
         data-state={mobileOpen ? "open" : "closed"}
         inert={!mobileOpen}
-        className="popover fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top))] z-50 max-h-[calc(100dvh-4rem-env(safe-area-inset-top))] overflow-y-auto overscroll-contain rounded-b-[1.75rem] border-b border-slate-200/80 bg-white px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_30px_60px_-24px_rgb(15_23_42/0.55)] lg:hidden"
+        className="popover fixed inset-x-0 top-[calc(4rem+var(--top-inset))] z-50 max-h-[calc(100dvh-4rem-var(--top-inset))] overflow-y-auto overscroll-contain rounded-b-[1.75rem] border-b border-slate-200/80 bg-white px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_30px_60px_-24px_rgb(15_23_42/0.55)] lg:hidden"
         style={{ transformOrigin: "top center" }}
       >
         {user && (

@@ -5,7 +5,7 @@ import ThemeToggle from "./ThemeToggle";
 
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
-    <div className="relative flex min-h-screen flex-col pt-[env(safe-area-inset-top)]">
+    <div className="relative flex min-h-screen flex-col">
       {/* Always-visible way back to the public site. */}
       <header className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
         <Link

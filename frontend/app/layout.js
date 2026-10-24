@@ -28,10 +28,14 @@ const DEVICES = [
   [375, 812, 3], [414, 896, 3], [414, 896, 2], [414, 736, 3], [375, 667, 2], [320, 568, 2],
   [1024, 1366, 2], [834, 1194, 2], [820, 1180, 2], [768, 1024, 2],
 ];
-const STARTUP_IMAGES = DEVICES.map(([w, h, r]) => ({
-  url: `/splash/launch-${w * r}x${h * r}.png`,
-  media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait)`,
-}));
+const STARTUP_IMAGES = [
+  ...DEVICES.map(([w, h, r]) => ({
+    url: `/splash/launch-${w * r}x${h * r}.png`,
+    media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r})`,
+  })),
+  // Fallback for any other screen size.
+  { url: "/splash/launch-1179x2556.png" },
+];
 const TITLE = "EscriptPay — Cheaper data. Instant airtime.";
 const DESCRIPTION =
   "Buy MTN, Airtel, Glo and 9mobile data and airtime in seconds. Fund your wallet once and buy in one tap, with a receipt for every order.";
@@ -74,9 +78,8 @@ export const metadata = {
 export const viewport = {
   // Draw to the very edges of iPhones. Chrome on iPhone otherwise leaves a
   // strip under the bottom tab bar where the page scrolls through. Headers
-  // sit below the status bar via `top: env(safe-area-inset-top)` (not
-  // padding, so nothing jumps when the browser bars slide in and out) and
-  // the cover below paints the status-bar area.
+  // and the page sit below the status bar only in the installed app
+  // (--top-inset in globals.css), so nothing jumps in the browser.
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },

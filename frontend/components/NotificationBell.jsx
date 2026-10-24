@@ -102,7 +102,7 @@ export default function NotificationBell() {
       <div
         aria-hidden="true"
         onClick={close}
-        className={`fixed inset-0 top-[calc(3.5rem+env(safe-area-inset-top))] z-40 touch-none bg-slate-950/40 transition-opacity duration-200 sm:hidden ${
+        className={`fixed inset-0 top-[calc(3.5rem+var(--top-inset))] z-40 touch-none bg-slate-950/40 transition-opacity duration-200 sm:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
@@ -113,7 +113,7 @@ export default function NotificationBell() {
         aria-label="Notifications"
         data-state={open ? "open" : "closed"}
         inert={!open}
-        className="popover fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] z-50 flex max-h-[calc(100dvh-4.75rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl sm:block sm:max-h-none border border-slate-200/80 bg-white shadow-[0_24px_60px_-24px_rgb(15_23_42/0.35)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[22rem]"
+        className="popover fixed inset-x-3 top-[calc(3.5rem+var(--top-inset)+0.5rem)] z-50 flex max-h-[calc(100dvh-4.75rem-var(--top-inset)-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl sm:block sm:max-h-none border border-slate-200/80 bg-white shadow-[0_24px_60px_-24px_rgb(15_23_42/0.35)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[22rem]"
       >
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <div>

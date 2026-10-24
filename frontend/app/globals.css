@@ -650,3 +650,19 @@ html:not(.js) .hero-word { opacity: 1; animation: none; }
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
 }
+
+/* Space for the iPhone status bar when EscriptPay runs as an installed app
+   (full screen). In the browser it stays 0, so nothing moves while browser
+   toolbars slide in and out. Headers stick at this offset; the body padding
+   keeps them from covering the top of the page. */
+:root {
+  --top-inset: 0px;
+}
+@media (display-mode: standalone) {
+  :root {
+    --top-inset: env(safe-area-inset-top);
+  }
+  body {
+    padding-top: var(--top-inset);
+  }
+}
