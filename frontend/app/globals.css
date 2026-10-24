@@ -575,3 +575,18 @@ body {
     transform: none !important;
   }
 }
+
+/* Hero backdrop: faint grid that fades out towards the edges. */
+.hero-grid {
+  background-image:
+    linear-gradient(to right, rgb(124 58 237 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(124 58 237 / 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+}
+.dark .hero-grid {
+  background-image:
+    linear-gradient(to right, rgb(167 139 250 / 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(167 139 250 / 0.08) 1px, transparent 1px);
+}

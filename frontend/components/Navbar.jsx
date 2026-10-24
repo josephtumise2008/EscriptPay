@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, LayoutDashboard, ChevronRight } from "lucide-react";
+import { Menu, X, LayoutDashboard, ChevronRight, LogOut } from "lucide-react";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import ThemeToggle from "./ThemeToggle";
@@ -37,20 +37,31 @@ export default function Navbar() {
     setMobileOpen(false);
   }, [pathname]);
 
+  // While the menu is open the page behind it must not scroll. Locking both
+  // <html> and <body> works on iOS Safari too (body alone does not).
   useEffect(() => {
     if (!mobileOpen) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const html = document.documentElement;
+    const body = document.body;
+    const previous = { html: html.style.overflow, body: body.style.overflow };
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
     const onKey = (e) => {
       if (e.key === "Escape") {
         setMobileOpen(false);
         toggleRef.current?.focus();
       }
     };
+    // Close if the screen grows to desktop width while open.
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const onDesktop = (e) => e.matches && setMobileOpen(false);
     document.addEventListener("keydown", onKey);
+    desktop.addEventListener("change", onDesktop);
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previousOverflow;
+      desktop.removeEventListener("change", onDesktop);
+      html.style.overflow = previous.html;
+      body.style.overflow = previous.body;
     };
   }, [mobileOpen]);
 
@@ -89,6 +100,7 @@ export default function Navbar() {
     closeMobile();
     if (pathname !== "/") return; // let the router load the homepage + hash
     e.preventDefault();
+    document.documentElement.style.overflow = "";
     document.body.style.overflow = "";
     const id = href.split("#")[1];
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -112,7 +124,7 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-40 border-b transition-[background-color,border-color,box-shadow] duration-200 ${
+      className={`sticky top-0 z-50 border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color,box-shadow] duration-200 ${
         mobileOpen
           ? "border-slate-200 bg-white"
           : scrolled
@@ -186,52 +198,79 @@ export default function Navbar() {
         </div>
       </nav>
 
+      {/* Tap anywhere outside the panel to close it. */}
+      <div
+        aria-hidden="true"
+        onClick={closeMobile}
+        className={`fixed inset-x-0 bottom-0 top-[calc(4rem+env(safe-area-inset-top))] z-40 touch-none bg-slate-950/45 transition-opacity duration-200 lg:hidden ${
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+
       <div
         id="mobile-menu"
         data-state={mobileOpen ? "open" : "closed"}
         inert={!mobileOpen}
-        className="popover fixed inset-x-0 bottom-0 top-16 z-40 flex flex-col overflow-y-auto bg-white lg:hidden"
+        className="popover fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top)+0.5rem)] z-50 max-h-[calc(100dvh-5.5rem-env(safe-area-inset-top))] overflow-y-auto overscroll-contain rounded-2xl border border-slate-200/80 bg-white p-2 shadow-[0_24px_60px_-20px_rgb(15_23_42/0.5)] lg:hidden"
         style={{ transformOrigin: "top center" }}
       >
-        <ul className="flex-1 px-4 py-4">
+        <ul>
           {NAV_LINKS.map((link) => (
-            <li key={link.href} className="border-b border-slate-100 last:border-b-0">
+            <li key={link.href}>
               <Link
                 href={link.href}
                 onClick={(e) => onNavClick(e, link.href)}
-                className="focus-ring flex items-center justify-between rounded-lg px-2 py-4 font-display text-lg font-semibold text-ink-900 hover:text-cyan-700"
+                aria-current={isCurrent(link.href) ? "true" : undefined}
+                className={`focus-ring flex items-center justify-between rounded-xl px-3 py-3 text-[15px] font-semibold hover:bg-slate-50 ${
+                  isCurrent(link.href) ? "bg-cyan-50 text-cyan-800" : "text-ink-800"
+                }`}
               >
                 {link.label}
-                <ChevronRight size={18} className="text-ink-400" aria-hidden="true" />
+                <ChevronRight size={17} className="text-ink-400" aria-hidden="true" />
               </Link>
             </li>
           ))}
         </ul>
 
-        <div className="border-t border-slate-100 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4">
+        <div className="mt-1 border-t border-slate-100 px-1 pb-1 pt-3">
           {user ? (
-            <>
-              <Link
-                href="/dashboard"
-                onClick={closeMobile}
-                className="focus-ring gradient-btn mb-2 flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-[15px] font-semibold brand-contrast"
-              >
-                <LayoutDashboard size={17} aria-hidden="true" />
-                Go to dashboard
-              </Link>
-              <UserMenu mobile onClose={closeMobile} onLogoutRequest={logout} />
-            </>
+            <div className="space-y-2">
+              <p className="px-2 text-xs text-ink-500">
+                Signed in as <span className="font-semibold text-ink-800">{user.name}</span>
+              </p>
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <Link
+                  href="/dashboard"
+                  onClick={closeMobile}
+                  className="focus-ring gradient-btn flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold brand-contrast"
+                >
+                  <LayoutDashboard size={16} aria-hidden="true" />
+                  Go to dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobile();
+                    logout();
+                  }}
+                  className="focus-ring inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+                >
+                  <LogOut size={15} aria-hidden="true" />
+                  Log out
+                </button>
+              </div>
+            </div>
           ) : (
-            <div className="space-y-2.5">
+            <div className="grid grid-cols-2 gap-2">
+              <Link href="/login" onClick={closeMobile} className="focus-ring btn-secondary w-full py-3 text-sm">
+                Log in
+              </Link>
               <Link
                 href="/signup"
                 onClick={closeMobile}
-                className="gradient-btn focus-ring flex w-full items-center justify-center rounded-xl px-4 py-3.5 text-[15px] font-semibold brand-contrast"
+                className="gradient-btn focus-ring flex w-full items-center justify-center rounded-xl px-3 py-3 text-sm font-semibold brand-contrast"
               >
-                Create free account
-              </Link>
-              <Link href="/login" onClick={closeMobile} className="focus-ring btn-secondary w-full py-3.5 text-[15px]">
-                Log in
+                Create account
               </Link>
             </div>
           )}

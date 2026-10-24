@@ -12,6 +12,8 @@ import {
   Smartphone,
   Wallet,
   Wifi,
+  Zap,
+  Flame,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -320,18 +322,29 @@ function HeroVisual() {
 export default function HomePage() {
   useRevealObserver();
   const { user } = useAuth();
-  const [planCount, setPlanCount] = useState(null);
+  const [catalogue, setCatalogue] = useState(null);
 
   useEffect(() => {
     getPlans()
-      .then((all) => setPlanCount((all || []).length))
-      .catch(() => setPlanCount(null));
+      .then((all) => setCatalogue(all || []))
+      .catch(() => setCatalogue(null));
   }, []);
 
+  // Live numbers from the real price list (never hard-coded).
+  const planCount = catalogue ? catalogue.length : null;
+  const cheapest1GB = useMemo(() => {
+    const oneGB = (catalogue || []).filter((p) => /^1\s?GB\b/i.test(String(p.name).split(" - ")[0].trim()));
+    return oneGB.length ? oneGB.reduce((a, b) => (b.price < a.price ? b : a)) : null;
+  }, [catalogue]);
+  const cheapestData = useMemo(
+    () => ((catalogue || []).length ? catalogue.reduce((a, b) => (b.price < a.price ? b : a)) : null),
+    [catalogue]
+  );
+
   const facts = [
-    ["4", "Networks"],
+    [cheapest1GB ? formatNaira(cheapest1GB.price) : "—", "1GB from"],
     [planCount ? String(planCount) : "—", "Data plans"],
-    ["₦100+", "Airtime from"],
+    ["4", "Networks"],
   ];
 
   return (
@@ -341,52 +354,81 @@ export default function HomePage() {
       <main>
         {/* Hero */}
         <section aria-labelledby="hero-heading" className="relative overflow-hidden">
-          <div aria-hidden="true" className="pointer-events-none absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-cyan-200/35 blur-3xl" />
-          <div aria-hidden="true" className="pointer-events-none absolute -right-40 top-10 h-[30rem] w-[30rem] rounded-full bg-purple-lite-200/35 blur-3xl" />
+          {/* Backdrop: aurora glows + a faint grid that fades out */}
+          <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
+          <div aria-hidden="true" className="anim-glow pointer-events-none absolute -left-32 -top-40 h-[30rem] w-[30rem] rounded-full bg-violet-500/25 blur-3xl" />
+          <div aria-hidden="true" className="anim-glow pointer-events-none absolute -right-32 top-24 h-[28rem] w-[28rem] rounded-full bg-sky-400/25 blur-3xl" style={{ animationDelay: "-3s" }} />
 
-          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:grid-cols-[1.2fr_1fr] lg:gap-8 lg:px-8 lg:pb-20 lg:pt-12">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-8 sm:px-6 sm:pt-14 lg:grid-cols-[1.15fr_1fr] lg:gap-8 lg:px-8 lg:pb-20 lg:pt-12">
             <div className="text-center lg:text-left">
-              <p className="anim-pop inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-ink-600">
-                <Wifi size={14} className="text-cyan-600" aria-hidden="true" />
-                Airtime &amp; data for Nigerian networks
+              <p className="anim-pop inline-flex items-center gap-2 rounded-full border border-cyan-200/70 bg-white/80 py-1.5 pl-1.5 pr-3.5 text-xs font-semibold text-ink-700 shadow-sm backdrop-blur">
+                <span className="wallet-gradient inline-flex h-6 items-center gap-1 rounded-full px-2 text-[11px] font-bold brand-contrast">
+                  <Zap size={12} aria-hidden="true" />
+                  Instant
+                </span>
+                MTN · Airtel · Glo · 9mobile
               </p>
+
               <h1
                 id="hero-heading"
-                className="mt-6 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-5xl lg:text-[3.6rem]"
+                className="mt-6 font-display text-[2.6rem] font-extrabold leading-[1.04] tracking-tight text-ink-900 sm:text-6xl lg:text-[4.2rem]"
               >
-                <span className="anim-line" style={{ animationDelay: "80ms" }}>Top up any Nigerian</span>
+                <span className="anim-line" style={{ animationDelay: "80ms" }}>Cheaper data.</span>
                 <span className="anim-line" style={{ animationDelay: "180ms" }}>
-                  line with <span className="gradient-text anim-shine">clear prices</span>
+                  <span className="gradient-text anim-shine">Instant</span> airtime.
                 </span>
-                <span className="anim-line" style={{ animationDelay: "280ms" }}>and a receipt.</span>
+                <span className="anim-line" style={{ animationDelay: "280ms" }}>Zero stress.</span>
               </h1>
+
               <p className="anim-line mx-auto mt-5 max-w-xl text-base leading-relaxed text-ink-500 sm:text-lg lg:mx-0" style={{ animationDelay: "380ms" }}>
-                Choose MTN, Airtel, Glo or 9mobile, pick a bundle or amount, and see exactly what you&apos;ll pay before you confirm.
+                Top up any Nigerian line in seconds. Fund your wallet once, buy in one tap, and get a receipt for every order.
               </p>
 
-              <div className="anim-pop mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start" style={{ animationDelay: "480ms" }}>
+              {/* Live price highlights from the real catalogue */}
+              {(cheapest1GB || cheapestData) && (
+                <div className="anim-pop mt-6 flex flex-wrap justify-center gap-2 lg:justify-start" style={{ animationDelay: "430ms" }}>
+                  {cheapest1GB && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                      <Flame size={13} aria-hidden="true" />
+                      {cheapest1GB.network} 1GB for {formatNaira(cheapest1GB.price)}
+                    </span>
+                  )}
+                  {cheapestData && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 ring-1 ring-sky-100">
+                      <Wifi size={13} aria-hidden="true" />
+                      Data from {formatNaira(cheapestData.price)}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 ring-1 ring-cyan-100">
+                    <ReceiptText size={13} aria-hidden="true" />
+                    Receipt for every order
+                  </span>
+                </div>
+              )}
+
+              <div className="anim-pop mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start" style={{ animationDelay: "500ms" }}>
                 {user ? (
                   <>
-                    <Link href="/buy-data" className="gradient-btn focus-ring inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold brand-contrast">
-                      Buy data <ArrowRight size={16} aria-hidden="true" />
+                    <Link href="/buy-data" className="gradient-btn focus-ring inline-flex items-center justify-center gap-2 rounded-xl px-7 py-4 text-[15px] font-semibold brand-contrast shadow-[0_18px_40px_-18px_rgb(124_58_237/0.8)]">
+                      Buy data now <ArrowRight size={17} aria-hidden="true" />
                     </Link>
-                    <Link href="/buy-airtime" className="focus-ring btn-secondary px-6 py-3.5">
+                    <Link href="/buy-airtime" className="focus-ring btn-secondary px-7 py-4 text-[15px]">
                       Buy airtime
                     </Link>
                   </>
                 ) : (
                   <>
-                    <Link href="/signup" className="gradient-btn focus-ring inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold brand-contrast">
-                      Create free account <ArrowRight size={16} aria-hidden="true" />
+                    <Link href="/signup" className="gradient-btn focus-ring inline-flex items-center justify-center gap-2 rounded-xl px-7 py-4 text-[15px] font-semibold brand-contrast shadow-[0_18px_40px_-18px_rgb(124_58_237/0.8)]">
+                      Get started free <ArrowRight size={17} aria-hidden="true" />
                     </Link>
-                    <Link href="/#how-it-works" className="focus-ring btn-secondary px-6 py-3.5">
+                    <Link href="/#how-it-works" className="focus-ring btn-secondary px-7 py-4 text-[15px]">
                       See how it works
                     </Link>
                   </>
                 )}
               </div>
 
-              <dl style={{ animationDelay: "580ms" }} className="anim-pop mx-auto mt-10 grid max-w-md grid-cols-3 divide-x divide-slate-200 border-t border-slate-200 pt-6 lg:mx-0">
+              <dl style={{ animationDelay: "600ms" }} className="anim-pop mx-auto mt-10 grid max-w-md grid-cols-3 divide-x divide-slate-200 border-t border-slate-200 pt-6 lg:mx-0">
                 {facts.map(([value, label]) => (
                   <div key={label} className="flex flex-col items-center px-2 lg:items-start lg:px-0 lg:pl-5 lg:first:pl-0">
                     <dt className="order-2 mt-1 whitespace-nowrap text-xs text-ink-500">{label}</dt>
