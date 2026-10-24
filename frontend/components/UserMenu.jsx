@@ -81,7 +81,7 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
           <button
             type="button"
             onClick={requestLogout}
-            className={`${rowClass} mt-1 border border-red-200/70 bg-red-50/60 font-semibold text-red-600 hover:bg-red-50`}
+            className={`${rowClass} font-semibold text-red-600 hover:bg-red-50`}
           >
             <span className={`${iconBox} logout-icon`}><LogOut size={17} aria-hidden="true" /></span>
             Log out
@@ -221,7 +221,7 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
                 role="menuitem"
                 tabIndex={-1}
                 onClick={requestLogout}
-                className={`${rowClass} border border-red-200/70 bg-red-50/60 font-semibold text-red-600 hover:bg-red-50 focus-visible:bg-red-50`}
+                className={`${rowClass} font-semibold text-red-600 hover:bg-red-50 focus-visible:bg-red-50`}
               >
                 <span className={`${iconBox} logout-icon`}><LogOut size={17} aria-hidden="true" /></span>
                 Log out

@@ -300,11 +300,9 @@ export default function Navbar() {
                   closeMobile();
                   logout();
                 }}
-                className="focus-ring press flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl border border-red-200/70 bg-red-50/60 text-[15px] font-semibold text-red-600 hover:bg-red-50"
+                className="focus-ring press flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 text-[15px] font-semibold text-red-600 hover:border-red-200 hover:bg-red-50"
               >
-                <span className="logout-icon flex h-7 w-7 items-center justify-center rounded-lg">
-                  <LogOut size={15} aria-hidden="true" />
-                </span>
+                <LogOut size={18} aria-hidden="true" />
                 Log out
               </button>
             </>

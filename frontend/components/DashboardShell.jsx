@@ -240,7 +240,7 @@ export default function DashboardShell({ children }) {
             type="button"
             onClick={openLogout}
             disabled={loggingOut}
-            className="focus-ring mt-1 flex w-full items-center gap-3 rounded-xl border border-red-200/70 bg-red-50/60 px-2.5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
+            className="focus-ring mt-1 flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
           >
             <span className="logout-icon flex h-8 w-8 items-center justify-center rounded-lg">
               <LogOut size={16} aria-hidden="true" />
