@@ -9,7 +9,7 @@ export default function MobileCheckoutBar({ title, subtitle, amountLabel, ready,
     <>
       {/* Reserves space so the bar never covers the end of the form. */}
       <div aria-hidden="true" className="h-24 lg:hidden" />
-      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_-12px_32px_-24px_rgb(15_23_42/0.4)] backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t border-slate-200/80 bg-white px-4 py-3 shadow-[0_-12px_32px_-24px_rgb(15_23_42/0.4)] lg:hidden">
         <div className="mx-auto max-w-md">
           {error && (
             <p role="alert" className="mb-2 flex items-start gap-1.5 text-xs font-medium text-red-600">
