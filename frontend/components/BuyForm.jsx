@@ -171,17 +171,9 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
           )}
         </section>
 
-        <section aria-labelledby="plan-heading">
-          <h2 id="plan-heading" className={stepHeading}>
-            <span className={stepNumber} aria-hidden="true">3</span>
-            {network} data plan
-          </h2>
-          <PlanList network={network} selectedPlan={selectedPlan} onSelect={selectPlan} />
-        </section>
-
         <section aria-labelledby="pay-heading">
           <h2 id="pay-heading" className={stepHeading}>
-            <span className={stepNumber} aria-hidden="true">4</span>
+            <span className={stepNumber} aria-hidden="true">3</span>
             Pay with
           </h2>
           <PaymentMethodPicker
@@ -193,6 +185,14 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
             }}
           />
         </section>
+        <section aria-labelledby="plan-heading">
+          <h2 id="plan-heading" className={stepHeading}>
+            <span className={stepNumber} aria-hidden="true">4</span>
+            {network} data plan
+          </h2>
+          <PlanList network={network} selectedPlan={selectedPlan} onSelect={selectPlan} />
+        </section>
+
       </div>
 
       <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
