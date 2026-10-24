@@ -16,7 +16,7 @@ export const platformHint = () => {
   if (typeof navigator === "undefined") return null;
   const ua = navigator.userAgent || "";
   const iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
-  if (/iPhone|iPad|iPod/.test(ua) || iPadOS) return "ios";
+  if (/iPhone|iPad|iPod/.test(ua) || iPadOS) return /CriOS|EdgiOS|FxiOS/.test(ua) ? "ios-other" : "ios";
   if (/Android/.test(ua)) return "android";
   if (/Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua)) return "mac-safari";
   return null;

@@ -27,6 +27,7 @@ import Image from "next/image";
 import PhoneFrame from "@/components/PhoneFrame";
 import TrustReceipt from "@/components/TrustReceipt";
 import HeroBackdrop from "@/components/HeroBackdrop";
+import InstallApp from "@/components/InstallApp";
 import { HERO_PHOTO } from "@/lib/data";
 
 const NETWORKS = [
@@ -439,6 +440,10 @@ export default function HomePage() {
                     </Link>
                   </>
                 )}
+              </div>
+
+              <div className="anim-pop mt-4 flex justify-center lg:justify-start" style={{ animationDelay: "560ms" }}>
+                <InstallApp variant="hero" />
               </div>
 
               <dl style={{ animationDelay: "600ms" }} className="anim-pop mx-auto mt-10 grid max-w-md grid-cols-3 divide-x divide-slate-200 border-t border-slate-200 pt-6 lg:mx-0">

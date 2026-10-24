@@ -326,7 +326,7 @@ export default function Navbar() {
               </Link>
             </>
           )}
-          {!user && <InstallApp variant="block" onDone={closeMobile} />}
+          <InstallApp variant="block" onDone={closeMobile} />
         </div>
       </div>
 

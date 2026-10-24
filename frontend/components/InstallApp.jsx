@@ -8,21 +8,35 @@ import { useInstallApp } from "@/lib/pwa";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
 const STEPS = {
-  ios: [
-    { icon: Share, text: <>Tap the <b>Share</b> button in your browser (the square with an arrow).</> },
-    { icon: PlusSquare, text: <>Scroll down and tap <b>Add to Home Screen</b>.</> },
-    { icon: Smartphone, text: <>Tap <b>Add</b>. EscriptPay now opens from your home screen like an app.</> },
-  ],
-  android: [
-    { icon: MoreVertical, text: <>Tap your browser&apos;s <b>menu</b> (⋮).</> },
-    { icon: PlusSquare, text: <>Tap <b>Install app</b> or <b>Add to Home screen</b>.</> },
-    { icon: Smartphone, text: <>Confirm. EscriptPay now opens from your home screen like an app.</> },
-  ],
-  "mac-safari": [
-    { icon: Share, text: <>In Safari, open the <b>File</b> menu (or tap Share).</> },
-    { icon: PlusSquare, text: <>Choose <b>Add to Dock</b>.</> },
-    { icon: Smartphone, text: <>EscriptPay now opens from your Dock like an app.</> },
-  ],
+  ios: {
+    steps: [
+      { icon: Share, text: <>Tap the <b>Share</b> button (the square with an arrow). On newer iPhones tap <b>⋯</b> first, then <b>Share</b>.</> },
+      { icon: PlusSquare, text: <>Scroll down and tap <b>Add to Home Screen</b>.</> },
+      { icon: Smartphone, text: <>Tap <b>Add</b>. EscriptPay now opens from your home screen like an app.</> },
+    ],
+  },
+  "ios-other": {
+    steps: [
+      { icon: Share, text: <>Tap the <b>Share</b> button at the top right, next to the address.</> },
+      { icon: PlusSquare, text: <>Scroll to the bottom of the list and tap <b>Add to Home Screen</b>. Not there? Tap <b>Edit Actions</b> or <b>More</b> to find it.</> },
+      { icon: Smartphone, text: <>Tap <b>Add</b>. EscriptPay now opens from your home screen like an app.</> },
+    ],
+    note: "Easiest in Safari: open escriptpay.com in Safari and use Share → Add to Home Screen.",
+  },
+  android: {
+    steps: [
+      { icon: MoreVertical, text: <>Tap your browser&apos;s <b>menu</b> (⋮).</> },
+      { icon: PlusSquare, text: <>Tap <b>Install app</b> or <b>Add to Home screen</b>.</> },
+      { icon: Smartphone, text: <>Confirm. EscriptPay now opens from your home screen like an app.</> },
+    ],
+  },
+  "mac-safari": {
+    steps: [
+      { icon: Share, text: <>In Safari, open the <b>File</b> menu (or click Share).</> },
+      { icon: PlusSquare, text: <>Choose <b>Add to Dock</b>.</> },
+      { icon: Smartphone, text: <>EscriptPay now opens from your Dock like an app.</> },
+    ],
+  },
 };
 
 function InstructionsSheet({ hint, onClose }) {
@@ -32,7 +46,8 @@ function InstructionsSheet({ hint, onClose }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  const steps = STEPS[hint] || STEPS.android;
+  const guide = STEPS[hint] || STEPS.android;
+  const steps = guide.steps;
   return createPortal(
     <div role="dialog" aria-modal="true" aria-labelledby="install-title" className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-6">
       <button type="button" tabIndex={-1} aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-slate-950/55 backdrop-blur-[2px] animate-fade-in" />
@@ -59,6 +74,7 @@ function InstructionsSheet({ hint, onClose }) {
             </li>
           ))}
         </ol>
+        {guide.note && <p className="mt-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-ink-500">{guide.note}</p>}
         <button type="button" onClick={onClose} className="gradient-btn focus-ring mt-5 inline-flex h-12 w-full items-center justify-center rounded-2xl text-sm font-bold brand-contrast">
           Got it
         </button>
@@ -119,6 +135,15 @@ export default function InstallApp({ variant = "row", rowClass = "", iconBox = "
           <X size={16} aria-hidden="true" />
         </button>
       </section>
+    );
+  }
+
+  if (variant === "hero") {
+    return (
+      <button type="button" onClick={start} className="focus-ring press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-white">
+        <Download size={16} aria-hidden="true" className="text-cyan-600" />
+        Install the EscriptPay app
+      </button>
     );
   }
 
