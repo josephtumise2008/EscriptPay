@@ -137,7 +137,7 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-[env(safe-area-inset-top)] z-50 border-b transition-[background-color,border-color,box-shadow] duration-200 ${
+      className={`sticky top-[env(safe-area-inset-top)] z-50 border-b transition-[background-color,border-color,box-shadow] duration-200 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-[env(safe-area-inset-top)] before:bg-inherit before:content-[''] ${
         mobileOpen
           ? "border-slate-200 bg-white"
           : scrolled

@@ -66,6 +66,9 @@ export const metadata = {
     startupImage: STARTUP_IMAGES,
   },
   formatDetection: { telephone: false },
+  // iOS only uses the launch screens (and full-screen mode) with this tag;
+  // Next.js now writes the newer "mobile-web-app-capable" name only.
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 export const viewport = {
@@ -97,7 +100,6 @@ window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();win
       </head>
       <body>
         <AppSplash />
-        <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-[env(safe-area-inset-top)] bg-white" />
         <ThemeProvider>
           <AuthProvider>
             <WalletProvider>{children}</WalletProvider>

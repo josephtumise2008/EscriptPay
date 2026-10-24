@@ -254,7 +254,7 @@ export default function DashboardShell({ children }) {
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         {/* No backdrop-filter on phones: it would become the containing block for
             the fixed-position menus and backdrops opened from this header. */}
-        <header className="sticky top-[env(safe-area-inset-top)] z-40 border-b border-slate-200/70 bg-white lg:bg-white/85 lg:backdrop-blur-xl">
+        <header className="sticky top-[env(safe-area-inset-top)] z-40 border-b border-slate-200/70 bg-white lg:bg-white/85 lg:backdrop-blur-xl before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-[env(safe-area-inset-top)] before:bg-inherit before:content-['']">
           <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:h-16 lg:px-8">
             <div className="flex min-w-0 items-center">
               {back ? (
