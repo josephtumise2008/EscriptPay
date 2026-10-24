@@ -219,8 +219,11 @@ const changePassword = async (req, res) => {
       return res.status(401).json({ success: false, message: "Current password is incorrect." });
     }
 
+    // Signs out every other device; this one gets a fresh token.
     user.password = newPassword;
+    user.sessionsValidAfter = new Date();
     await user.save();
+    setAuthCookie(res, signToken(user));
 
     return res.json({ success: true, message: "Password updated successfully." });
   } catch (error) {
@@ -311,6 +314,7 @@ const resetPassword = async (req, res) => {
     }
 
     user.password = password;
+    user.sessionsValidAfter = new Date(); // signs out every device
     user.resetTokenHash = undefined;
     user.resetTokenExpires = undefined;
     await user.save();

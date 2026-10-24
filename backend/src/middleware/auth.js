@@ -36,19 +36,37 @@ const extractToken = (req) => {
   return null;
 };
 
-const requireAuth = (req, res, next) => {
+// Verifies the token, then checks the account still exists and that the
+// token wasn't issued before a forced logout or password change.
+const requireAuth = async (req, res, next) => {
   const token = extractToken(req);
   if (!token) {
     return res.status(401).json({ success: false, message: "Not authenticated." });
   }
 
+  let payload;
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = payload.sub;
-    return next();
+    payload = jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
     return res.status(401).json({ success: false, message: "Session expired. Please log in again." });
   }
+
+  try {
+    const User = require("../models/User");
+    const user = await User.findById(payload.sub).select("+sessionsValidAfter").lean();
+    const validAfter = user && user.sessionsValidAfter
+      ? Math.floor(new Date(user.sessionsValidAfter).getTime() / 1000)
+      : 0;
+    if (!user || !payload.iat || payload.iat < validAfter) {
+      clearAuthCookie(res);
+      return res.status(401).json({ success: false, message: "Session expired. Please log in again." });
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not check your session." });
+  }
+
+  req.userId = payload.sub;
+  return next();
 };
 
 // Composes with requireAuth. Only users whose DB record has role === "admin"

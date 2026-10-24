@@ -60,6 +60,9 @@ const userSchema = new mongoose.Schema(
     emailCodeExpires: { type: Date, select: false },
     emailCodeAttempts: { type: Number, default: 0, select: false },
     emailCodeSentAt: { type: Date, select: false },
+    // Any login token issued before this moment is rejected (forced logout,
+    // password change or reset).
+    sessionsValidAfter: { type: Date, select: false },
     // Password-reset token (stored as a one-way hash, not the raw token).
     resetTokenHash: {
       type: String,
@@ -92,6 +95,7 @@ userSchema.methods.toJSON = function toJSON() {
   delete obj.emailCodeExpires;
   delete obj.emailCodeAttempts;
   delete obj.emailCodeSentAt;
+  delete obj.sessionsValidAfter;
   return obj;
 };
 
