@@ -47,7 +47,7 @@ const sections = [
       <p>
         You can ask for an unused wallet balance to be returned by emailing {BUSINESS.supportEmail} from the address on
         your account. We&apos;ll confirm your identity and send it back to your original payment method or a bank account in
-        your name. Payment processing fees already paid when funding the wallet are not refundable.
+        your name.
       </p>
     ),
   },

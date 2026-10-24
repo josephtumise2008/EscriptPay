@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
 const User = require("../models/User");
 const ContactMessage = require("../models/ContactMessage");
+const WalletEntry = require("../models/WalletEntry");
 const { vtu, config } = require("../services");
 const { providerFee } = require("../services/walletFee");
 const { logEvent } = require("../utils/logger");
@@ -36,8 +37,8 @@ const overview = async (req, res) => {
     for (const tx of delivered) {
       const salesK = tx.paymentAmountKobo || Math.round(tx.amount * 100);
       const costK = Number.isFinite(tx.costKobo) ? tx.costKobo : null;
-      // Card orders: we pay the processor's fee. Wallet orders: the customer
-      // already paid the fee when funding.
+      // Card orders: we pay the processor's fee. Wallet orders: the fee was
+      // on the top-up (counted below).
       const feeK = tx.paymentProvider === "paystack" ? providerFee(salesK, fee) : 0;
       const profitK = costK === null ? 0 : salesK - costK - feeK;
       const d = byDay[dayKey(tx.createdAt)];
@@ -50,6 +51,22 @@ const overview = async (req, res) => {
       }
       totals[tx.type] += 1;
       if (costK === null) totals.unknownCost += 1;
+    }
+
+    // Card top-ups: whatever part of the processor's fee the customer didn't
+    // pay (all of it when the top-up fee is switched off) is our cost.
+    const fundings = await WalletEntry.find({ mode, kind: "funding", status: "successful", paymentProvider: "paystack", createdAt: { $gte: since } })
+      .select("amountKobo chargedKobo feeKobo createdAt")
+      .lean();
+    for (const f of fundings) {
+      const chargedK = f.chargedKobo || f.amountKobo;
+      const absorbedK = Math.max(0, providerFee(chargedK, fee) - (f.feeKobo || 0));
+      if (!absorbedK) continue;
+      const d = byDay[dayKey(f.createdAt)];
+      for (const bucket of [totals, d].filter(Boolean)) {
+        bucket.fees += absorbedK;
+        bucket.profit -= absorbedK;
+      }
     }
 
     const toNaira = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, ["orders", "data", "airtime", "unknownCost"].includes(k) ? v : v / 100]));

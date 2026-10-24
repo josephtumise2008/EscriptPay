@@ -177,7 +177,7 @@ export default function AdminPage() {
             </div>
             <Kpi icon={ShoppingBag} label="Sales" value={formatNaira(t.sales)} sub={`${t.orders} delivered orders`} />
             <Kpi icon={Truck} label="Supplier cost" value={formatNaira(t.cost)} sub="Paid to ClubKonnect" />
-            <Kpi icon={CreditCard} label="Card fees" value={formatNaira(t.fees)} sub="On card purchases" />
+            <Kpi icon={CreditCard} label="Card fees" value={formatNaira(t.fees)} sub="Paystack fees you paid" />
             <Kpi icon={ShoppingBag} label="Mix" value={`${t.data} / ${t.airtime}`} sub="Data / airtime orders" />
           </section>
           {t.unknownCost > 0 && (

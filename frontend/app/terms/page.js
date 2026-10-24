@@ -66,7 +66,7 @@ const sections = [
     body: (
       <ul>
         <li>You can add money to your EscriptPay wallet and use it to pay for purchases on EscriptPay.</li>
-        <li>When you fund the wallet by card, transfer or USSD, the payment processing fee is shown and added to the amount you pay, so your wallet receives the full amount you chose.</li>
+        <li>Funding the wallet is free: your wallet receives exactly the amount you pay. If a fee is ever introduced, it will be shown clearly before you pay.</li>
         <li>The wallet is not a bank account and does not earn interest. Balances cannot be transferred to other users.</li>
         <li>If you would like an unused balance returned, contact us — see the Refund Policy.</li>
       </ul>

@@ -20,6 +20,7 @@ const connectDB = require("../../src/config/db");
 const User = require("../../src/models/User");
 const Plan = require("../../src/models/Plan");
 const Transaction = require("../../src/models/Transaction");
+const WalletEntry = require("../../src/models/WalletEntry");
 const { startServer, createClient } = require("../helpers/server");
 
 let srv;
@@ -80,4 +81,19 @@ test("admin can resolve an order that needs review", { skip }, async () => {
   const after = await Transaction.findById(tx._id);
   assert.equal(after.needsReview, false);
   assert.equal(after.adminResolution.action, "refunded");
+});
+
+test("card fees on free wallet top-ups count against profit", { skip }, async () => {
+  const u = await User.findOne({ email: "customer@example.com" });
+  const admin = createClient(srv.baseUrl);
+  await admin.post("/api/auth/login", { email: "owner@example.com", password: "password123" });
+  const before = (await admin.get("/api/admin/overview?days=7")).body.totals;
+  const base = { user: u._id, kind: "funding", direction: "credit", status: "successful", mode: "test", paymentProvider: "paystack" };
+  // Free top-up: we pay 1.5% of 1,000 = 15.
+  await WalletEntry.create({ ...base, reference: "WF-FREE-1", amountKobo: 100000, chargedKobo: 100000, feeKobo: 0 });
+  // Customer paid the fee: nothing absorbed.
+  await WalletEntry.create({ ...base, reference: "WF-PAID-1", amountKobo: 100000, chargedKobo: 101600, feeKobo: 1600 });
+  const after = (await admin.get("/api/admin/overview?days=7")).body.totals;
+  assert.equal(Math.round((after.fees - before.fees) * 100), 1500);
+  assert.equal(Math.round((before.profit - after.profit) * 100), 1500);
 });
