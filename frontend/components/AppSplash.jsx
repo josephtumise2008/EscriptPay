@@ -1,7 +1,6 @@
-// Launch animation shown when EscriptPay is opened from the home screen
-// (installed app). It is plain HTML + CSS so it paints before React loads;
-// the inline script in the root layout decides whether to show it (once per
-// launch) and removes it after the animation. Hidden in the browser.
+// Launch screen shown when EscriptPay is opened from the home screen or as an
+// installed app. Plain HTML + inline CSS (lib/splash.js) so it paints with the
+// first HTML, before React or the stylesheet load. Hidden in the browser.
 export default function AppSplash() {
   return (
     <div id="ep-splash" aria-hidden="true" className="ep-splash">
@@ -18,6 +17,10 @@ export default function AppSplash() {
           <circle cx="60" cy="60" r="56" stroke="rgb(255 255 255 / 0.08)" strokeWidth="2" />
           <circle className="ep-splash-arc" cx="60" cy="60" r="56" stroke="url(#ep-splash-ring-grad)" strokeWidth="3" strokeLinecap="round" />
         </svg>
+        <svg className="ep-splash-orbit" viewBox="0 0 120 120" fill="none">
+          <circle cx="60" cy="4" r="4" fill="#fff" />
+          <circle cx="60" cy="4" r="9" fill="rgb(167 139 250 / 0.35)" />
+        </svg>
         <svg className="ep-splash-logo" viewBox="0 0 48 48" fill="none">
           <defs>
             <linearGradient id="ep-splash-logo-grad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
@@ -30,8 +33,6 @@ export default function AppSplash() {
           <path d="M16 30c2.5 4 7 6.5 12 6.5" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.55" />
           <path d="M16 34c2.5 4 7 6.5 12 6.5" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
           <path
-            className="ep-splash-clip"
-            pathLength="100"
             d="M32 14l-13.4 13.4a3.4 3.4 0 004.8 4.8L36.8 18.8a6.6 6.6 0 00-9.3-9.3L13.6 24a9.6 9.6 0 0013.6 13.6"
             stroke="white"
             strokeWidth="3.2"
@@ -43,6 +44,8 @@ export default function AppSplash() {
       <p className="ep-splash-word">
         Escript<span>Pay</span>
       </p>
+      <p className="ep-splash-tag">Cheaper data. Instant airtime.</p>
+      <div className="ep-splash-bar"><i /></div>
     </div>
   );
 }

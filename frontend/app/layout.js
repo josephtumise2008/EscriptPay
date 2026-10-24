@@ -3,6 +3,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { WalletProvider } from "@/lib/wallet-context";
 import ThemeProvider from "@/components/ThemeProvider";
 import AppSplash from "@/components/AppSplash";
+import { SPLASH_CSS, SPLASH_SCRIPT } from "@/lib/splash";
 import { InstallSheetHost } from "@/components/InstallApp";
 import { PwaRegister } from "@/lib/pwa";
 import "./globals.css";
@@ -20,6 +21,17 @@ const sora = Sora({
 });
 
 const SITE_URL = "https://escriptpay.com";
+
+// [css width, css height, pixel ratio] of iPhones and iPads, portrait.
+const DEVICES = [
+  [440, 956, 3], [402, 874, 3], [430, 932, 3], [393, 852, 3], [428, 926, 3], [390, 844, 3],
+  [375, 812, 3], [414, 896, 3], [414, 896, 2], [414, 736, 3], [375, 667, 2], [320, 568, 2],
+  [1024, 1366, 2], [834, 1194, 2], [820, 1180, 2], [768, 1024, 2],
+];
+const STARTUP_IMAGES = DEVICES.map(([w, h, r]) => ({
+  url: `/splash/launch-${w * r}x${h * r}.png`,
+  media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait)`,
+}));
 const TITLE = "EscriptPay — Cheaper data. Instant airtime.";
 const DESCRIPTION =
   "Buy MTN, Airtel, Glo and 9mobile data and airtime in seconds. Fund your wallet once and buy in one tap, with a receipt for every order.";
@@ -46,7 +58,13 @@ export const metadata = {
     title: TITLE,
     description: DESCRIPTION,
   },
-  appleWebApp: { title: "EscriptPay", capable: true, statusBarStyle: "black-translucent" },
+  appleWebApp: {
+    title: "EscriptPay",
+    capable: true,
+    statusBarStyle: "black-translucent",
+    // iPhone/iPad launch screens (otherwise iOS shows white while the app opens).
+    startupImage: STARTUP_IMAGES,
+  },
   formatDetection: { telephone: false },
 };
 
@@ -67,10 +85,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${sora.variable}`} suppressHydrationWarning>
       <head>
+        <style dangerouslySetInnerHTML={{ __html: SPLASH_CSS }} />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var d=document.documentElement;d.classList.add("js");try{var p=localStorage.getItem("escriptpay-theme");var t=(p==="light"||p==="dark")?p:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");d.classList.toggle("dark",t==="dark");d.style.colorScheme=t;}catch(e){}
-try{var sa=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;var rm=window.matchMedia("(prefers-reduced-motion: reduce)").matches;if(sa&&!sessionStorage.getItem("ep-splash")){sessionStorage.setItem("ep-splash","1");d.classList.add("ep-splash-on");setTimeout(function(){d.classList.add("ep-splash-out")},rm?500:1600);setTimeout(function(){d.classList.remove("ep-splash-on","ep-splash-out")},rm?900:2100);}}catch(e){}
+${SPLASH_SCRIPT}
 window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__epInstall=e;window.dispatchEvent(new Event("ep-installable"));});
 })();`,
           }}
