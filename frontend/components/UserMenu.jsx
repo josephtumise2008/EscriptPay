@@ -10,6 +10,7 @@ import { initials } from "@/lib/format";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { useDismiss, handleMenuKeyDown } from "@/hooks/useDismiss";
 import { useTheme, THEME_OPTIONS } from "@/components/ThemeProvider";
+import InstallApp from "@/components/InstallApp";
 
 const THEME_ICONS = { light: Sun, dark: Moon, system: Monitor };
 
@@ -77,6 +78,7 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
             {item.label}
           </Link>
         ))}
+        <InstallApp variant="row" rowClass={rowClass} iconBox={iconBox} onDone={onClose} />
         {onLogoutRequest && (
           <button
             type="button"
@@ -182,6 +184,7 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
               {item.label}
             </Link>
           ))}
+          <InstallApp variant="row" rowClass={rowClass} iconBox={iconBox} onDone={close} />
         </div>
 
         <div className="h-px bg-slate-100" role="separator" />

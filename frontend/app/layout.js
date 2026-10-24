@@ -2,6 +2,9 @@ import { Inter, Sora } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { WalletProvider } from "@/lib/wallet-context";
 import ThemeProvider from "@/components/ThemeProvider";
+import AppSplash from "@/components/AppSplash";
+import { InstallSheetHost } from "@/components/InstallApp";
+import { PwaRegister } from "@/lib/pwa";
 import "./globals.css";
 
 const inter = Inter({
@@ -44,6 +47,7 @@ export const metadata = {
     description: DESCRIPTION,
   },
   appleWebApp: { title: "EscriptPay", capable: true, statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport = {
@@ -65,17 +69,23 @@ export default function RootLayout({ children }) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var d=document.documentElement;d.classList.add("js");try{var p=localStorage.getItem("escriptpay-theme");var t=(p==="light"||p==="dark")?p:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");d.classList.toggle("dark",t==="dark");d.style.colorScheme=t;}catch(e){}})();`,
+            __html: `(function(){var d=document.documentElement;d.classList.add("js");try{var p=localStorage.getItem("escriptpay-theme");var t=(p==="light"||p==="dark")?p:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");d.classList.toggle("dark",t==="dark");d.style.colorScheme=t;}catch(e){}
+try{var sa=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;var rm=window.matchMedia("(prefers-reduced-motion: reduce)").matches;if(sa&&!sessionStorage.getItem("ep-splash")){sessionStorage.setItem("ep-splash","1");d.classList.add("ep-splash-on");setTimeout(function(){d.classList.add("ep-splash-out")},rm?500:1600);setTimeout(function(){d.classList.remove("ep-splash-on","ep-splash-out")},rm?900:2100);}}catch(e){}
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__epInstall=e;window.dispatchEvent(new Event("ep-installable"));});
+})();`,
           }}
         />
       </head>
       <body>
+        <AppSplash />
         <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-[env(safe-area-inset-top)] bg-white" />
         <ThemeProvider>
           <AuthProvider>
             <WalletProvider>{children}</WalletProvider>
+            <InstallSheetHost />
           </AuthProvider>
         </ThemeProvider>
+        <PwaRegister />
       </body>
     </html>
   );

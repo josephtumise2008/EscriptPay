@@ -20,6 +20,7 @@ import {
 import { BalanceAmount } from "./WalletBalance";
 import { initials } from "@/lib/format";
 import Logo from "./Logo";
+import InstallApp from "./InstallApp";
 import UserMenu from "./UserMenu";
 import ThemeToggle from "./ThemeToggle";
 import { useLogout, LogoutErrorToast } from "@/hooks/useLogout";
@@ -325,6 +326,7 @@ export default function Navbar() {
               </Link>
             </>
           )}
+          {!user && <InstallApp variant="block" onDone={closeMobile} />}
         </div>
       </div>
 

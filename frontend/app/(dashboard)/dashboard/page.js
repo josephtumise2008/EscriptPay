@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth-context";
 import { getTransactions, errorMessage } from "@/lib/api";
 import { formatNaira } from "@/lib/format";
 import { computeStats, buildRangeSeries } from "@/lib/transactions";
+import InstallApp from "@/components/InstallApp";
 
 const RANGES = [
   { value: "7d", label: "7 days" },
@@ -135,6 +136,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      <InstallApp variant="banner" />
 
       <section aria-labelledby="quick-actions-heading">
         <h2 id="quick-actions-heading" className="sr-only">
