@@ -14,6 +14,7 @@ export const formatDate = (dateString) => {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: "Africa/Lagos",
   }).format(date);
 };
 
@@ -26,6 +27,7 @@ export const formatDateTime = (dateString) => {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "Africa/Lagos",
   }).format(date);
 };
 

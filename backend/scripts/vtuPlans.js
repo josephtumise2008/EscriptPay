@@ -18,7 +18,38 @@
 //
 // Never deletes anything. The database comes from MONGO_URI, backend/.env.atlas
 // or a hidden prompt; it is never printed.
+const dns = require("dns");
 const mongoose = require("mongoose");
+
+// mongodb+srv:// strings need a DNS "SRV" lookup that some networks/routers
+// can't answer ("querySrv" errors). Try the computer's own DNS first, then
+// public DNS (Cloudflare, Google), then give a clear message.
+const connectWithFallback = async (uri) => {
+  try {
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 15000 });
+    return;
+  } catch (error) {
+    if (!/querySrv|ENOTFOUND|ETIMEOUT|ECONNREFUSED/i.test(String(error && error.message))) throw error;
+    console.log("Your network's DNS couldn't find Atlas. Retrying with public DNS (Cloudflare/Google)…");
+    await mongoose.disconnect().catch(() => {});
+  }
+  dns.setServers(["1.1.1.1", "8.8.8.8", "1.0.0.1", "8.8.4.4"]);
+  try {
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 20000 });
+  } catch (error) {
+    const msg = String(error && error.message);
+    if (/ENOTFOUND/i.test(msg)) {
+      throw new Error("Atlas host not found — check the part after @ in your connection string (e.g. cluster0.xxxxx.mongodb.net).");
+    }
+    if (/querySrv|ETIMEOUT|ECONNREFUSED/i.test(msg)) {
+      throw new Error(
+        "Your internet connection is blocking the Atlas lookup. Switch network (e.g. phone hotspot) and run again."
+      );
+    }
+    if (/bad auth|authentication failed/i.test(msg)) throw new Error("Atlas rejected the username/password in the connection string.");
+    throw error;
+  }
+};
 const fs = require("fs");
 const path = require("path");
 const { loadClubkonnect, readPrivate, ask, askHidden, flag, option } = require("./lib/privateEnv");
@@ -120,7 +151,8 @@ const run = async () => {
   }
 
   const Plan = require("../src/models/Plan");
-  await mongoose.connect(uri, { serverSelectionTimeoutMS: 15000 });
+  console.log("Connecting to the database…");
+  await connectWithFallback(uri);
   const dbName = mongoose.connection.name;
 
   const existing = await Plan.find({ provider: "clubkonnect" });
