@@ -50,6 +50,16 @@ const userSchema = new mongoose.Schema(
       test: { type: Number, default: 0, min: 0 },
       live: { type: Number, default: 0, min: 0 },
     },
+    // Email verification. The 6-digit code is stored only as a hash.
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerifiedAt: Date,
+    emailCodeHash: { type: String, select: false },
+    emailCodeExpires: { type: Date, select: false },
+    emailCodeAttempts: { type: Number, default: 0, select: false },
+    emailCodeSentAt: { type: Date, select: false },
     // Password-reset token (stored as a one-way hash, not the raw token).
     resetTokenHash: {
       type: String,
@@ -78,6 +88,10 @@ userSchema.methods.comparePassword = function comparePassword(candidate) {
 userSchema.methods.toJSON = function toJSON() {
   const obj = this.toObject();
   delete obj.password;
+  delete obj.emailCodeHash;
+  delete obj.emailCodeExpires;
+  delete obj.emailCodeAttempts;
+  delete obj.emailCodeSentAt;
   return obj;
 };
 

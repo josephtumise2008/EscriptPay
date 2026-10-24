@@ -51,8 +51,11 @@ const ask = (question) =>
 
 const askHidden = (question) =>
   new Promise((resolve) => {
+    // Print the question on its own line first: some terminals swallow text
+    // written on the same line once input echo is turned off.
+    console.log(`\n${question.trim()}`);
+    console.log("(Paste it and press Enter — it stays hidden, nothing will show while you paste.)");
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    process.stdout.write(question);
     rl._writeToOutput = () => {};
     rl.question("", (answer) => {
       rl.close();

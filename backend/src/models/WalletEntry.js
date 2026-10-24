@@ -40,6 +40,17 @@ const walletEntrySchema = new mongoose.Schema(
       min: 1,
       validate: { validator: Number.isInteger, message: "amountKobo must be an integer." },
     },
+    // Funding: what the customer is charged (amount + card fee) and the fee.
+    // The provider must confirm exactly chargedKobo.
+    chargedKobo: {
+      type: Number,
+      min: 0,
+    },
+    feeKobo: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
     // Balance right after this entry was applied (set once applied).
     balanceAfterKobo: {
       type: Number,
@@ -117,6 +128,8 @@ walletEntrySchema.methods.toJSON = function toJSON() {
     kind: this.kind,
     direction: this.direction,
     amount: this.amountKobo / 100,
+    fee: (this.feeKobo || 0) / 100,
+    charged: (this.chargedKobo || this.amountKobo) / 100,
     balanceAfter: typeof this.balanceAfterKobo === "number" ? this.balanceAfterKobo / 100 : null,
     status: this.status,
     mode: this.mode,

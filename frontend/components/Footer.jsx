@@ -28,6 +28,14 @@ const GROUPS = [
       { href: "/#contact", label: "Contact" },
     ],
   },
+  {
+    title: "Legal",
+    links: [
+      { href: "/terms", label: "Terms of service" },
+      { href: "/privacy", label: "Privacy policy" },
+      { href: "/refunds", label: "Refund policy" },
+    ],
+  },
 ];
 
 export default function Footer() {
@@ -44,7 +52,7 @@ export default function Footer() {
             </p>
           </div>
 
-          <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+          <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-4">
             {GROUPS.map((g) => (
               <div key={g.title}>
                 <p className="text-sm font-semibold text-ink-900">{g.title}</p>

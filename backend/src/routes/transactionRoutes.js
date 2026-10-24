@@ -8,16 +8,18 @@ const {
   verifyTransactionPayment,
 } = require("../controllers/transactionController");
 
+const { requireVerifiedEmail } = require("../services/email/verification");
+
 const router = express.Router();
 
 router.use(requireAuth);
 
 router.get("/", getUserTransactions);
 router.get("/:id", getTransactionById);
-router.post("/data", createDataTransaction);
+router.post("/data", requireVerifiedEmail, createDataTransaction);
 // Original route name, kept so existing clients keep working.
-router.post("/test", createDataTransaction);
-router.post("/airtime", createAirtimeTransaction);
+router.post("/test", requireVerifiedEmail, createDataTransaction);
+router.post("/airtime", requireVerifiedEmail, createAirtimeTransaction);
 router.post("/verify", verifyTransactionPayment);
 
 module.exports = router;

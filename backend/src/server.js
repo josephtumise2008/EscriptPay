@@ -33,6 +33,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const vtuRoutes = require("./routes/vtuRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const { rateLimit } = require("./middleware/rateLimit");
 // Loading the service registry validates PAYMENT_SERVICE / VTU_SERVICE and
 // refuses to start with an unsafe combination (see config/payments.js).
@@ -137,6 +138,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/vtu", vtuRoutes);
+app.use("/api/admin", rateLimit({ windowMs: 60 * 1000, max: 60, namespace: "admin" }), adminRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found." });

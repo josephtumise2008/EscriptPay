@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { History, UserRound, Settings, LogOut, ChevronDown, Home, LayoutDashboard, Sun, Moon, Monitor, Wallet, Plus } from "lucide-react";
+import { History, UserRound, Settings, LogOut, ChevronDown, Home, LayoutDashboard, Sun, Moon, Monitor, Wallet, Plus, BarChart3 } from "lucide-react";
 import { BalanceAmount, HideBalanceButton } from "@/components/WalletBalance";
 import { useAuth } from "@/lib/auth-context";
 import { initials } from "@/lib/format";
@@ -64,6 +64,7 @@ export default function UserMenu({ mobile = false, onClose, onLogoutRequest }) {
     { href: "/profile", label: "Profile", icon: UserRound },
     { href: "/history", label: "Transactions", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
+    ...(user.role === "admin" ? [{ href: "/admin", label: "Business (admin)", icon: BarChart3 }] : []),
   ];
 
   // Inline list used inside the public site's mobile menu.

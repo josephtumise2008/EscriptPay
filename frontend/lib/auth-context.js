@@ -82,6 +82,9 @@ export function AuthProvider({ children }) {
 
   const clearSession = useCallback(() => setUser(null), []);
 
+  // Replace the cached user (e.g. after verifying the email).
+  const updateUser = useCallback((next) => setUser(next), []);
+
   const saveProfile = useCallback(async (patch) => {
     try {
       const { user: updated } = await apiUpdateProfile(patch);
@@ -103,7 +106,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, clearSession, saveProfile, savePassword }}
+      value={{ user, loading, login, register, logout, clearSession, saveProfile, savePassword, updateUser }}
     >
       {children}
     </AuthContext.Provider>

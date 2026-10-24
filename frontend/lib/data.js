@@ -68,6 +68,17 @@ export const CONTACT = {
   hours: "To be announced",
 };
 
+// Business details used on the Terms, Privacy and Refund pages. The support
+// email is the one registered as EscriptPay's support contact with Paystack.
+export const BUSINESS = {
+  name: "EscriptPay",
+  owner: "Abimbade Joseph Onaopemiposi",
+  location: "Ibadan, Oyo State, Nigeria",
+  supportEmail: "joseescript@gmail.com",
+  website: "https://escriptpay.com",
+  policiesUpdated: "24 October 2026",
+};
+
 // Kept for any older imports.
 export const CONTACT_PLACEHOLDERS = {
   email: `${CONTACT.email} (placeholder)`,

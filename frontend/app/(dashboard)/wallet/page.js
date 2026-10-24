@@ -20,7 +20,7 @@ import {
 import { HideBalanceButton, MASKED } from "@/components/WalletBalance";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useWallet } from "@/lib/wallet-context";
-import { getWallet, fundWallet, errorMessage } from "@/lib/api";
+import { getWallet, fundWallet, getFundingQuote, errorMessage } from "@/lib/api";
 import { isTrustedCheckoutUrl } from "@/lib/checkout";
 import { formatNaira, formatDateTime } from "@/lib/format";
 
@@ -120,6 +120,28 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
   const max = limits?.maxFunding ?? 500000;
   const value = custom ? Number(custom) : amount;
   const valid = Number.isInteger(value) && value >= min && value <= max;
+
+  // Card fee is added on top for real payments; ask the server for the exact
+  // total (debounced while typing).
+  const [quote, setQuote] = useState(null);
+  useEffect(() => {
+    if (!valid) {
+      setQuote(null);
+      return undefined;
+    }
+    let active = true;
+    const timer = setTimeout(() => {
+      getFundingQuote(value)
+        .then((q) => active && setQuote(q))
+        .catch(() => active && setQuote(null));
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [value, valid]);
+  const total = quote && quote.amount === value ? quote.total : null;
+  const fee = quote && quote.amount === value ? quote.fee : 0;
 
   useEffect(() => {
     panelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -237,6 +259,23 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
           )}
         </div>
 
+        {valid && fee > 0 && (
+          <dl className="space-y-1.5 rounded-xl border border-slate-200 px-4 py-3 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Added to your wallet</dt>
+              <dd className="font-semibold text-ink-900">{formatNaira(value)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Card processing fee</dt>
+              <dd className="font-semibold text-ink-900">{formatNaira(fee)}</dd>
+            </div>
+            <div className="flex justify-between border-t border-slate-100 pt-1.5">
+              <dt className="font-semibold text-ink-800">You pay</dt>
+              <dd className="font-display font-extrabold text-ink-900">{formatNaira(total)}</dd>
+            </div>
+          </dl>
+        )}
+
         <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 px-3.5 py-3 text-xs text-ink-500">
           <ShieldCheck size={16} className="mt-px shrink-0 text-emerald-600" aria-hidden="true" />
           <span>
@@ -253,7 +292,13 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
           className="gradient-btn focus-ring inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold brand-contrast disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy && <span aria-hidden="true" className="brand-spin inline-block h-4 w-4 animate-spin rounded-full" />}
-          {busy ? "Processing…" : valid ? `Add ${formatNaira(value)} to wallet` : "Enter an amount"}
+          {busy
+            ? "Processing…"
+            : !valid
+              ? "Enter an amount"
+              : fee > 0 && total
+                ? `Pay ${formatNaira(total)}`
+                : `Add ${formatNaira(value)} to wallet`}
         </button>
       </form>
     </section>

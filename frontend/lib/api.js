@@ -100,6 +100,17 @@ export const forgotPassword = async (email) => {
   return data;
 };
 
+// Email verification (6-digit code).
+export const sendEmailCode = async () => {
+  const { data } = await api.post("/api/auth/verify-email/send", {});
+  return data;
+};
+
+export const verifyEmailCode = async (code) => {
+  const { data } = await api.post("/api/auth/verify-email", { code });
+  return data;
+};
+
 export const resetPassword = async (token, password) => {
   const { data } = await api.post("/api/auth/reset-password", { token, password });
   return data;
@@ -184,6 +195,11 @@ export const fundWallet = async ({ amount, clientReference }) => {
   return data;
 };
 
+export const getFundingQuote = async (amount) => {
+  const { data } = await api.get("/api/wallet/quote", { params: { amount } });
+  return data.quote;
+};
+
 export const verifyWalletFunding = async (reference) => {
   const { data } = await api.post("/api/wallet/verify", { reference });
   return data;
@@ -192,6 +208,22 @@ export const verifyWalletFunding = async (reference) => {
 // Website contact form. `website` is a hidden honeypot (left empty by people).
 export const sendContactMessage = async ({ name, email, message, website = "" }) => {
   const { data } = await api.post("/api/contact", { name, email, message, website });
+  return data;
+};
+
+// Admin (owner only; the server checks the role).
+export const getAdminOverview = async (days = 30) => {
+  const { data } = await api.get("/api/admin/overview", { params: { days } });
+  return data;
+};
+
+export const resolveAdminTransaction = async (id, action, note = "") => {
+  const { data } = await api.post(`/api/admin/transactions/${id}/resolve`, { action, note });
+  return data;
+};
+
+export const updateAdminMessage = async (id, status) => {
+  const { data } = await api.post(`/api/admin/messages/${id}`, { status });
   return data;
 };
 

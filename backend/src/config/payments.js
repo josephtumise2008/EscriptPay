@@ -108,6 +108,25 @@ const readConfig = (env = process.env) => {
     deliveryMode: realDelivery ? "live" : "test",
     currency: "NGN",
     paymentExpiryMinutes: positiveInt(env.PAYMENT_EXPIRY_MINUTES, DEFAULT_PAYMENT_EXPIRY_MINUTES),
+    // Wallet top-ups: the customer pays the card processing fee on top, so
+    // the wallet receives the exact amount. Paystack's published NGN pricing:
+    // 1.5% + ₦100 (₦100 waived under ₦2,500), capped at ₦2,000.
+    walletFee: {
+      enabled: paymentProvider === "paystack" && env.WALLET_FEE_ENABLED !== "false",
+      percent: Number(env.WALLET_FEE_PERCENT || 1.5),
+      flatKobo: Math.round(Number(env.WALLET_FEE_FLAT_NAIRA || 100) * 100),
+      flatThresholdKobo: Math.round(Number(env.WALLET_FEE_FLAT_THRESHOLD_NAIRA || 2500) * 100),
+      capKobo: Math.round(Number(env.WALLET_FEE_CAP_NAIRA || 2000) * 100),
+    },
+    // Estimated supplier discount on airtime, per network (percent), used for
+    // profit reports until the supplier reports the exact amount charged.
+    // Defaults from ClubKonnect's airtime API page; override with env.
+    airtimeDiscountPercent: {
+      MTN: Number(env.AIRTIME_DISCOUNT_MTN || 3),
+      Airtel: Number(env.AIRTIME_DISCOUNT_AIRTEL || 3),
+      Glo: Number(env.AIRTIME_DISCOUNT_GLO || 8),
+      "9mobile": Number(env.AIRTIME_DISCOUNT_9MOBILE || 7),
+    },
     // Minimum gap between supplier status checks for the same order.
     statusCheckIntervalMs: positiveInt(env.VTU_STATUS_CHECK_INTERVAL_SECONDS, 20) * 1000,
     appUrl,

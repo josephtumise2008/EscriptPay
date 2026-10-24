@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wifi, Phone, History, UserRound, Settings, LogOut, Home, ChevronLeft, Wallet } from "lucide-react";
+import { LayoutDashboard, Wifi, Phone, History, UserRound, Settings, LogOut, Home, ChevronLeft, Wallet, BarChart3 } from "lucide-react";
 import Logo from "@/components/Logo";
 import WalletPill from "@/components/WalletBalance";
 import UserMenu from "@/components/UserMenu";
@@ -119,10 +119,13 @@ function BackButton({ previous, fallbackUrl }) {
 const isActive = (href, pathname) =>
   href === pathname || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
 
-function NavList({ pathname, onNavigate }) {
+const ADMIN_ITEM = { href: "/admin", label: "Business", icon: BarChart3 };
+
+function NavList({ pathname, onNavigate, isAdmin }) {
+  const items = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
   return (
     <ul className="space-y-1">
-      {NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const active = isActive(item.href, pathname);
         return (
           <li key={item.href}>
@@ -164,6 +167,8 @@ export default function DashboardShell({ children }) {
   // navigating them to the homepage.
   useEffect(() => {
     if (!loading && !user && !loggingOut) router.replace("/login");
+    // New accounts confirm their email before using the dashboard.
+    if (!loading && user && user.needsEmailVerification) router.replace("/verify-email");
   }, [user, loading, loggingOut, router]);
 
   // Track the in-app trail so "Back" returns to the real previous page.
@@ -188,7 +193,7 @@ export default function DashboardShell({ children }) {
     );
   }
 
-  if (!user) return null;
+  if (!user || user.needsEmailVerification) return null;
 
   const back = BACK_ROUTES.find((r) => r.match(pathname));
   const firstName = (user.name || "").split(" ")[0] || "there";
@@ -207,7 +212,7 @@ export default function DashboardShell({ children }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Dashboard">
-          <NavList pathname={pathname} />
+          <NavList pathname={pathname} isAdmin={user.role === "admin"} />
         </nav>
 
         <div className="space-y-1 border-t border-slate-100 p-3">

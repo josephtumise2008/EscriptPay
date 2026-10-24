@@ -13,6 +13,8 @@
 // - Funding through Paystack is only credited after the server verifies the
 //   reference, exact amount and currency with Paystack itself.
 
+const { quoteFunding } = require("./walletFee");
+
 const AFTER = { returnDocument: "after" };
 const FUNDING_CONFIRMABLE = ["pending", "expired"];
 
@@ -107,6 +109,8 @@ const createWalletService = ({
     const amountKobo = Math.round(amountNaira * 100);
     const reference = generateReference();
     const checkout = payment.requiresCheckout === true;
+    // Card fee is paid by the customer on top (only when a real checkout runs).
+    const quote = checkout ? quoteFunding(amountKobo, config.walletFee) : { feeKobo: 0, chargeKobo: amountKobo };
 
     let entry;
     try {
@@ -116,6 +120,8 @@ const createWalletService = ({
         kind: "funding",
         direction: "credit",
         amountKobo,
+        chargedKobo: quote.chargeKobo,
+        feeKobo: quote.feeKobo,
         status: "pending",
         mode,
         currency: config.currency,
@@ -141,7 +147,7 @@ const createWalletService = ({
     try {
       const init = await payment.initializePayment({
         email,
-        amountKobo,
+        amountKobo: quote.chargeKobo,
         reference,
         callbackUrl: `${config.appUrl}/payment/callback?purpose=wallet`,
         metadata: { walletReference: reference, purpose: "wallet_funding" },
@@ -180,7 +186,8 @@ const createWalletService = ({
       const problems = [];
       if (verified.reference !== reference) problems.push("reference_mismatch");
       if (verified.currency !== config.currency) problems.push("currency_mismatch");
-      if (!Number.isInteger(verified.amountKobo) || verified.amountKobo !== entry.amountKobo) {
+      const expectedKobo = entry.chargedKobo || entry.amountKobo;
+      if (!Number.isInteger(verified.amountKobo) || verified.amountKobo !== expectedKobo) {
         problems.push("amount_mismatch");
       }
       if (problems.length > 0) {
@@ -305,8 +312,15 @@ const createWalletService = ({
     return { entries, total };
   };
 
+  const quote = (amountNaira) => {
+    const checkout = payment.requiresCheckout === true;
+    const amountKobo = Math.round(amountNaira * 100);
+    return checkout ? quoteFunding(amountKobo, config.walletFee) : { amountKobo, feeKobo: 0, chargeKobo: amountKobo };
+  };
+
   return {
     mode,
+    quote,
     getBalanceKobo,
     startFunding,
     confirmFunding,

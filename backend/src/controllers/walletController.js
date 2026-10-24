@@ -43,6 +43,17 @@ const getBalance = async (req, res) => {
   }
 };
 
+// GET /api/wallet/quote?amount=5000 — what the customer pays for a top-up
+// (amount + card fee), so the page can show it before they continue.
+const quoteFunding = async (req, res) => {
+  const value = Number(req.query.amount);
+  if (!Number.isInteger(value) || value < FUNDING_MIN_NAIRA || value > FUNDING_MAX_NAIRA) {
+    return res.status(400).json({ success: false, message: "Enter a valid amount." });
+  }
+  const q = wallet.quote(value);
+  return res.json({ success: true, quote: { amount: q.amountKobo / 100, fee: q.feeKobo / 100, total: q.chargeKobo / 100 } });
+};
+
 // POST /api/wallet/fund { amount, clientReference }
 const fundWallet = async (req, res) => {
   const { amount, clientReference } = req.body || {};
@@ -111,4 +122,4 @@ const verifyFunding = async (req, res) => {
   }
 };
 
-module.exports = { getWallet, getBalance, fundWallet, verifyFunding };
+module.exports = { getWallet, getBalance, fundWallet, verifyFunding, quoteFunding };

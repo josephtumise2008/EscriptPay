@@ -12,7 +12,26 @@ const wallet = require("../services/wallet");
 const { vtu } = require("../services");
 const { refreshOrder } = require("../services/orderStatus");
 
-const serialize = (tx) => tx.toJSON();
+const serialize = (tx) => {
+  const json = tx.toJSON();
+  // Internal business numbers are not shown to customers.
+  delete json.costKobo;
+  delete json.costSource;
+  delete json.adminResolution;
+  return json;
+};
+
+// Our cost for an order, for profit reporting.
+const costFor = (spec) => {
+  if (Number.isFinite(spec.costPrice) && spec.costPrice > 0) {
+    return { costKobo: Math.round(spec.costPrice * 100), costSource: "plan" };
+  }
+  if (spec.type === "airtime") {
+    const pct = (config.airtimeDiscountPercent || {})[spec.network];
+    if (Number.isFinite(pct)) return { costKobo: Math.round(spec.amount * 100 * (1 - pct / 100)), costSource: "estimate" };
+  }
+  return {};
+};
 
 const AIRTIME_NETWORKS = ["MTN", "Airtel", "Glo", "9mobile"];
 const AIRTIME_MIN = 100;
@@ -93,6 +112,7 @@ const startOrder = async (req, res, spec) => {
       paymentAmountKobo: toKobo(spec.amount),
       currency: config.currency,
       clientReference,
+      ...costFor(spec),
     });
   } catch (error) {
     // Two identical requests raced past the lookup: return the winner.
@@ -176,6 +196,7 @@ const startWalletOrder = async (req, res, spec, clientReference) => {
       currency: config.currency,
       paidAt: new Date(),
       clientReference,
+      ...costFor(spec),
     });
   } catch (error) {
     await wallet.reverseDebit(req.userId, amountKobo);
@@ -343,6 +364,7 @@ const createTestTransaction = async (req, res) => {
       planId: plan._id,
       phone: phoneCheck.normalized,
       amount: plan.price,
+      costPrice: plan.costPrice,
       clientReference,
       payWith: payWith === "wallet" ? "wallet" : "card",
     });

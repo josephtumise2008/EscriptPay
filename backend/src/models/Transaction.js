@@ -148,6 +148,26 @@ const transactionSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // ---- Business ----
+    // What the supplier charges us for this order, in kobo, and where that
+    // number came from: "plan" (synced cost price), "estimate" (airtime
+    // discount), "supplier" (amount the supplier reported charging).
+    costKobo: {
+      type: Number,
+      min: 0,
+    },
+    costSource: {
+      type: String,
+      enum: ["plan", "estimate", "supplier"],
+    },
+    // How an admin resolved an order that needed review.
+    adminResolution: {
+      action: { type: String, enum: ["refunded", "delivered", "dismissed"] },
+      note: { type: String, trim: true, maxlength: 300 },
+      at: Date,
+      by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    },
+
     // ---- Operations ----
     // True when a person must look at this order (paid but not delivered,
     // amount mismatch, ambiguous supplier response). Blocks fulfilment.

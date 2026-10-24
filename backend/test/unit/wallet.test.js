@@ -5,7 +5,7 @@ const { createFakeModel } = require("../helpers/fakeModel");
 
 let refCounter = 0;
 
-const setup = ({ provider = "test", balance = 0, verification } = {}) => {
+const setup = ({ provider = "test", balance = 0, verification, walletFee } = {}) => {
   const User = createFakeModel({ docs: [{ _id: "u1", walletBalances: { test: balance, live: 0 } }] });
   const WalletEntry = createFakeModel({ unique: ["reference", "paymentReference", "clientReference"] });
   const Transaction = createFakeModel();
@@ -26,7 +26,7 @@ const setup = ({ provider = "test", balance = 0, verification } = {}) => {
               status: "success",
               currency: "NGN",
               reference,
-              amountKobo: entry && entry.amountKobo,
+              amountKobo: entry && (entry.chargedKobo || entry.amountKobo),
               paidAt: new Date().toISOString(),
               ...verification,
             };
@@ -39,6 +39,7 @@ const setup = ({ provider = "test", balance = 0, verification } = {}) => {
     currency: "NGN",
     paymentExpiryMinutes: 60,
     appUrl: "http://localhost:3000",
+    walletFee,
   };
   const wallet = createWalletService({
     User,
@@ -157,4 +158,38 @@ test("refund is refused for orders that were not definitively failed or not paid
     assert.equal((await wallet.refundOrder({ user: "u1", transactionId: "X", ...tx })).outcome, "not_applicable");
   }
   assert.equal(balanceOf(), 0);
+});
+
+const PAYSTACK_FEE = { enabled: true, percent: 1.5, flatKobo: 10000, flatThresholdKobo: 250000, capKobo: 200000 };
+
+test("paystack top-up: customer pays the card fee on top, wallet gets the exact amount", async () => {
+  const { wallet, balanceOf, WalletEntry } = setup({ provider: "paystack", walletFee: PAYSTACK_FEE });
+  const started = await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 5000 });
+  const entry = WalletEntry.docs[0];
+  assert.equal(entry.amountKobo, 500000);
+  assert.equal(entry.chargedKobo, 517800);
+  assert.equal(entry.feeKobo, 17800);
+  await wallet.confirmFunding(started.entry.paymentReference, { source: "webhook" });
+  assert.equal(balanceOf(), 500000, "wallet receives the amount, not the fee");
+});
+
+test("paystack top-up: paying only the base amount (without fee) is a mismatch", async () => {
+  const { wallet, balanceOf } = setup({ provider: "paystack", walletFee: PAYSTACK_FEE, verification: { amountKobo: 500000 } });
+  const started = await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 5000 });
+  assert.equal((await wallet.confirmFunding(started.entry.paymentReference, { source: "webhook" })).outcome, "mismatch");
+  assert.equal(balanceOf(), 0);
+});
+
+test("fee quote never leaves the wallet short after the provider's cut", () => {
+  const { quoteFunding, providerFee } = require("../../src/services/walletFee");
+  for (let naira = 100; naira <= 500000; naira += 97) {
+    const q = quoteFunding(naira * 100, PAYSTACK_FEE);
+    assert.ok(q.chargeKobo - providerFee(q.chargeKobo, PAYSTACK_FEE) >= naira * 100, `₦${naira}`);
+    assert.ok(q.feeKobo <= 200000 + 100);
+  }
+});
+
+test("test mode: no fee", async () => {
+  const { wallet } = setup();
+  assert.deepEqual(wallet.quote(5000), { amountKobo: 500000, feeKobo: 0, chargeKobo: 500000 });
 });

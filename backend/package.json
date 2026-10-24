@@ -12,7 +12,8 @@
     "import:plans": "node scripts/importPlans.js",
     "vtu:balance": "node scripts/vtuBalance.js",
     "vtu:plans": "node scripts/vtuPlans.js",
-    "vtu:test-order": "node scripts/vtuTestOrder.js"
+    "vtu:test-order": "node scripts/vtuTestOrder.js",
+    "make:admin": "node scripts/makeAdmin.js"
   },
   "keywords": [],
   "author": "",

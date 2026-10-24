@@ -246,6 +246,11 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     const set = {};
     if (result.reference && !claimed.providerReference) set.providerReference = result.reference;
     if (result.statusCode !== undefined && result.statusCode !== null) set.providerStatusCode = String(result.statusCode);
+    // The supplier's own figure for what this order cost us.
+    if (Number.isFinite(result.amountCharged) && result.amountCharged > 0) {
+      set.costKobo = Math.round(result.amountCharged * 100);
+      set.costSource = "supplier";
+    }
 
     let outcome = "pending";
     if (result.outcome === "delivered") {

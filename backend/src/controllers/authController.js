@@ -8,6 +8,16 @@ const {
   clearAuthCookie,
 } = require("../middleware/auth");
 
+const { sendEmail } = require("../services/email");
+const templates = require("../services/email/templates");
+const {
+  verificationRequired,
+  sendVerificationCode,
+  verifyCode,
+} = require("../services/email/verification");
+const { getConfig } = require("../config/payments");
+const { logEvent } = require("../utils/logger");
+
 const sanitize = (user) => ({
   id: user.id,
   name: user.name,
@@ -16,6 +26,9 @@ const sanitize = (user) => ({
   state: user.state || "",
   role: user.role || "user",
   createdAt: user.createdAt,
+  emailVerified: user.emailVerified === true,
+  // True when the account must confirm its email before buying.
+  needsEmailVerification: verificationRequired() && user.emailVerified !== true,
 });
 
 // Password-reset tokens are one-time, single-URL, expire after 60 minutes,
@@ -26,10 +39,8 @@ const hashResetToken = (token) => crypto.createHash("sha256").update(token).dige
 
 const generateResetToken = () => crypto.randomBytes(32).toString("hex");
 
-const buildResetLink = (token) => {
-  const origin = process.env.CLIENT_ORIGIN || "http://localhost:3000";
-  return `${origin}/reset-password?token=${encodeURIComponent(token)}`;
-};
+// Uses APP_URL (CLIENT_ORIGIN may be a comma-separated list).
+const buildResetLink = (token) => `${getConfig().appUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
 // POST /api/auth/signup
 const signup = async (req, res) => {
@@ -73,6 +84,16 @@ const signup = async (req, res) => {
 
     const token = signToken(user);
     setAuthCookie(res, token);
+
+    // Send the first verification code right away. A failure here must not
+    // fail the signup: the verify page can always send a new code.
+    if (verificationRequired()) {
+      try {
+        await sendVerificationCode(user._id);
+      } catch (error) {
+        logEvent("email.verification_send_failed", { code: error && error.code });
+      }
+    }
 
     return res.status(201).json({ success: true, user: sanitize(user) });
   } catch (error) {
@@ -238,16 +259,16 @@ const forgotPassword = async (req, res) => {
     user.resetTokenExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
     await user.save();
 
-    if (process.env.NODE_ENV !== "production") {
-      // STAGING HELP: replace with a real email send (SendGrid/Postmark/etc.)
-      // in production. logRelevant* is intentionally console-only here.
-      console.log(
-        `[forgot-password] reset link for ${user.email}: ${buildResetLink(token)} ` +
-          `(expires in 60 minutes)`
-      );
+    // Sends the reset email (in development without an email provider the
+    // email is printed to the server console instead). The response is the
+    // same whether or not the account exists or the email could be sent.
+    try {
+      const mail = templates.passwordReset({ name: user.name, link: buildResetLink(token), minutes: 60 });
+      const result = await sendEmail({ to: user.email, ...mail });
+      if (!result.sent) logEvent("email.reset_not_sent", { reason: result.reason });
+    } catch (error) {
+      logEvent("email.reset_failed", { code: error && error.code });
     }
-
-    // Email dispatch (e.g. sendResetEmail(to, link)) is a future integration.
     return res.status(200).json(generic);
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
@@ -303,4 +324,47 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, logout, me, updateProfile, changePassword, forgotPassword, resetPassword };
+// POST /api/auth/verify-email/send — (re)send the 6-digit code.
+const sendEmailCode = async (req, res) => {
+  try {
+    const result = await sendVerificationCode(req.userId);
+    if (result.outcome === "already_verified") return res.json({ success: true, alreadyVerified: true });
+    if (result.outcome === "cooldown") {
+      return res.status(429).json({
+        success: false,
+        retryAfter: result.retryAfter,
+        message: `Please wait ${result.retryAfter}s before requesting another code.`,
+      });
+    }
+    if (result.outcome === "not_found") return res.status(404).json({ success: false, message: "User not found." });
+    return res.json({ success: true, sent: result.outcome === "sent", retryAfter: result.retryAfter });
+  } catch (error) {
+    logEvent("email.verification_send_failed", { code: error && error.code });
+    return res.status(502).json({ success: false, message: "We couldn't send the code right now. Please try again." });
+  }
+};
+
+// POST /api/auth/verify-email { code }
+const confirmEmailCode = async (req, res) => {
+  try {
+    const result = await verifyCode(req.userId, (req.body || {}).code);
+    const messages = {
+      invalid: "Enter the 6-digit code from your email.",
+      expired: "This code has expired. Request a new one.",
+      too_many: "Too many wrong attempts. Request a new code.",
+      wrong: `That code isn't right.${result.attemptsLeft ? ` ${result.attemptsLeft} attempt(s) left.` : ""}`,
+    };
+    if (result.outcome === "verified" || result.outcome === "already_verified") {
+      const user = await User.findById(req.userId);
+      return res.json({ success: true, user: sanitize(user) });
+    }
+    if (result.outcome === "not_found") return res.status(404).json({ success: false, message: "User not found." });
+    return res.status(400).json({ success: false, code: result.outcome, message: messages[result.outcome] });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not verify the code. Please try again." });
+  }
+};
+
+module.exports = {
+  sendEmailCode,
+  confirmEmailCode, signup, login, logout, me, updateProfile, changePassword, forgotPassword, resetPassword };

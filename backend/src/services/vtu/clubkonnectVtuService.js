@@ -119,12 +119,14 @@ const interpret = (body) => {
   const status = data.status ?? data.orderstatus ?? data.OrderStatus ?? "";
   const outcome = code !== null ? OUTCOME_BY_CODE(code) : OUTCOME_BY_TEXT(status);
   const orderId = data.orderid ?? data.OrderID ?? data.orderId;
+  const charged = Number(data.amountcharged ?? data.AmountCharged);
   return {
     outcome,
     reference: orderId ? String(orderId) : null,
     statusCode: code,
     status: String(status || ""),
     remark: typeof (data.remark ?? data.orderremark) === "string" ? (data.remark ?? data.orderremark).slice(0, 200) : undefined,
+    amountCharged: Number.isFinite(charged) && charged > 0 ? charged : undefined,
     attention: code !== null ? ATTENTION_CODES.has(code) : /^(INVALID_CREDENTIALS|MISSING_|INSUFFICIENT_)/.test(String(status).toUpperCase()),
   };
 };
