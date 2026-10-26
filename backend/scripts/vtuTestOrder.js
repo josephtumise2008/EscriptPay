@@ -54,12 +54,14 @@ const run = async () => {
     console.log(`No clear answer from ClubKonnect (${error.code}). It MAY have been sent — checking by request ID…`);
     result = { outcome: "unknown" };
   }
-  console.log(`First response: ${result.outcome}${result.statusCode ? ` (code ${result.statusCode} ${result.status})` : ""}`);
+  const describe = (r) =>
+    [r.statusCode ? `code ${r.statusCode}` : "", r.status, r.remark, r.errorCode].filter(Boolean).join(" · ");
+  console.log(`First response: ${result.outcome}${describe(result) ? ` (${describe(result)})` : ""}`);
 
   for (let i = 0; i < 12 && !["delivered", "failed"].includes(result.outcome); i += 1) {
     await sleep(10000);
     result = await ck.queryStatus({ transaction: { providerReference: result.reference, transactionId: requestId } }).catch(() => result);
-    console.log(`  status: ${result.outcome}${result.statusCode ? ` (code ${result.statusCode} ${result.status})` : ""}`);
+    console.log(`  status: ${result.outcome}${describe(result) ? ` (${describe(result)})` : ""}`);
   }
   console.log(`\nRequest ID: ${requestId}${result.reference ? `   ClubKonnect order: ${result.reference}` : ""}`);
   console.log(
