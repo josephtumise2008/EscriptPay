@@ -10,8 +10,7 @@ import {
   History,
   AlertCircle,
   XCircle,
-  Clock,
-} from "lucide-react";
+  Clock, Home } from "lucide-react";
 import { getTransaction, errorMessage } from "@/lib/api";
 import { useWallet } from "@/lib/wallet-context";
 import { formatDateTime, formatNaira } from "@/lib/format";
@@ -263,6 +262,13 @@ function SuccessContent() {
           Buy again
         </Link>
       </div>
+      <Link
+        href="/dashboard"
+        className="focus-ring press flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-ink-800 hover:bg-slate-50 sm:ml-auto sm:w-auto sm:px-8"
+      >
+        <Home size={16} aria-hidden="true" />
+        Done
+      </Link>
     </div>
   );
 }
