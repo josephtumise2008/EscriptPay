@@ -8,7 +8,12 @@
 //   Data:     APIDatabundleV1.asp?UserID&APIKey&MobileNetwork&DataPlan&MobileNumber&RequestID&CallBackURL
 //   Query:    APIQueryV1.asp?UserID&APIKey&OrderID=…   or  &RequestID=…
 //   Balance:  APIWalletBalanceV1.asp?UserID&APIKey
-//   Plans:    APIDatabundlePlansV2.asp?UserID=…
+//   Plans:    APIDatabundlePlansV2.asp?UserID=…  (our cost per plan)
+//             APIDatabundlePlansV3.asp?UserID=…  (adds PRODUCT_CODE)
+//   Since late Oct 2026 the DataPlan parameter must be the plan's PRODUCT_CODE
+//   (e.g. "5") from PlansV3; the older PRODUCT_ID (e.g. "2000") is rejected
+//   with INVALID_DATAPLAN. Plans are stored by PRODUCT_ID, so the code is
+//   looked up from PlansV3 (cached) just before each data order.
 //   Network codes: MTN 01, Glo 02, 9mobile 03, Airtel 04
 //   Accepted order: {"orderid":"789","statuscode":"100","status":"ORDER_RECEIVED"}
 //   Status codes (APIParaGetDisputeResolutionV1): 100 received, 200 completed,
@@ -131,6 +136,38 @@ const interpret = (body) => {
   };
 };
 
+// PRODUCT_ID -> PRODUCT_CODE per network, from PlansV3. Cached briefly.
+const CODE_CACHE_MS = 10 * 60 * 1000;
+let codeCache = { at: 0, map: null };
+const __resetPlanCodes = () => {
+  codeCache = { at: 0, map: null };
+};
+
+const loadPlanCodes = async () => {
+  if (codeCache.map && Date.now() - codeCache.at < CODE_CACHE_MS) return codeCache.map;
+  const { userId } = credentials();
+  const body = await get("APIDatabundlePlansV3.asp", { UserID: userId });
+  const networks = (body && body.MOBILE_NETWORK) || {};
+  const map = new Map();
+  for (const entries of Object.values(networks)) {
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      for (const p of Array.isArray(entry.PRODUCT) ? entry.PRODUCT : []) {
+        if (p && p.PRODUCT_ID && p.PRODUCT_CODE) map.set(`${String(entry.ID)}|${String(p.PRODUCT_ID)}`, String(p.PRODUCT_CODE));
+      }
+    }
+  }
+  if (map.size === 0) throw new VtuProviderError("Supplier plan list is empty or unreadable.", "bad_response");
+  codeCache = { at: Date.now(), map };
+  return map;
+};
+
+// The DataPlan value ClubKonnect accepts for one of our plans, or null if the
+// plan is no longer offered.
+const dataPlanCode = async (networkCode, planId) => {
+  const map = await loadPlanCodes();
+  return map.get(`${networkCode}|${planId}`) || null;
+};
+
 // purchase({ type, network, phone, amount, plan, requestId })
 //   -> { outcome, reference, statusCode, status, attention }
 // Throws VtuProviderError on timeout/network/unreadable responses; the order
@@ -160,8 +197,17 @@ const purchase = async ({ type, network, phone, amount, plan, requestId }) => {
   } else if (type === "data") {
     const planId = plan && plan.providerPlanId;
     if (!planId) return { outcome: "failed", errorCode: "plan_not_mapped" };
+    // Nothing has been sent yet, so a failed lookup is a safe, definite
+    // failure (the order is refunded, never left "unknown").
+    let code;
+    try {
+      code = await dataPlanCode(networkCode, String(planId));
+    } catch {
+      return { outcome: "failed", errorCode: "plan_lookup_failed" };
+    }
+    if (!code) return { outcome: "failed", errorCode: "plan_unavailable" };
     path = "APIDatabundleV1.asp";
-    params.DataPlan = String(planId);
+    params.DataPlan = code;
   } else {
     return { outcome: "failed", errorCode: "unsupported_type" };
   }
@@ -232,4 +278,6 @@ module.exports = {
   NETWORK_CODES,
   VtuProviderError,
   __setFetch,
+  __resetPlanCodes,
+  dataPlanCode,
 };

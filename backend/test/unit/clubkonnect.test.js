@@ -38,19 +38,47 @@ test("airtime: documented URL, network code, local phone, RequestID and callback
   assert.equal(u.searchParams.get("CallBackURL"), "https://escriptpay.example.com/api/vtu/clubkonnect/callback");
 });
 
-test("data: uses the plan's ClubKonnect DataPlan code; unmapped plans are never sent", async () => {
-  const f = fakeFetch({ body: { orderid: "55", statuscode: "100", status: "ORDER_RECEIVED" } });
-  ck.__setFetch(f);
-  const r = await ck.purchase({ type: "data", network: "9mobile", phone: "08091234567", plan: { providerPlanId: "1000.00" }, requestId: "ESCP-2" });
-  assert.equal(r.outcome, "accepted");
-  assert.equal(f.calls[0].pathname, "/APIDatabundleV1.asp");
-  assert.equal(f.calls[0].searchParams.get("MobileNetwork"), "03");
-  assert.equal(f.calls[0].searchParams.get("DataPlan"), "1000.00");
+const PLANS_V3 = {
+  MOBILE_NETWORK: {
+    MTN: [{ ID: "01", PRODUCT: [{ PRODUCT_CODE: "5", PRODUCT_ID: "2000", PRODUCT_NAME: "2GB - Weekly (SME)", PRODUCT_AMOUNT: "820.00" }] }],
+    m_9mobile: [{ ID: "03", PRODUCT: [{ PRODUCT_CODE: "5", PRODUCT_ID: "1000", PRODUCT_NAME: "1 GB - 30 days (SME)", PRODUCT_AMOUNT: "492.00" }] }],
+  },
+};
+const withPlans = (orderReply) => (u) => (u.pathname === "/APIDatabundlePlansV3.asp" ? { body: PLANS_V3 } : orderReply);
 
+test("data: sends ClubKonnect's current PRODUCT_CODE for the plan (looked up from PlansV3)", async () => {
+  ck.__resetPlanCodes();
+  const f = fakeFetch(withPlans({ body: { orderid: "55", statuscode: "100", status: "ORDER_RECEIVED" } }));
+  ck.__setFetch(f);
+  const r = await ck.purchase({ type: "data", network: "9mobile", phone: "08091234567", plan: { providerPlanId: "1000" }, requestId: "ESCP-2" });
+  assert.equal(r.outcome, "accepted");
+  const order = f.calls.find((u) => u.pathname === "/APIDatabundleV1.asp");
+  assert.equal(order.searchParams.get("MobileNetwork"), "03");
+  assert.equal(order.searchParams.get("DataPlan"), "5");
+  assert.equal(order.searchParams.get("RequestID"), "ESCP-2");
+
+  // Second order reuses the cached plan list.
+  await ck.purchase({ type: "data", network: "MTN", phone: "08031234567", plan: { providerPlanId: "2000" }, requestId: "ESCP-2b" });
+  assert.equal(f.calls.filter((u) => u.pathname === "/APIDatabundlePlansV3.asp").length, 1);
+  assert.equal(f.calls.at(-1).searchParams.get("DataPlan"), "5");
+});
+
+test("data: unmapped, withdrawn or unlookup-able plans fail safely without ordering", async () => {
+  ck.__resetPlanCodes();
+  const f = fakeFetch(withPlans({ body: { orderid: "1", statuscode: "100" } }));
+  ck.__setFetch(f);
   const unmapped = await ck.purchase({ type: "data", network: "MTN", phone: "08031234567", plan: {}, requestId: "ESCP-3" });
-  assert.equal(unmapped.outcome, "failed");
   assert.equal(unmapped.errorCode, "plan_not_mapped");
-  assert.equal(f.calls.length, 1, "no request for an unmapped plan");
+  const gone = await ck.purchase({ type: "data", network: "MTN", phone: "08031234567", plan: { providerPlanId: "750.01" }, requestId: "ESCP-4" });
+  assert.equal(gone.outcome, "failed");
+  assert.equal(gone.errorCode, "plan_unavailable");
+  assert.equal(f.calls.filter((u) => u.pathname === "/APIDatabundleV1.asp").length, 0, "no order sent");
+
+  ck.__resetPlanCodes();
+  ck.__setFetch(fakeFetch(new Error("offline")));
+  const down = await ck.purchase({ type: "data", network: "MTN", phone: "08031234567", plan: { providerPlanId: "2000" }, requestId: "ESCP-5" });
+  assert.equal(down.outcome, "failed");
+  assert.equal(down.errorCode, "plan_lookup_failed");
 });
 
 test("status codes map to safe outcomes", () => {
