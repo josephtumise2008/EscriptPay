@@ -161,6 +161,27 @@ const startOrder = async (req, res, spec) => {
   return res.status(201).json({ success: true, transaction: serialize(tx) });
 };
 
+// Most suppliers accept an order first and confirm delivery a few seconds
+// later. Wait briefly for that confirmation so the customer usually sees the
+// final result straight away instead of "in progress". Never re-sends the
+// order; only asks for its status.
+const INLINE_CONFIRM_MS = Number(process.env.INLINE_CONFIRM_MS || 12000);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const awaitDelivery = async (tx) => {
+  let current = tx;
+  const deadline = Date.now() + INLINE_CONFIRM_MS;
+  for (let wait = 1500; current && current.providerStatus === "processing" && Date.now() + wait < deadline; wait = 2500) {
+    await sleep(wait);
+    try {
+      current = (await refreshOrder(current, { minIntervalMs: 1000, source: "inline" })).tx || current;
+    } catch (error) {
+      logEvent("reconcile.inline_error", { transactionId: current.transactionId, message: error && error.message });
+      break;
+    }
+  }
+  return current;
+};
+
 // Pays for the order from the wallet balance: the amount is taken with one
 // atomic conditional update (never below zero), the order is created as paid,
 // and delivery starts through the same guarded fulfilment path. A definitive
@@ -215,6 +236,7 @@ const startWalletOrder = async (req, res, spec, clientReference) => {
   logEvent("wallet.paid", { transactionId: created.transactionId });
 
   let { tx } = await lifecycle.fulfillOrder(created);
+  if (tx && tx.providerStatus === "processing") tx = await awaitDelivery(tx);
   if (tx && tx.providerStatus === "failed") {
     const refunded = await wallet.refundOrder(tx);
     tx = refunded.tx || tx;
@@ -313,7 +335,10 @@ const getTransactionById = async (req, res) => {
     // for the final result (throttled; never re-sends the purchase).
     if (["processing", "unknown"].includes(tx.providerStatus)) {
       try {
-        tx = (await refreshOrder(tx, { source: "poll" })).tx || tx;
+        // Fresh orders are checked often (delivery usually lands within
+        // seconds); older ones fall back to the normal throttle.
+        const young = Date.now() - new Date(tx.createdAt).getTime() < 3 * 60 * 1000;
+        tx = (await refreshOrder(tx, { source: "poll", ...(young ? { minIntervalMs: 3000 } : {}) })).tx || tx;
       } catch (error) {
         logEvent("reconcile.poll_error", { transactionId: tx.transactionId, message: error && error.message });
       }

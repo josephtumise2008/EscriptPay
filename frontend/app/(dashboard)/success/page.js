@@ -80,22 +80,22 @@ function SuccessContent() {
     if (!awaiting || !txRef) return;
     let active = true;
     let tries = 0;
-    const timer = setInterval(async () => {
+    let timer;
+    // Fast checks first (delivery usually lands within seconds), then slower.
+    const tick = async () => {
       tries += 1;
-      if (tries > 60) {
-        clearInterval(timer);
-        return;
-      }
       try {
         const { transaction: tx } = await getTransaction(txRef);
         if (active && tx) setTransaction(tx);
       } catch {
         // Transient network error: try again on the next tick.
       }
-    }, 5000);
+      if (active && tries < 80) timer = setTimeout(tick, tries < 20 ? 2000 : 5000);
+    };
+    timer = setTimeout(tick, 1500);
     return () => {
       active = false;
-      clearInterval(timer);
+      clearTimeout(timer);
     };
   }, [awaiting, txRef]);
 
@@ -191,7 +191,17 @@ function SuccessContent() {
                   summary.message
                 )}
               </p>
-              {awaiting && (
+              {awaiting && transaction.paymentStatus === "successful" && (
+                <div className="mt-3 w-full max-w-xs" role="status">
+                  <p className="text-xs font-medium text-ink-500">
+                    Sending to {transaction.phone}… this usually takes a few seconds.
+                  </p>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                    <div className="delivery-bar h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 via-indigo-500 to-sky-400" />
+                  </div>
+                </div>
+              )}
+              {awaiting && transaction.paymentStatus !== "successful" && (
                 <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-amber-600" role="status">
                   <Clock size={13} aria-hidden="true" />
                   Checking for updates…

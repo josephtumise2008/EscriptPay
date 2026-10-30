@@ -193,10 +193,10 @@ export const describeTransaction = (tx = {}) => {
   }
   return {
     tone: "pending",
-    title: "Delivery in progress",
+    title: `Sending your ${what}…`,
     message:
       tx.paymentStatus === "successful"
-        ? `Payment received. Your ${what} is being delivered.`
+        ? `Payment received. Your ${what} is on its way.`
         : `Your ${what} is being processed.`,
   };
 };
@@ -210,8 +210,8 @@ export const isAwaitingUpdate = (tx) =>
   );
 
 export const statusLabel = (status = "") => {
-  const map = { successful: "Successful", pending: "Pending", failed: "Failed" };
-  return map[status] || status || "Pending";
+  const map = { successful: "Successful", pending: "Processing", failed: "Failed" };
+  return map[status] || status || "Processing";
 };
 
 export const statusBadge = (status = "") => {

@@ -11,7 +11,7 @@ const STATUS_STYLES = {
 
 const STATUS_LABELS = {
   successful: "Successful",
-  pending: "Pending",
+  pending: "Processing",
   failed: "Failed",
 };
 

@@ -666,3 +666,11 @@ html:not(.js) .hero-word { opacity: 1; animation: none; }
     padding-top: var(--top-inset);
   }
 }
+
+/* Order page: indeterminate "sending" bar. */
+.delivery-bar { animation: delivery-slide 1.2s ease-in-out infinite; }
+@keyframes delivery-slide {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(320%); }
+}
+@media (prefers-reduced-motion: reduce) { .delivery-bar { animation: none; width: 100%; opacity: .5; } }
