@@ -548,7 +548,7 @@ export default function HomePage() {
               Ready to try EscriptPay?
             </h2>
             <p className="relative mx-auto mt-3 max-w-xl text-sm text-slate-300 sm:text-base dark:text-ink-500">
-              Create an account and walk through a test purchase — it takes about a minute.
+              Create a free account and buy your first data or airtime in under a minute.
             </p>
             <div className="relative mt-7 flex flex-col justify-center gap-3 sm:flex-row">
               <Link href={user ? "/dashboard" : "/signup"} className="gradient-btn focus-ring inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold brand-contrast">

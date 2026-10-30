@@ -1,10 +1,9 @@
-import { CheckCircle2, Clock3, MessageCircleQuestion } from "lucide-react";
+import { CheckCircle2, MessageCircleQuestion } from "lucide-react";
 
 // Illustration for the FAQ intro: a question bubble, an answer bubble and a
-// status board of what works today vs. what is still in test mode. Every
-// item reflects the product's real current state.
-const WORKS_TODAY = ["Create an account", "Browse live data prices", "Place test orders", "Receipts & purchase history"];
-const COMING_NEXT = ["Real payments", "Real airtime & data delivery"];
+// short list of what you can do on EscriptPay today.
+const WORKS_TODAY = ["Buy data on all 4 networks", "Instant airtime top-up", "Wallet, card, transfer or USSD"];
+const ALSO = ["Receipt for every order", "Automatic refund if delivery fails"];
 
 export default function FaqStatusCard() {
   return (
@@ -19,12 +18,12 @@ export default function FaqStatusCard() {
               <MessageCircleQuestion size={16} aria-hidden="true" />
             </span>
             <p className="rounded-2xl rounded-bl-md bg-slate-100 px-4 py-2.5 text-sm font-medium text-ink-800">
-              Is EscriptPay live yet?
+              Is EscriptPay live?
             </p>
           </div>
           <div style={{ "--i": 1 }} className="flex justify-end">
             <p className="max-w-[85%] rounded-2xl rounded-br-md bg-cyan-500 px-4 py-2.5 text-sm font-medium brand-contrast">
-              Not yet — here&apos;s exactly what works today.
+              Yes! Here&apos;s what you can do today.
             </p>
           </div>
         </div>
@@ -45,18 +44,18 @@ export default function FaqStatusCard() {
             </ul>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-600">Still in test mode</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-600">Also included</p>
             <ul className="mt-3 space-y-2.5" data-reveal-stagger>
-              {COMING_NEXT.map((item, i) => (
-                <li key={item} style={{ "--i": i + 6 }} className="flex items-start gap-2 text-sm text-ink-800">
-                  <Clock3 size={16} className="mt-0.5 shrink-0 text-amber-500" aria-hidden="true" />
+              {ALSO.map((item, i) => (
+                <li key={item} style={{ "--i": i + 5 }} className="flex items-start gap-2 text-sm text-ink-800">
+                  <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" aria-hidden="true" />
                   {item}
                 </li>
               ))}
             </ul>
           </div>
         </div>
-        <figcaption className="sr-only">What works on EscriptPay today and what is still in test mode.</figcaption>
+        <figcaption className="sr-only">What you can do on EscriptPay today.</figcaption>
       </figure>
     </div>
   );

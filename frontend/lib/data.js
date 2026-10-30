@@ -6,9 +6,9 @@
 
 export const FAQ_ITEMS = [
   {
-    question: "Is EscriptPay live yet?",
+    question: "Is EscriptPay live?",
     answer:
-      "Not yet. EscriptPay is currently in test mode: you can create an account and place orders to try the full flow, but no money is charged and no data or airtime is delivered. The site will clearly say when real purchases are switched on.",
+      "Yes. EscriptPay is live: you can buy real MTN, Airtel, Glo and 9mobile data and airtime, paid securely through Paystack, and most orders are delivered within seconds.",
   },
   {
     question: "Which networks can I buy for?",
@@ -16,9 +16,9 @@ export const FAQ_ITEMS = [
       "MTN, Airtel, Glo and 9mobile. Data bundles are listed per network with their price and validity, and airtime can be bought in any whole amount from ₦100 to ₦10,000.",
   },
   {
-    question: "How will I pay?",
+    question: "How do I pay?",
     answer:
-      "Payments will go through a secure hosted checkout. EscriptPay never asks for or stores your card details. Your order is only processed after our server has confirmed the payment with the payment provider — a browser redirect alone is never treated as proof of payment.",
+      "Pay with your EscriptPay wallet, or by card, bank transfer or USSD through Paystack's secure checkout. EscriptPay never asks for or stores your card details. Your order is only processed after our server has confirmed the payment with the payment provider — a browser redirect alone is never treated as proof of payment.",
   },
   {
     question: "Is the price I see the price I pay?",

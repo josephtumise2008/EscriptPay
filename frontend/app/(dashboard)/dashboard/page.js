@@ -173,7 +173,7 @@ export default function DashboardPage() {
             icon="successful"
             title="Successful Transactions"
             value={`${stats.successful}/${stats.total}`}
-            sub={loading ? "Loading…" : "Completed in test mode"}
+            sub={loading ? "Loading…" : "Completed orders"}
             index={4}
           />
         </div>

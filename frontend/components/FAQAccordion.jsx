@@ -18,7 +18,7 @@ export default function FAQAccordion() {
           Questions, answered
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-ink-500 sm:text-base">
-          What to expect when buying data and airtime with EscriptPay — including what works today and what is still in test mode.
+          What to expect when buying data and airtime with EscriptPay.
         </p>
         <FaqStatusCard />
       </div>
