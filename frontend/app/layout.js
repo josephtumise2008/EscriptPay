@@ -53,6 +53,8 @@ export const metadata = {
   },
   description: DESCRIPTION,
   applicationName: "EscriptPay",
+  // One official address for search engines (escriptpay.com, not www).
+  alternates: { canonical: "/" },
   keywords: ["EscriptPay", "buy data", "cheap data", "airtime", "MTN", "Airtel", "Glo", "9mobile", "Nigeria"],
   openGraph: {
     type: "website",
