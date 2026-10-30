@@ -15,7 +15,8 @@
     "vtu:test-order": "node scripts/vtuTestOrder.js",
     "make:admin": "node scripts/makeAdmin.js",
     "logout:users": "node scripts/logoutUsers.js",
-    "fix:costs": "node scripts/fixCosts.js"
+    "fix:costs": "node scripts/fixCosts.js",
+    "order:check": "node scripts/orderCheck.js"
   },
   "keywords": [],
   "author": "",
