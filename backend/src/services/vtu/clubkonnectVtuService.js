@@ -114,6 +114,9 @@ const OUTCOME_BY_CODE = (code) => {
 
 const OUTCOME_BY_TEXT = (status) => {
   const s = String(status || "").trim().toUpperCase();
+  // Query answers meaning "no such order on our side" (ClubKonnect replies
+  // TRANSACTION_BEYOND_30_DAYS for a RequestID it never received).
+  if (["TRANSACTION_BEYOND_30_DAYS", "INVALID_REQUESTID", "INVALID_ORDERID", "ORDER_NOT_FOUND", "TRANSACTION_NOT_FOUND"].includes(s)) return "not_found";
   if (s === "ORDER_COMPLETED") return "unknown"; // completed but no code: confirm by query
   if (["ORDER_RECEIVED", "ORDER_PROCESSING", "ORDER_ONHOLD"].includes(s)) return "accepted";
   if (["ORDER_CANCELLED", "ORDER_REFUNDED"].includes(s)) return "failed";

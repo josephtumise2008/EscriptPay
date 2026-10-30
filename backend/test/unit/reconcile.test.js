@@ -122,3 +122,30 @@ test("supplier's face-value 'amount charged' never raises the known cost; a lowe
   assert.equal(lower.doc().costKobo, 9650);
   assert.equal(lower.doc().costSource, "supplier");
 });
+
+test("an order the supplier never received fails after the grace period (wallet refund follows)", async () => {
+  const fresh = setup({
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "wallet", needsReview: true, fulfillmentStartedAt: new Date() },
+    query: { outcome: "not_found", status: "TRANSACTION_BEYOND_30_DAYS" },
+  });
+  await fresh.lifecycle.reconcileOrder("t1");
+  assert.equal(fresh.doc().providerStatus, "unknown", "too early to believe 'not found'");
+
+  const old5 = setup({
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "wallet", needsReview: true, fulfillmentStartedAt: new Date(Date.now() - 5 * 60 * 1000) },
+    query: { outcome: "not_found", status: "TRANSACTION_BEYOND_30_DAYS" },
+  });
+  const r = await old5.lifecycle.reconcileOrder("t1");
+  assert.equal(r.outcome, "failed");
+  assert.equal(old5.doc().providerStatus, "failed");
+  assert.equal(old5.doc().failureReason, "not_received_by_supplier");
+  assert.equal(old5.doc().needsReview, false);
+
+  const card = setup({
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "paystack", needsReview: true, fulfillmentStartedAt: new Date(Date.now() - 5 * 60 * 1000) },
+    query: { outcome: "not_found", status: "TRANSACTION_BEYOND_30_DAYS" },
+  });
+  await card.lifecycle.reconcileOrder("t1");
+  assert.equal(card.doc().providerStatus, "failed");
+  assert.equal(card.doc().needsReview, true, "card payment needs a person to refund");
+});

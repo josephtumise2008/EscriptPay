@@ -20,6 +20,9 @@
 // and only the winner calls the supplier.
 
 const PAYMENT_CONFIRMABLE = ["pending", "expired", "failed"];
+// How long the supplier may take to show an order before "no such order"
+// is believed.
+const NOT_FOUND_GRACE_MS = Number(process.env.VTU_NOT_FOUND_GRACE_SECONDS || 180) * 1000;
 const AFTER = { returnDocument: "after" };
 
 const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEvent = () => {} }) => {
@@ -163,7 +166,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     } catch (error) {
       // Timeout / network error / unparseable response: the supplier MAY
       // have delivered. Do not retry blindly — reconcile.
-      result = { outcome: "unknown", errorCode: error && error.code };
+      result = { outcome: "unknown", errorCode: error && error.code, status: `error_${(error && error.code) || "unknown"}` };
     }
 
     const outcome = ["delivered", "accepted", "failed"].includes(result && result.outcome) ? result.outcome : "unknown";
@@ -258,8 +261,24 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
       }
     }
 
+    // The supplier has no record of an order we sent minutes ago and never got
+    // an order reference for: it never arrived (e.g. a timeout before they
+    // received it). Nothing was charged, so treat it as failed (wallet orders
+    // are then refunded automatically by the caller).
+    const ageMs = Date.now() - new Date(claimed.fulfillmentStartedAt || claimed.createdAt).getTime();
+    const neverArrived = result.outcome === "not_found" && !claimed.providerReference && ageMs >= NOT_FOUND_GRACE_MS;
+    if (result.outcome === "not_found" && !set.providerStatusCode && result.status) set.providerStatusCode = String(result.status).slice(0, 40);
+
     let outcome = "pending";
-    if (result.outcome === "delivered") {
+    if (neverArrived) {
+      outcome = "failed";
+      Object.assign(set, {
+        providerStatus: "failed",
+        status: "failed",
+        failureReason: "not_received_by_supplier",
+        needsReview: claimed.paymentStatus === "successful" && claimed.paymentProvider !== "wallet",
+      });
+    } else if (result.outcome === "delivered") {
       outcome = "delivered";
       Object.assign(set, { providerStatus: "successful", status: "successful", deliveredAt: new Date(), needsReview: false });
     } else if (result.outcome === "failed") {

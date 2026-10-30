@@ -179,9 +179,11 @@ export const describeTransaction = (tx = {}) => {
       tone: "failed",
       title: "Delivery failed",
       message:
-        tx.paymentStatus === "successful"
-          ? `We received your payment but the ${what} could not be delivered. This order has been flagged for a refund review.`
-          : `The ${what} could not be delivered.`,
+        tx.paymentStatus !== "successful"
+          ? `The ${what} could not be delivered.`
+          : tx.paymentProvider === "wallet"
+            ? `The network couldn't deliver this ${what}, so the full amount has been returned to your EscriptPay wallet. You can buy again now.`
+            : `We received your payment but the ${what} could not be delivered. We'll refund you, and you'll get an email when it's done.`,
     };
   }
   if (tx.providerStatus === "unknown") {

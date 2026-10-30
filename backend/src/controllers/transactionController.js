@@ -10,7 +10,7 @@ const { payment, config } = require("../services");
 const lifecycle = require("../services/lifecycle");
 const wallet = require("../services/wallet");
 const { vtu } = require("../services");
-const { refreshOrder } = require("../services/orderStatus");
+const { refreshOrder, refreshStaleOrders } = require("../services/orderStatus");
 
 const serialize = (tx) => {
   const json = tx.toJSON();
@@ -258,6 +258,7 @@ const startWalletOrder = async (req, res, spec, clientReference) => {
 //   ?page=1&limit=25 (pagination; without these the full list is returned)
 const getUserTransactions = async (req, res) => {
   try {
+    await refreshStaleOrders({ user: req.userId }).catch(() => {});
     const { status, type, network, q, from, to, page, limit } = req.query || {};
     const query = { user: req.userId };
 

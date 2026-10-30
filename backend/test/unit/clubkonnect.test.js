@@ -178,3 +178,7 @@ test("wallet balance", async () => {
   ck.__setFetch(fakeFetch({ body: { status: "INVALID_CREDENTIALS" } }));
   await assert.rejects(() => ck.getBalance(), /INVALID_CREDENTIALS/);
 });
+
+test("query for an order ClubKonnect never received means not_found", () => {
+  assert.equal(ck.interpret({ status: "TRANSACTION_BEYOND_30_DAYS" }).outcome, "not_found");
+});
