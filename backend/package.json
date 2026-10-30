@@ -14,7 +14,8 @@
     "vtu:plans": "node scripts/vtuPlans.js",
     "vtu:test-order": "node scripts/vtuTestOrder.js",
     "make:admin": "node scripts/makeAdmin.js",
-    "logout:users": "node scripts/logoutUsers.js"
+    "logout:users": "node scripts/logoutUsers.js",
+    "fix:costs": "node scripts/fixCosts.js"
   },
   "keywords": [],
   "author": "",

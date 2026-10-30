@@ -246,10 +246,16 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     const set = {};
     if (result.reference && !claimed.providerReference) set.providerReference = result.reference;
     if (result.statusCode !== undefined && result.statusCode !== null) set.providerStatusCode = String(result.statusCode);
-    // The supplier's own figure for what this order cost us.
+    // The supplier's own figure for what this order cost us. ClubKonnect's
+    // status query reports the product's face value (e.g. 100 for ₦100
+    // airtime) while its history shows the discounted amount actually taken
+    // (97). So only use it when it is LOWER than the cost we already know.
     if (Number.isFinite(result.amountCharged) && result.amountCharged > 0) {
-      set.costKobo = Math.round(result.amountCharged * 100);
-      set.costSource = "supplier";
+      const supplierKobo = Math.round(result.amountCharged * 100);
+      if (!Number.isFinite(claimed.costKobo) || supplierKobo < claimed.costKobo) {
+        set.costKobo = supplierKobo;
+        set.costSource = "supplier";
+      }
     }
 
     let outcome = "pending";

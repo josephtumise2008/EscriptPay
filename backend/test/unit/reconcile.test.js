@@ -104,3 +104,21 @@ test("finished orders and orders still awaiting their first supplier reply are n
     assert.equal(calls.query, 0);
   }
 });
+
+test("supplier's face-value 'amount charged' never raises the known cost; a lower figure is used", async () => {
+  const face = setup({
+    tx: { providerStatus: "processing", status: "pending", paymentStatus: "successful", providerReference: "1", costKobo: 9700, costSource: "estimate" },
+    query: { outcome: "delivered", statusCode: 200, amountCharged: 100 },
+  });
+  await face.lifecycle.reconcileOrder("t1");
+  assert.equal(face.doc().costKobo, 9700);
+  assert.equal(face.doc().costSource, "estimate");
+
+  const lower = setup({
+    tx: { providerStatus: "processing", status: "pending", paymentStatus: "successful", providerReference: "1", costKobo: 9700, costSource: "estimate" },
+    query: { outcome: "delivered", statusCode: 200, amountCharged: 96.5 },
+  });
+  await lower.lifecycle.reconcileOrder("t1");
+  assert.equal(lower.doc().costKobo, 9650);
+  assert.equal(lower.doc().costSource, "supplier");
+});
