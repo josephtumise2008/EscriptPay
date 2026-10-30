@@ -10,6 +10,9 @@
 //   --only "1000,2000.00"   limit to these ClubKonnect plan codes
 //   --deactivate-unmapped   hide old plans that have no ClubKonnect code
 //                           (only for the networks being applied)
+//   --deactivate-missing    hide ClubKonnect plans that ClubKonnect no longer
+//                           offers (only for the networks being applied;
+//                           not with --only)
 //
 //   npm run vtu:plans -- --network MTN --pricing                 preview owner pricing (scripts/pricing.js)
 //   npm run vtu:plans -- --network MTN --pricing --apply --db local --deactivate-unmapped
@@ -166,12 +169,20 @@ const run = async () => {
     $or: [{ provider: { $exists: false } }, { provider: { $ne: "clubkonnect" } }],
   };
   const unmappedCount = await Plan.countDocuments({ ...unmappedFilter, active: { $ne: false } });
+  const offered = new Set(plans.map(key));
+  const missing = only.length
+    ? []
+    : existing.filter((p) => networksApplied.includes(p.network) && p.active !== false && !offered.has(key(p)));
 
   const rule = usePricing ? "your pricing (scripts/pricing.js)" : `cost + ₦${markup}`;
   console.log(`\nDatabase "${dbName}" (${db === "local" ? "this computer" : "MongoDB Atlas"}):`);
   console.log(`  add ${toCreate.length} new plan(s) at ${rule}`);
   console.log(`  refresh ${toUpdate.length} linked plan(s)${usePricing || flag("reprice") ? ` and set their price to ${rule}` : " (selling prices unchanged)"}`);
   if (flag("deactivate-unmapped")) console.log(`  hide ${unmappedCount} old ${networksApplied.join("/")} plan(s) without a ClubKonnect code (not deleted)`);
+  if (missing.length) {
+    console.log(`  ${missing.length} plan(s) ClubKonnect no longer offers: ${missing.map((p) => `${p.network} ${p.name}`).join("; ")}`);
+    console.log(flag("deactivate-missing") ? "    -> will be hidden (not deleted)" : "    -> add --deactivate-missing to hide them");
+  }
   const answer = (await ask('Type YES to apply: ')).trim();
   if (answer !== "YES") {
     console.log("Cancelled. Nothing was changed.");
@@ -200,6 +211,9 @@ const run = async () => {
   }
   if (flag("deactivate-unmapped")) {
     await Plan.updateMany(unmappedFilter, { $set: { active: false } });
+  }
+  if (flag("deactivate-missing") && missing.length) {
+    await Plan.updateMany({ _id: { $in: missing.map((p) => p._id) } }, { $set: { active: false } });
   }
   const belowCost = await Plan.countDocuments({ provider: "clubkonnect", active: { $ne: false }, $expr: { $lt: ["$price", "$costPrice"] } });
   console.log(`Done. Added ${toCreate.length}, refreshed ${toUpdate.length}.`);
