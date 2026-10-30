@@ -5,8 +5,10 @@
 // 1. fixedProfit — exact profit per plan, set by the owner (MTN SME list).
 // 2. Network bundles (Awoof / Direct Data): ClubKonnect's plan code carries
 //    the network's own price (e.g. "800.01" = ₦800 bundle, cost ₦752.72).
-//    We sell at  min(network price, cost + standard profit),  so customers
-//    never pay more than buying from the network directly — and often less.
+//    We always sell BELOW the network's price: the customer gets
+//    CUSTOMER_SHARE of the gap between the network price and our cost, we
+//    keep the rest (e.g. ₦800 bundle, cost ₦752.72 -> ₦781, we keep ₦28).
+//    If cost + standard profit is cheaper still, that price is used.
 // 3. Everything else (SME, Night, …): cost + standard profit.
 //
 // Standard profit = max(7.5% of cost, ₦35); for small plans (cost < ₦300)
@@ -16,6 +18,9 @@
 const FIXED_PROFIT = {
   MTN: { "500": 35, "1000": 40, "1000.00": 45, "2000.00": 83, "5000.00": 189 },
 };
+
+// Share of the bundle discount passed on to the customer (0–1).
+const CUSTOMER_SHARE = 0.4;
 
 const standardProfit = (cost) => (cost < 300 ? Math.max(cost * 0.15, 10) : Math.max(cost * 0.075, 35));
 
@@ -37,9 +42,12 @@ const price = (plan) => {
   } else {
     value = Math.ceil(cost + standardProfit(cost));
     const networkPrice = networkPriceOf(plan);
-    if (networkPrice !== null) value = Math.min(value, networkPrice);
+    if (networkPrice !== null) {
+      const belowNetwork = Math.floor(networkPrice - (networkPrice - cost) * CUSTOMER_SHARE);
+      value = Math.min(value, belowNetwork);
+    }
   }
   return Math.max(value, Math.ceil(cost * 1.03));
 };
 
-module.exports = { price, networkPriceOf, FIXED_PROFIT };
+module.exports = { price, networkPriceOf, FIXED_PROFIT, CUSTOMER_SHARE };
