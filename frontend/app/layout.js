@@ -40,6 +40,11 @@ const TITLE = "EscriptPay — Cheaper data. Instant airtime.";
 const DESCRIPTION =
   "Buy MTN, Airtel, Glo and 9mobile data and airtime in seconds. Fund your wallet once and buy in one tap, with a receipt for every order.";
 
+const STRUCTURED_DATA = [
+  { "@context": "https://schema.org", "@type": "WebSite", name: "EscriptPay", alternateName: "EscriptPay.com", url: `${SITE_URL}/` },
+  { "@context": "https://schema.org", "@type": "Organization", name: "EscriptPay", url: `${SITE_URL}/`, logo: `${SITE_URL}/icons/icon-512.png` },
+];
+
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -92,6 +97,9 @@ export default function RootLayout({ children }) {
     <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${sora.variable}`} suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: SPLASH_CSS }} />
+        {/* Tells Google the site name and logo for search results. */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }} />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var d=document.documentElement;d.classList.add("js");try{var p=localStorage.getItem("escriptpay-theme");var t=(p==="light"||p==="dark")?p:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");d.classList.toggle("dark",t==="dark");d.style.colorScheme=t;}catch(e){}
