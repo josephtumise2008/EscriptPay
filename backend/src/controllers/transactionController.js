@@ -170,10 +170,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const awaitDelivery = async (tx) => {
   let current = tx;
   const deadline = Date.now() + INLINE_CONFIRM_MS;
-  for (let wait = 1500; current && current.providerStatus === "processing" && Date.now() + wait < deadline; wait = 2500) {
+  for (let wait = 1500; current && ["processing", "unknown"].includes(current.providerStatus) && Date.now() + wait < deadline; wait = 2500) {
     await sleep(wait);
     try {
-      current = (await refreshOrder(current, { minIntervalMs: 1000, source: "inline" })).tx || current;
+      // A request that errored before ClubKonnect gave us an order number is
+      // checked by RequestID; if they still have no record after a few
+      // seconds it never reached them, so it fails now and is refunded
+      // straight away instead of waiting minutes.
+      current = (await refreshOrder(current, { minIntervalMs: 1000, source: "inline", notFoundGraceMs: 4000 })).tx || current;
     } catch (error) {
       logEvent("reconcile.inline_error", { transactionId: current.transactionId, message: error && error.message });
       break;
@@ -236,7 +240,7 @@ const startWalletOrder = async (req, res, spec, clientReference) => {
   logEvent("wallet.paid", { transactionId: created.transactionId });
 
   let { tx } = await lifecycle.fulfillOrder(created);
-  if (tx && tx.providerStatus === "processing") tx = await awaitDelivery(tx);
+  if (tx && ["processing", "unknown"].includes(tx.providerStatus)) tx = await awaitDelivery(tx);
   if (tx && tx.providerStatus === "failed") {
     const refunded = await wallet.refundOrder(tx);
     tx = refunded.tx || tx;

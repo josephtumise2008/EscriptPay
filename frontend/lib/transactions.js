@@ -174,6 +174,13 @@ export const describeTransaction = (tx = {}) => {
   }
 
   // Payment is confirmed (or not required in test mode) from here on.
+  if (tx.providerStatus === "failed" && tx.paymentProvider === "wallet" && tx.paymentStatus === "successful") {
+    return {
+      tone: "failed",
+      title: "Didn't go through",
+      message: `The network connection was poor, so this ${what} wasn't delivered. You weren't charged: the money is back in your EscriptPay wallet. Please try again.`,
+    };
+  }
   if (tx.providerStatus === "failed") {
     return {
       tone: "failed",

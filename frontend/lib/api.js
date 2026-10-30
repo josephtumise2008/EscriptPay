@@ -40,6 +40,10 @@ const api = axios.create({
 
 // Normalizes any axios/network error into a safe, user-visible message.
 export const errorMessage = (error, fallback = "Something went wrong. Please try again.") => {
+  // No answer from our server at all: the customer's internet dropped.
+  if (error && !error.response && (error.code === "ERR_NETWORK" || error.code === "ECONNABORTED" || error.message === "Network Error")) {
+    return "Poor internet connection. Check your network and try again. If money left your wallet, see History: orders that don't go through are refunded automatically.";
+  }
   return error?.response?.data?.message || error?.message || fallback;
 };
 

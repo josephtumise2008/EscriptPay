@@ -212,7 +212,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
   // not confirmed ("processing"), or whose outcome was ambiguous ("unknown",
   // e.g. a timeout). Idempotent and throttled; never re-sends the purchase.
   //   -> { outcome: "delivered" | "failed" | "pending" | "skipped", tx }
-  const reconcileOrder = async (txOrId, { minIntervalMs, source = "poll" } = {}) => {
+  const reconcileOrder = async (txOrId, { minIntervalMs, source = "poll", notFoundGraceMs = NOT_FOUND_GRACE_MS } = {}) => {
     const interval = Number.isFinite(minIntervalMs) ? minIntervalMs : config.statusCheckIntervalMs || 20000;
     const tx = txOrId && txOrId._id ? txOrId : await reload(txOrId);
     if (!tx || !["processing", "unknown"].includes(tx.providerStatus) || typeof vtu.queryStatus !== "function") {
@@ -266,7 +266,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     // received it). Nothing was charged, so treat it as failed (wallet orders
     // are then refunded automatically by the caller).
     const ageMs = Date.now() - new Date(claimed.fulfillmentStartedAt || claimed.createdAt).getTime();
-    const neverArrived = result.outcome === "not_found" && !claimed.providerReference && ageMs >= NOT_FOUND_GRACE_MS;
+    const neverArrived = result.outcome === "not_found" && !claimed.providerReference && ageMs >= notFoundGraceMs;
     if (result.outcome === "not_found" && !set.providerStatusCode && result.status) set.providerStatusCode = String(result.status).slice(0, 40);
 
     let outcome = "pending";
