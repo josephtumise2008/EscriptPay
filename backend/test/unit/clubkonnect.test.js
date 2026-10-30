@@ -173,6 +173,8 @@ test("data plan list comes from PlansV3 with our real cost (amount x discount fa
 test("wallet balance", async () => {
   ck.__setFetch(fakeFetch({ body: { date: "15th-Oct-2017", id: "CK999", balance: "3500" } }));
   assert.deepEqual(await ck.getBalance(), { balance: 3500 });
+  ck.__setFetch(fakeFetch({ body: { id: "CK999", balance: "8,243.50" } }));
+  assert.deepEqual(await ck.getBalance(), { balance: 8243.5 }, "thousands separator");
   ck.__setFetch(fakeFetch({ body: { status: "INVALID_CREDENTIALS" } }));
   await assert.rejects(() => ck.getBalance(), /INVALID_CREDENTIALS/);
 });

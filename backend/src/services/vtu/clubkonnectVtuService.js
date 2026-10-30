@@ -29,6 +29,13 @@
 // request URLs are NEVER logged or included in errors.
 
 const BASE_URL = "https://www.nellobytesystems.com";
+
+// ClubKonnect sends numbers as strings, sometimes with thousands separators
+// ("8,243.50"). Number("8,243.50") is NaN, so strip commas first.
+const num = (v) => {
+  const t = String(v ?? "").replace(/,/g, "").trim();
+  return t === "" ? NaN : Number(t);
+};
 const REQUEST_TIMEOUT_MS = Number(process.env.CLUBKONNECT_TIMEOUT_MS || 25000);
 
 const NETWORK_CODES = { MTN: "01", Glo: "02", "9mobile": "03", Airtel: "04" };
@@ -124,7 +131,7 @@ const interpret = (body) => {
   const status = data.status ?? data.orderstatus ?? data.OrderStatus ?? "";
   const outcome = code !== null ? OUTCOME_BY_CODE(code) : OUTCOME_BY_TEXT(status);
   const orderId = data.orderid ?? data.OrderID ?? data.orderId;
-  const charged = Number(data.amountcharged ?? data.AmountCharged);
+  const charged = num(data.amountcharged ?? data.AmountCharged);
   return {
     outcome,
     reference: orderId ? String(orderId) : null,
@@ -230,7 +237,7 @@ const queryStatus = async ({ transaction }) => {
 const getBalance = async () => {
   const { userId, apiKey } = credentials();
   const body = await get("APIWalletBalanceV1.asp", { UserID: userId, APIKey: apiKey });
-  const balance = Number(body && body.balance);
+  const balance = num(body && body.balance);
   if (!Number.isFinite(balance)) {
     const status = body && (body.status || body.statuscode);
     throw new VtuProviderError(`Balance check failed${status ? ` (${status})` : ""}.`, "balance_failed");
@@ -253,8 +260,8 @@ const getDataPlans = async () => {
       const network = NETWORK_BY_CODE[String(entry.ID)];
       if (!network) continue;
       for (const p of Array.isArray(entry.PRODUCT) ? entry.PRODUCT : []) {
-        const amount = Number(p.PRODUCT_AMOUNT);
-        const rawFactor = Number(p.PRODUCT_DISCOUNT_AMOUNT);
+        const amount = num(p.PRODUCT_AMOUNT);
+        const rawFactor = num(p.PRODUCT_DISCOUNT_AMOUNT);
         const factor = Number.isFinite(rawFactor) && rawFactor > 0 && rawFactor <= 1 ? rawFactor : 1;
         if (!p.PRODUCT_ID || !Number.isFinite(amount) || amount <= 0) continue;
         const dataType = String(p.DATA_TYPE || "").toUpperCase();
