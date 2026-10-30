@@ -146,22 +146,27 @@ test("query uses OrderID when known, else our RequestID", async () => {
   assert.equal(f.calls[1].searchParams.get("RequestID"), "ESCP-9");
 });
 
-test("data plan list is parsed from the documented MOBILE_NETWORK format", async () => {
+test("data plan list comes from PlansV3 with our real cost (amount x discount factor)", async () => {
   ck.__setFetch(
-    fakeFetch({
-      body: {
-        MOBILE_NETWORK: {
-          MTN: [{ ID: "01", PRODUCT: [{ PRODUCT_ID: "1000", PRODUCT_NAME: "1 GB - Weekly (SME)", PRODUCT_AMOUNT: "410" }] }],
-          Airtel: [{ ID: "04", PRODUCT: [{ PRODUCT_ID: "499.91", PRODUCT_NAME: "1GB - 1 day (Awoof Data)", PRODUCT_AMOUNT: "470.450027751923" }] }],
-          Bogus: [{ ID: "99", PRODUCT: [{ PRODUCT_ID: "1", PRODUCT_NAME: "x", PRODUCT_AMOUNT: "1" }] }],
+    fakeFetch((u) => {
+      assert.equal(u.pathname, "/APIDatabundlePlansV3.asp");
+      return {
+        body: {
+          MOBILE_NETWORK: {
+            MTN: [{ ID: "01", PRODUCT: [
+              { PRODUCT_CODE: "2", PRODUCT_ID: "500", PRODUCT_NAME: "500MB - Weekly (SME)", PRODUCT_AMOUNT: "297.00", PRODUCT_DISCOUNT_AMOUNT: "1", DATA_TYPE: "SME" },
+              { PRODUCT_CODE: "19", PRODUCT_ID: "800.01", PRODUCT_NAME: "1GB Weekly Plan - 7 days (Direct Data)", PRODUCT_AMOUNT: "800.00", PRODUCT_DISCOUNT_AMOUNT: "0.97", DATA_TYPE: "DIRECT" },
+            ] }],
+            Bogus: [{ ID: "99", PRODUCT: [{ PRODUCT_ID: "1", PRODUCT_NAME: "x", PRODUCT_AMOUNT: "1" }] }],
+          },
         },
-      },
+      };
     })
   );
   const plans = await ck.getDataPlans();
   assert.deepEqual(plans, [
-    { network: "MTN", networkCode: "01", providerPlanId: "1000", name: "1 GB - Weekly (SME)", cost: 410 },
-    { network: "Airtel", networkCode: "04", providerPlanId: "499.91", name: "1GB - 1 day (Awoof Data)", cost: 470.45 },
+    { network: "MTN", networkCode: "01", providerPlanId: "500", providerPlanCode: "2", name: "500MB - Weekly (SME)", cost: 297, networkPrice: null, dataType: "SME" },
+    { network: "MTN", networkCode: "01", providerPlanId: "800.01", providerPlanCode: "19", name: "1GB Weekly Plan - 7 days (Direct Data)", cost: 776, networkPrice: 800, dataType: "DIRECT" },
   ]);
 });
 

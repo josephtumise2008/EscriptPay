@@ -238,11 +238,14 @@ const getBalance = async () => {
   return { balance };
 };
 
-// Data plans with the price ClubKonnect charges this account.
-// -> [{ network, networkCode, providerPlanId, name, cost }]
+// Data plans with the price ClubKonnect charges this account, from PlansV3:
+//   PRODUCT_AMOUNT           network price for DIRECT bundles, our price for SME
+//   PRODUCT_DISCOUNT_AMOUNT  multiplier for our cost (e.g. "0.97" = 3% off; "1" for SME)
+//   DATA_TYPE                "SME" | "DIRECT" | …
+// -> [{ network, networkCode, providerPlanId, providerPlanCode, name, cost, networkPrice, dataType }]
 const getDataPlans = async () => {
-  const { userId } = credentials();
-  const body = await get("APIDatabundlePlansV2.asp", { UserID: userId });
+  const { userId, apiKey } = credentials();
+  const body = await get("APIDatabundlePlansV3.asp", { UserID: userId, APIKey: apiKey });
   const networks = (body && body.MOBILE_NETWORK) || {};
   const plans = [];
   for (const entries of Object.values(networks)) {
@@ -250,14 +253,20 @@ const getDataPlans = async () => {
       const network = NETWORK_BY_CODE[String(entry.ID)];
       if (!network) continue;
       for (const p of Array.isArray(entry.PRODUCT) ? entry.PRODUCT : []) {
-        const cost = Number(p.PRODUCT_AMOUNT);
-        if (!p.PRODUCT_ID || !Number.isFinite(cost) || cost <= 0) continue;
+        const amount = Number(p.PRODUCT_AMOUNT);
+        const rawFactor = Number(p.PRODUCT_DISCOUNT_AMOUNT);
+        const factor = Number.isFinite(rawFactor) && rawFactor > 0 && rawFactor <= 1 ? rawFactor : 1;
+        if (!p.PRODUCT_ID || !Number.isFinite(amount) || amount <= 0) continue;
+        const dataType = String(p.DATA_TYPE || "").toUpperCase();
         plans.push({
           network,
           networkCode: String(entry.ID),
           providerPlanId: String(p.PRODUCT_ID),
+          providerPlanCode: p.PRODUCT_CODE ? String(p.PRODUCT_CODE) : null,
           name: String(p.PRODUCT_NAME || "").trim(),
-          cost: Math.round(cost * 100) / 100,
+          cost: Math.round(amount * factor * 100) / 100,
+          networkPrice: dataType === "DIRECT" ? amount : null,
+          dataType,
         });
       }
     }
