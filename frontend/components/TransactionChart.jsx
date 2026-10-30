@@ -5,9 +5,9 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { formatNaira } from "@/lib/format";
 
 const PERIOD_META = {
-  "7d": { title: "Last 7 days", subtitle: "Successful test purchases." },
-  "30d": { title: "Last 30 days", subtitle: "Successful test purchases." },
-  all: { title: "All time", subtitle: "Successful test purchases by month." },
+  "7d": { title: "Last 7 days", subtitle: "Successful purchases." },
+  "30d": { title: "Last 30 days", subtitle: "Successful purchases." },
+  all: { title: "All time", subtitle: "Successful purchases by month." },
 };
 
 // Line chart of the user's successful transaction amounts for a selected
@@ -36,7 +36,7 @@ export default function TransactionChart({
           <LoadingSpinner size={32} label="Loading chart..." />
         ) : (
           <p className="py-10 text-center text-sm text-ink-400">
-            Not enough data to chart yet — your test purchases will appear here.
+            Not enough data to chart yet — your purchases will appear here.
           </p>
         )}
       </div>

@@ -254,7 +254,7 @@ export default function DashboardPage() {
       <p className="text-xs text-ink-400">
         {stats.weekly > 0
           ? `You completed ${stats.weekly} test ${stats.weekly === 1 ? "purchase" : "purchases"} this week (${formatNaira(stats.weeklyAmount)}).`
-          : "No successful test purchases this week yet."}
+          : "No successful purchases this week yet."}
       </p>
     </div>
   );
