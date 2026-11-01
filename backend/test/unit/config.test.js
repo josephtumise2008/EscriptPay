@@ -95,3 +95,9 @@ test("live payments + clubkonnect + both switches is the only live combination",
   assert.equal(c.deliveryMode, "live");
   assert.equal(c.vtuProvider, "clubkonnect");
 });
+
+test("card payments: Nigeria only by default, configurable, '*' allows any", () => {
+  assert.deepEqual(readConfig({}).allowedCardCountries, ["NG"]);
+  assert.deepEqual(readConfig({ ALLOWED_CARD_COUNTRIES: "ng, gh" }).allowedCardCountries, ["NG", "GH"]);
+  assert.deepEqual(readConfig({ ALLOWED_CARD_COUNTRIES: "*" }).allowedCardCountries, []);
+});

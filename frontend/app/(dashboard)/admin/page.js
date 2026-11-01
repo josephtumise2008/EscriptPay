@@ -72,6 +72,12 @@ function ProfitBars({ series }) {
   );
 }
 
+const REFUND_LABEL = {
+  requested: "refund sent automatically",
+  failed: "automatic refund FAILED: refund in Paystack",
+  not_supported: "refund in Paystack",
+};
+
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -245,6 +251,8 @@ export default function AdminPage() {
                           Paid via {tx.paymentProvider} ({tx.paymentStatus}) · delivery {tx.providerStatus}
                           {tx.providerStatusCode ? ` (code ${tx.providerStatusCode})` : ""}
                           {tx.failureReason ? ` · ${tx.failureReason.replace(/_/g, " ")}` : ""}
+                          {tx.cardCountry ? ` · card from ${tx.cardCountry}` : ""}
+                          {tx.refundStatus ? ` · ${REFUND_LABEL[tx.refundStatus] || tx.refundStatus}` : ""}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -264,6 +272,33 @@ export default function AdminPage() {
               </ul>
             )}
           </section>
+
+          {data.blockedFundings?.length > 0 && (
+            <section aria-labelledby="blocked-heading">
+              <h2 id="blocked-heading" className="mb-3 font-display text-lg font-bold text-ink-800">
+                Blocked top-ups <span className="text-ink-400">({data.blockedFundings.length})</span>
+              </h2>
+              <p className="mb-3 text-xs text-ink-500">
+                Paid but not added to the wallet (e.g. a foreign card). Blacklist the customer in Paystack, and refund there if the automatic refund failed.
+              </p>
+              <ul className="space-y-3">
+                {data.blockedFundings.map((e) => (
+                  <li key={e.id} className="card p-4">
+                    <p className="font-mono text-xs text-ink-500">{e.reference}</p>
+                    <p className="mt-0.5 font-semibold text-ink-900">Wallet top-up · {formatNaira(e.amount)}</p>
+                    <p className="text-xs text-ink-500">
+                      {e.customer ? `${e.customer.name} <${e.customer.email}>` : "unknown customer"} · {formatDateTime(e.createdAt)}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-amber-700">
+                      {e.failureReason ? e.failureReason.replace(/_/g, " ") : "flagged"}
+                      {e.cardCountry ? ` · card from ${e.cardCountry}` : ""}
+                      {e.refundStatus ? ` · ${REFUND_LABEL[e.refundStatus] || e.refundStatus}` : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section aria-labelledby="messages-heading">
             <h2 id="messages-heading" className="mb-3 font-display text-lg font-bold text-ink-800">

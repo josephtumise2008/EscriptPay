@@ -35,12 +35,17 @@ const paidVerification = (over = {}) => ({
 
 const setup = ({ tx = baseTx(), verification = paidVerification(), vtuOutcome = "delivered", vtuThrows, config } = {}) => {
   const Transaction = createFakeTransactionModel([tx]);
-  const calls = { verify: 0, purchase: 0 };
+  const calls = { verify: 0, purchase: 0, refund: 0 };
   const payment = {
     verifyPayment: async () => {
       calls.verify += 1;
+      await new Promise((r) => setImmediate(r));
       if (verification instanceof Error) throw verification;
       return verification;
+    },
+    refundPayment: async () => {
+      calls.refund += 1;
+      return { status: "pending" };
     },
   };
   const vtu = {
@@ -214,4 +219,60 @@ test("unknown reference is reported, nothing is created", async () => {
   const r = await lifecycle.confirmPayment("NOT-OURS", { source: "webhook" });
   assert.equal(r.outcome, "not_found");
   assert.equal(calls.verify, 0);
+});
+
+const ngOnly = { ...paystackConfig, allowedCardCountries: ["NG"] };
+
+test("foreign card: never delivered, flagged and refunded exactly once", async () => {
+  const { lifecycle, calls, doc } = setup({
+    config: ngOnly,
+    verification: paidVerification({ channel: "card", cardCountry: "PR" }),
+  });
+  const [a, b] = await Promise.all([
+    lifecycle.confirmPayment("ESCP-20261022-AAAAAA", { source: "webhook" }),
+    lifecycle.confirmPayment("ESCP-20261022-AAAAAA", { source: "callback" }),
+  ]);
+  assert.ok([a.outcome, b.outcome].includes("mismatch"));
+  assert.equal(doc().paymentStatus, "failed");
+  assert.equal(doc().needsReview, true);
+  assert.match(doc().failureReason, /foreign_card/);
+  assert.equal(doc().cardCountry, "PR");
+  assert.equal(doc().refundStatus, "requested");
+  assert.equal(calls.refund, 1);
+  assert.equal((await lifecycle.fulfillOrder(doc())).outcome, "blocked");
+  assert.equal(calls.purchase, 0);
+  // Later checks never refund again.
+  await lifecycle.confirmPayment("ESCP-20261022-AAAAAA", { source: "webhook" });
+  assert.equal(calls.refund, 1);
+});
+
+test("Nigerian card, bank transfer and card without a country are accepted", async () => {
+  for (const extra of [
+    { channel: "card", cardCountry: "NG" },
+    { channel: "bank_transfer", cardCountry: null },
+    { channel: "card", cardCountry: null },
+  ]) {
+    const { lifecycle, calls } = setup({ config: ngOnly, verification: paidVerification(extra) });
+    assert.equal((await lifecycle.confirmPayment("ESCP-20261022-AAAAAA", { source: "callback" })).outcome, "paid");
+    assert.equal(calls.refund, 0);
+  }
+});
+
+test("a failed automatic refund is recorded for the admin", async () => {
+  const cur = setup({ config: ngOnly, verification: paidVerification({ channel: "card", cardCountry: "US" }) });
+  const { createOrderLifecycle: create } = require("../../src/services/orderLifecycle");
+  const lifecycle = create({
+    Transaction: cur.Transaction,
+    Plan: null,
+    payment: {
+      verifyPayment: async () => paidVerification({ channel: "card", cardCountry: "US" }),
+      refundPayment: async () => {
+        throw new Error("nope");
+      },
+    },
+    vtu: { name: "fake", simulated: false, purchase: async () => ({ outcome: "delivered" }) },
+    config: ngOnly,
+  });
+  assert.equal((await lifecycle.confirmPayment("ESCP-20261022-AAAAAA", { source: "webhook" })).outcome, "mismatch");
+  assert.equal(cur.doc().refundStatus, "failed");
 });

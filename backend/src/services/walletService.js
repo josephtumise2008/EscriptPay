@@ -14,6 +14,7 @@
 //   reference, exact amount and currency with Paystack itself.
 
 const { quoteFunding } = require("./walletFee");
+const { isForeignCard, refundBlockedPayment } = require("./payment/cardCheck");
 
 const AFTER = { returnDocument: "after" };
 const FUNDING_CONFIRMABLE = ["pending", "expired"];
@@ -190,13 +191,29 @@ const createWalletService = ({
       if (!Number.isInteger(verified.amountKobo) || verified.amountKobo !== expectedKobo) {
         problems.push("amount_mismatch");
       }
+      const foreign = isForeignCard(verified, config);
+      if (foreign) problems.push("foreign_card");
       if (problems.length > 0) {
         const flagged = await WalletEntry.findOneAndUpdate(
-          { _id: entry._id, status: { $in: [...FUNDING_CONFIRMABLE, "failed"] } },
-          { $set: { status: "failed", needsReview: true, failureReason: problems.join(","), verifiedVia: source } },
+          { _id: entry._id, status: { $in: [...FUNDING_CONFIRMABLE, "failed"] }, needsReview: { $ne: true } },
+          {
+            $set: {
+              status: "failed",
+              needsReview: true,
+              failureReason: problems.join(","),
+              verifiedVia: source,
+              ...(verified.cardCountry ? { cardCountry: verified.cardCountry } : {}),
+            },
+          },
           AFTER
         );
-        logEvent("wallet.funding_mismatch", { reference, problems, source });
+        logEvent("wallet.funding_mismatch", { reference, problems, source, cardCountry: verified.cardCountry || null });
+        if (flagged && foreign) {
+          const refundStatus = await refundBlockedPayment(payment, reference);
+          logEvent("wallet.foreign_card_refund", { reference, refundStatus });
+          const updated = await WalletEntry.findOneAndUpdate({ _id: entry._id }, { $set: { refundStatus } }, AFTER);
+          return { outcome: "mismatch", entry: updated || flagged };
+        }
         return { outcome: "mismatch", entry: flagged || (await WalletEntry.findById(entry._id)) };
       }
       if (entry.status === "failed") {

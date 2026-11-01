@@ -72,12 +72,15 @@ const overview = async (req, res) => {
 
     const toNaira = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, ["orders", "data", "airtime", "unknownCost"].includes(k) ? v : v / 100]));
 
-    const [needsReview, pending, walletAgg, newMessages, failedRecent] = await Promise.all([
+    const [needsReview, pending, walletAgg, newMessages, failedRecent, blockedFundings] = await Promise.all([
       Transaction.find({ mode, needsReview: true }).sort({ updatedAt: -1 }).limit(50).populate("user", "name email").lean(),
       Transaction.countDocuments({ mode, status: "pending" }),
       User.aggregate([{ $group: { _id: null, total: { $sum: `$walletBalances.${mode}` } } }]),
       ContactMessage.find({ status: "new" }).sort({ createdAt: -1 }).limit(30).lean(),
       Transaction.countDocuments({ mode, status: "failed", createdAt: { $gte: since } }),
+      // Wallet top-ups that were paid but not credited (foreign card, amount
+      // mismatch). Read-only here: refunds happen in Paystack.
+      WalletEntry.find({ mode, kind: "funding", needsReview: true }).sort({ updatedAt: -1 }).limit(20).populate("user", "name email").lean(),
     ]);
     const walletLiability = walletAgg[0] ? walletAgg[0].total / 100 : 0;
 
@@ -113,8 +116,20 @@ const overview = async (req, res) => {
         providerStatus: t.providerStatus,
         providerStatusCode: t.providerStatusCode || null,
         failureReason: t.failureReason || null,
+        cardCountry: t.cardCountry || null,
+        refundStatus: t.refundStatus || null,
         customer: t.user ? { name: t.user.name, email: t.user.email } : null,
         createdAt: t.createdAt,
+      })),
+      blockedFundings: blockedFundings.map((e) => ({
+        id: String(e._id),
+        reference: e.reference,
+        amount: (e.chargedKobo || e.amountKobo) / 100,
+        failureReason: e.failureReason || null,
+        cardCountry: e.cardCountry || null,
+        refundStatus: e.refundStatus || null,
+        customer: e.user ? { name: e.user.name, email: e.user.email } : null,
+        createdAt: e.createdAt,
       })),
       messages: newMessages.map((m) => ({ id: String(m._id), name: m.name, email: m.email, message: m.message, createdAt: m.createdAt })),
     });

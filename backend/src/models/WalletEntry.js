@@ -112,6 +112,10 @@ const walletEntrySchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // Card issuing country (ISO) when a payment was blocked for it, and the
+    // state of the automatic refund: requested | failed | not_supported.
+    cardCountry: { type: String, trim: true },
+    refundStatus: { type: String, trim: true },
   },
   { timestamps: true }
 );
@@ -136,6 +140,8 @@ walletEntrySchema.methods.toJSON = function toJSON() {
     paymentProvider: this.paymentProvider,
     orderTransactionId: this.orderTransactionId || null,
     description: this.description || "",
+    failureReason: this.failureReason || null,
+    refundStatus: this.refundStatus || null,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,
   };

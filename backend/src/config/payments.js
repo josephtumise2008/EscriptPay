@@ -24,6 +24,15 @@ const firstOrigin = (value) =>
     .map((s) => s.trim())
     .filter(Boolean)[0] || "";
 
+const cardCountries = (value) => {
+  const raw = value == null || String(value).trim() === "" ? "NG" : String(value);
+  if (raw.trim() === "*") return [];
+  return raw
+    .split(",")
+    .map((c) => c.trim().toUpperCase())
+    .filter((c) => /^[A-Z]{2}$/.test(c));
+};
+
 const readConfig = (env = process.env) => {
   const paymentProvider = (env.PAYMENT_SERVICE || "test").trim().toLowerCase();
   const vtuProvider = (env.VTU_SERVICE || "test").trim().toLowerCase();
@@ -108,6 +117,9 @@ const readConfig = (env = process.env) => {
     deliveryMode: realDelivery ? "live" : "test",
     currency: "NGN",
     paymentExpiryMinutes: positiveInt(env.PAYMENT_EXPIRY_MINUTES, DEFAULT_PAYMENT_EXPIRY_MINUTES),
+    // Card payments are only accepted from cards issued in these countries
+    // (ISO codes, comma-separated). Default Nigeria only. "*" allows any.
+    allowedCardCountries: cardCountries(env.ALLOWED_CARD_COUNTRIES),
     // Wallet top-ups: the customer pays the card processing fee on top, so
     // the wallet receives the exact amount. Paystack's published NGN pricing:
     // 1.5% + ₦100 (₦100 waived under ₦2,500), capped at ₦2,000.

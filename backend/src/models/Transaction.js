@@ -180,6 +180,10 @@ const transactionSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // Card issuing country (ISO) when a payment was blocked for it, and the
+    // state of the automatic refund: requested | failed | not_supported.
+    cardCountry: { type: String, trim: true },
+    refundStatus: { type: String, trim: true },
   },
   {
     timestamps: true,

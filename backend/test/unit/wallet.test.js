@@ -5,11 +5,11 @@ const { createFakeModel } = require("../helpers/fakeModel");
 
 let refCounter = 0;
 
-const setup = ({ provider = "test", balance = 0, verification, walletFee } = {}) => {
+const setup = ({ provider = "test", balance = 0, verification, walletFee, allowedCardCountries } = {}) => {
   const User = createFakeModel({ docs: [{ _id: "u1", walletBalances: { test: balance, live: 0 } }] });
   const WalletEntry = createFakeModel({ unique: ["reference", "paymentReference", "clientReference"] });
   const Transaction = createFakeModel();
-  const calls = { verify: 0, init: 0 };
+  const calls = { verify: 0, init: 0, refund: 0 };
   const payment =
     provider === "paystack"
       ? {
@@ -31,6 +31,10 @@ const setup = ({ provider = "test", balance = 0, verification, walletFee } = {})
               ...verification,
             };
           },
+          refundPayment: async () => {
+            calls.refund += 1;
+            return { status: "pending" };
+          },
         }
       : { requiresCheckout: false, processPayment: async () => ({ paymentStatus: "not_required" }) };
   const config = {
@@ -40,6 +44,7 @@ const setup = ({ provider = "test", balance = 0, verification, walletFee } = {})
     paymentExpiryMinutes: 60,
     appUrl: "http://localhost:3000",
     walletFee,
+    allowedCardCountries,
   };
   const wallet = createWalletService({
     User,
@@ -192,4 +197,34 @@ test("fee quote never leaves the wallet short after the provider's cut", () => {
 test("test mode: no fee", async () => {
   const { wallet } = setup();
   assert.deepEqual(wallet.quote(5000), { amountKobo: 500000, feeKobo: 0, chargeKobo: 500000 });
+});
+
+test("paystack: a foreign card top-up is never credited and is refunded once", async () => {
+  const { wallet, balanceOf, WalletEntry, calls } = setup({
+    provider: "paystack",
+    allowedCardCountries: ["NG"],
+    verification: { channel: "card", cardCountry: "PR" },
+  });
+  const started = await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 5000 });
+  const ref = started.entry.paymentReference;
+  await Promise.all([wallet.confirmFunding(ref, { source: "webhook" }), wallet.confirmFunding(ref, { source: "callback" })]);
+  assert.equal(balanceOf(), 0);
+  assert.equal(WalletEntry.docs[0].needsReview, true);
+  assert.match(WalletEntry.docs[0].failureReason, /foreign_card/);
+  assert.equal(WalletEntry.docs[0].refundStatus, "requested");
+  assert.equal(calls.refund, 1);
+  assert.equal((await wallet.confirmFunding(ref, { source: "webhook" })).outcome, "needs_review");
+  assert.equal(calls.refund, 1);
+});
+
+test("paystack: a Nigerian card top-up is credited", async () => {
+  const { wallet, balanceOf, calls } = setup({
+    provider: "paystack",
+    allowedCardCountries: ["NG"],
+    verification: { channel: "card", cardCountry: "NG" },
+  });
+  const started = await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 5000 });
+  await wallet.confirmFunding(started.entry.paymentReference, { source: "webhook" });
+  assert.equal(balanceOf(), 500000);
+  assert.equal(calls.refund, 0);
 });

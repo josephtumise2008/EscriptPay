@@ -151,6 +151,14 @@ export const describeTransaction = (tx = {}) => {
     };
   }
   if (tx.paymentStatus === "failed") {
+    if (tx.failureReason && tx.failureReason.includes("foreign_card")) {
+      return {
+        tone: "failed",
+        title: "Card not accepted",
+        message:
+          "EscriptPay only accepts cards issued in Nigeria, so nothing was delivered. The payment is being refunded to your card; it can take a few working days to show. Please pay with a Nigerian card, bank transfer or your wallet.",
+      };
+    }
     if (tx.needsReview) {
       return {
         tone: "failed",

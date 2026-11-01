@@ -106,7 +106,38 @@ test("verifyPayment normalizes Paystack's response", async () => {
     reference: "ESCP-1",
     paidAt: "2026-10-22T10:00:00Z",
     gatewayTransactionId: "42",
+    channel: null,
+    cardCountry: null,
+    cardBank: null,
   });
+});
+
+test("verifyPayment reports the channel and card country", async () => {
+  paystack.__setFetch(async () =>
+    jsonResponse(200, {
+      status: true,
+      data: {
+        status: "success", amount: 100, currency: "NGN", reference: "ESCP-1", id: 1,
+        channel: "card", authorization: { country_code: "pr", bank: "BANCO POPULAR DE PUERTO RICO" },
+      },
+    })
+  );
+  const v = await paystack.verifyPayment("ESCP-1");
+  assert.equal(v.channel, "card");
+  assert.equal(v.cardCountry, "PR");
+  assert.equal(v.cardBank, "BANCO POPULAR DE PUERTO RICO");
+});
+
+test("refundPayment posts a full refund for the reference", async () => {
+  let call;
+  paystack.__setFetch(async (url, opts) => {
+    call = { url, method: opts.method, body: JSON.parse(opts.body) };
+    return jsonResponse(200, { status: true, data: { status: "pending" } });
+  });
+  assert.deepEqual(await paystack.refundPayment("ESCW-1"), { status: "pending" });
+  assert.deepEqual(call, { url: "https://api.paystack.co/refund", method: "POST", body: { transaction: "ESCW-1" } });
+  paystack.__setFetch(async () => jsonResponse(400, { status: false }));
+  await assert.rejects(paystack.refundPayment("ESCW-1"), { code: "refund_failed" });
 });
 
 test("verifyPayment throws (does not guess) when Paystack cannot answer", async () => {

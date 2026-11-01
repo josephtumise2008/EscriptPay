@@ -412,6 +412,11 @@ function WalletContent() {
           const entry = data.entries.find((e) => e.reference === funded);
           if (entry?.status === "successful") {
             setNotice({ tone: "success", text: `${formatNaira(entry.amount)} was added to your wallet.` });
+          } else if (entry?.failureReason?.includes("foreign_card")) {
+            setNotice({
+              tone: "info",
+              text: "EscriptPay only accepts cards issued in Nigeria, so this top-up wasn't added. The payment is being refunded to your card (it can take a few working days). Please use a Nigerian card or bank transfer.",
+            });
           } else if (entry) {
             setNotice({ tone: "info", text: "We're still confirming your payment. Your wallet updates automatically once it's confirmed." });
           }

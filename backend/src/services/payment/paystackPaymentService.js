@@ -7,7 +7,10 @@
 //             metadata
 //       response: { status: true, data: { authorization_url, access_code, reference } }
 //   - GET  https://api.paystack.co/transaction/verify/:reference
-//       response: { status: true, data: { status, amount, currency, reference, paid_at, id } }
+//       response: { status: true, data: { status, amount, currency, reference, paid_at, id,
+//                   channel, authorization: { country_code, bank, ... } } }
+//   - POST https://api.paystack.co/refund
+//       body: transaction (reference or id); full refund when amount is omitted
 //   - Webhooks carry `x-paystack-signature`: an HMAC SHA512 of the event
 //     payload (the raw request body) signed with the secret key.
 //
@@ -126,6 +129,7 @@ const verifyPayment = async (reference) => {
   if (httpStatus < 200 || httpStatus >= 300 || !json || json.status !== true || !data) {
     throw new PaymentProviderError("Payment could not be verified.", "verify_failed");
   }
+  const auth = data.authorization || {};
 
   return {
     status: String(data.status || "").toLowerCase(),
@@ -134,7 +138,25 @@ const verifyPayment = async (reference) => {
     reference: data.reference,
     paidAt: data.paid_at || data.paidAt || null,
     gatewayTransactionId: data.id != null ? String(data.id) : null,
+    // How the customer paid ("card", "bank_transfer", "ussd", ...) and, for
+    // cards, the issuing country (ISO code, e.g. "NG").
+    channel: data.channel ? String(data.channel).toLowerCase() : null,
+    cardCountry: auth.country_code ? String(auth.country_code).toUpperCase() : null,
+    cardBank: auth.bank ? String(auth.bank) : null,
   };
+};
+
+// Full refund of a successful payment back to the customer's card/account.
+const refundPayment = async (reference) => {
+  if (!isValidReference(reference)) {
+    throw new PaymentProviderError("Invalid payment reference.", "invalid_reference");
+  }
+  const { httpStatus, json } = await request("POST", "/refund", { transaction: reference });
+  if (httpStatus < 200 || httpStatus >= 300 || !json || json.status !== true) {
+    throw new PaymentProviderError("Refund could not be started.", "refund_failed");
+  }
+  const data = json.data || {};
+  return { status: String(data.status || "pending").toLowerCase() };
 };
 
 // Constant-time check of the webhook signature against the RAW body bytes.
@@ -157,6 +179,7 @@ module.exports = {
   simulated: false,
   initializePayment,
   verifyPayment,
+  refundPayment,
   verifyWebhookSignature,
   isValidReference,
   PaymentProviderError,

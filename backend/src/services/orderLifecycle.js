@@ -24,6 +24,7 @@ const PAYMENT_CONFIRMABLE = ["pending", "expired", "failed"];
 // is believed.
 const NOT_FOUND_GRACE_MS = Number(process.env.VTU_NOT_FOUND_GRACE_SECONDS || 180) * 1000;
 const AFTER = { returnDocument: "after" };
+const { isForeignCard, refundBlockedPayment } = require("./payment/cardCheck");
 
 const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEvent = () => {} }) => {
   const reload = (id) => Transaction.findById(id);
@@ -48,12 +49,15 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
       if (!Number.isInteger(verified.amountKobo) || verified.amountKobo !== tx.paymentAmountKobo) {
         problems.push("amount_mismatch");
       }
+      const foreign = isForeignCard(verified, config);
+      if (foreign) problems.push("foreign_card");
 
       if (problems.length > 0) {
-        // Money was taken but not for this exact order: never deliver; flag
-        // for manual review/refund.
+        // Money was taken but not for this exact order (or from a card we do
+        // not accept): never deliver; flag for review. needsReview in the
+        // filter means only one caller wins the flag (and the refund).
         const flagged = await Transaction.findOneAndUpdate(
-          { _id: tx._id, paymentStatus: { $in: PAYMENT_CONFIRMABLE } },
+          { _id: tx._id, paymentStatus: { $in: PAYMENT_CONFIRMABLE }, needsReview: { $ne: true } },
           {
             $set: {
               paymentStatus: "failed",
@@ -61,11 +65,18 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
               needsReview: true,
               failureReason: problems.join(","),
               paymentVerifiedVia: source,
+              ...(verified.cardCountry ? { cardCountry: verified.cardCountry } : {}),
             },
           },
           AFTER
         );
-        logEvent("payment.mismatch", { transactionId: tx.transactionId, problems, source });
+        logEvent("payment.mismatch", { transactionId: tx.transactionId, problems, source, cardCountry: verified.cardCountry || null });
+        if (flagged && foreign) {
+          const refundStatus = await refundBlockedPayment(payment, reference);
+          logEvent("payment.foreign_card_refund", { transactionId: tx.transactionId, refundStatus });
+          const updated = await Transaction.findOneAndUpdate({ _id: tx._id }, { $set: { refundStatus } }, AFTER);
+          return { outcome: "mismatch", tx: updated || flagged };
+        }
         return { outcome: "mismatch", tx: flagged || (await reload(tx._id)) };
       }
 
