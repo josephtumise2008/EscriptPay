@@ -5,7 +5,7 @@ const { createFakeModel } = require("../helpers/fakeModel");
 
 let refCounter = 0;
 
-const setup = ({ provider = "test", balance = 0, verification, walletFee, allowedCardCountries } = {}) => {
+const setup = ({ provider = "test", balance = 0, verification, walletFee, allowedCardCountries, chargeStatus } = {}) => {
   const User = createFakeModel({ docs: [{ _id: "u1", walletBalances: { test: balance, live: 0 } }] });
   const WalletEntry = createFakeModel({ unique: ["reference", "paymentReference", "clientReference"] });
   const Transaction = createFakeModel();
@@ -35,6 +35,11 @@ const setup = ({ provider = "test", balance = 0, verification, walletFee, allowe
           refundPayment: async () => {
             calls.refund += 1;
             return { status: "pending" };
+          },
+          chargeAuthorization: async ({ reference, authorizationCode }) => {
+            calls.charge = (calls.charge || 0) + 1;
+            calls.chargedWith = authorizationCode;
+            return { status: chargeStatus || "success", reference };
           },
         }
       : { requiresCheckout: false, processPayment: async () => ({ paymentStatus: "not_required" }) };
@@ -230,10 +235,67 @@ test("paystack: a Nigerian card top-up is credited", async () => {
   assert.equal(calls.refund, 0);
 });
 
-test("paystack top-up: bank transfer opens checkout on transfer, card on the card form", async () => {
-  const { wallet, calls } = setup({ provider: "paystack" });
-  await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 2000, method: "bank_transfer" });
-  assert.deepEqual(calls.channels, ["bank_transfer"]);
-  await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 2000 });
-  assert.deepEqual(calls.channels, ["card"]);
+
+const reusableCard = {
+  channel: "card",
+  cardCountry: "NG",
+  authorization: { code: "AUTH_abc123", reusable: true, channel: "card", signature: "SIG_1", brand: "visa", last4: "4081", bank: "Test Bank", expMonth: "12", expYear: "2030" },
+};
+
+test("a card top-up with saveCard remembers the card (token never public)", async () => {
+  const { wallet, User } = setup({ provider: "paystack", verification: reusableCard });
+  const started = await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 1000, saveCard: true });
+  await wallet.confirmFunding(started.entry.paymentReference, { source: "callback" });
+  assert.equal(User.docs[0].savedCard.authorizationCode, "AUTH_abc123");
+  const card = await wallet.getSavedCard("u1");
+  assert.deepEqual(card, { brand: "visa", last4: "4081", bank: "Test Bank", expMonth: "12", expYear: "2030" });
+  assert.equal(JSON.stringify(card).includes("AUTH"), false);
+});
+
+test("no card is saved without saveCard, or for transfers / non-reusable cards", async () => {
+  for (const [save, verification] of [
+    [false, reusableCard],
+    [true, { channel: "bank_transfer", authorization: { ...reusableCard.authorization, channel: "bank_transfer" } }],
+    [true, { ...reusableCard, authorization: { ...reusableCard.authorization, reusable: false } }],
+  ]) {
+    const { wallet, User } = setup({ provider: "paystack", verification });
+    const started = await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 1000, saveCard: save });
+    await wallet.confirmFunding(started.entry.paymentReference, { source: "callback" });
+    assert.equal(User.docs[0].savedCard, undefined);
+  }
+});
+
+test("saved card: one tap charges it and credits the wallet without a checkout", async () => {
+  const { wallet, User, balanceOf, calls } = setup({ provider: "paystack", verification: reusableCard });
+  User.docs[0].savedCard = { authorizationCode: "AUTH_abc123", last4: "4081", brand: "visa" };
+  const result = await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 2000, method: "saved_card" });
+  assert.equal(calls.charge, 1);
+  assert.equal(calls.chargedWith, "AUTH_abc123");
+  assert.equal(calls.init, 0);
+  assert.equal(result.checkoutUrl, undefined);
+  assert.equal(result.entry.status, "successful");
+  assert.equal(balanceOf(), 200000);
+});
+
+test("saved card: declined, missing, or needing OTP fails cleanly with nothing credited", async () => {
+  const declined = setup({ provider: "paystack", verification: reusableCard, chargeStatus: "failed" });
+  declined.User.docs[0].savedCard = { authorizationCode: "AUTH_abc123", last4: "4081" };
+  await assert.rejects(declined.wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 2000, method: "saved_card" }), { code: "card_declined" });
+  assert.equal(declined.balanceOf(), 0);
+
+  const otp = setup({ provider: "paystack", verification: reusableCard, chargeStatus: "send_otp" });
+  otp.User.docs[0].savedCard = { authorizationCode: "AUTH_abc123", last4: "4081" };
+  await assert.rejects(otp.wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 2000, method: "saved_card" }), { code: "card_needs_action" });
+
+  const none = setup({ provider: "paystack" });
+  await assert.rejects(none.wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 2000, method: "saved_card" }), { code: "no_saved_card" });
+  assert.equal(none.calls.charge, undefined);
+});
+
+test("removing the saved card forgets it", async () => {
+  const { wallet, User } = setup({ provider: "paystack" });
+  User.docs[0].savedCard = { authorizationCode: "AUTH_abc123", last4: "4081" };
+  await wallet.removeSavedCard("u1");
+  assert.equal(await wallet.getSavedCard("u1"), null);
+  assert.equal(User.docs[0].savedCard, undefined);
 });

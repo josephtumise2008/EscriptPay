@@ -63,6 +63,19 @@ const userSchema = new mongoose.Schema(
     // Any login token issued before this moment is rejected (forced logout,
     // password change or reset).
     sessionsValidAfter: { type: Date, select: false },
+    // A card the customer chose to save, for one-tap wallet top-ups. The
+    // Paystack authorization code is a charge token: never selected by
+    // default and never sent to the browser.
+    savedCard: {
+      authorizationCode: { type: String, select: false },
+      signature: String,
+      brand: String,
+      last4: String,
+      bank: String,
+      expMonth: String,
+      expYear: String,
+      savedAt: Date,
+    },
     // Password-reset token (stored as a one-way hash, not the raw token).
     resetTokenHash: {
       type: String,
@@ -96,6 +109,7 @@ userSchema.methods.toJSON = function toJSON() {
   delete obj.emailCodeAttempts;
   delete obj.emailCodeSentAt;
   delete obj.sessionsValidAfter;
+  if (obj.savedCard) delete obj.savedCard.authorizationCode;
   return obj;
 };
 

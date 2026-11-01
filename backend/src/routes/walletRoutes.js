@@ -1,6 +1,6 @@
 const express = require("express");
 const { requireAuth } = require("../middleware/auth");
-const { getWallet, getBalance, fundWallet, verifyFunding, quoteFunding } = require("../controllers/walletController");
+const { getWallet, getBalance, fundWallet, verifyFunding, quoteFunding, removeCard } = require("../controllers/walletController");
 
 const { requireVerifiedEmail } = require("../services/email/verification");
 
@@ -13,5 +13,6 @@ router.get("/balance", getBalance);
 router.get("/quote", quoteFunding);
 router.post("/fund", requireVerifiedEmail, fundWallet);
 router.post("/verify", verifyFunding);
+router.delete("/card", removeCard);
 
 module.exports = router;

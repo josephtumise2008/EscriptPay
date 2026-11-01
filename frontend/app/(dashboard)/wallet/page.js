@@ -16,14 +16,14 @@ import {
   X,
   ShieldCheck,
   Clock,
-  Landmark,
   CreditCard,
+  Smartphone,
 } from "lucide-react";
 import { HideBalanceButton, MASKED } from "@/components/WalletBalance";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useWallet } from "@/lib/wallet-context";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { getWallet, fundWallet, getFundingQuote, errorMessage } from "@/lib/api";
+import { getWallet, fundWallet, getFundingQuote, removeSavedCard, errorMessage } from "@/lib/api";
 import { isTrustedCheckoutUrl } from "@/lib/checkout";
 import { formatNaira, formatDateTime } from "@/lib/format";
 
@@ -110,14 +110,19 @@ function WalletHero({ balance, hidden, onFund }) {
   );
 }
 
-function FundPanel({ limits, mode, onClose, onFunded }) {
+function FundPanel({ limits, mode, savedCard, onClose, onFunded, onPending, onCardRemoved }) {
   const router = useRouter();
   const [amount, setAmount] = useState(5000);
   const [custom, setCustom] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  // Bank transfer first: most customers top up from a bank app or OPay.
-  const [method, setMethod] = useState("bank_transfer");
+  // With a saved card, one tap charges it; otherwise (or by choice) the
+  // Paystack page offers OPay/bank app, transfer, USSD and card.
+  const [method, setMethod] = useState(savedCard ? "saved_card" : "checkout");
+  const [saveCard, setSaveCard] = useState(true);
+  const [removing, setRemoving] = useState(false);
+  const live = mode !== "test";
+  const useSaved = live && method === "saved_card" && savedCard;
   const clientRef = useRef(null);
   const panelRef = useRef(null);
 
@@ -178,11 +183,21 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
     if (!clientRef.current) clientRef.current = makeReference();
     setBusy(true);
     try {
-      const data = await fundWallet({ amount: value, clientReference: clientRef.current, method });
+      const data = await fundWallet({
+        amount: value,
+        clientReference: clientRef.current,
+        method: useSaved ? "saved_card" : "checkout",
+        saveCard: !useSaved && saveCard,
+      });
       clientRef.current = null;
       if (data.checkoutUrl) {
         if (!isTrustedCheckoutUrl(data.checkoutUrl)) throw new Error("Unexpected payment page. Please contact support.");
         window.location.assign(data.checkoutUrl);
+        return;
+      }
+      if (data.pending) {
+        onPending(data.message);
+        router.replace("/wallet", { scroll: false });
         return;
       }
       onFunded(data);
@@ -303,14 +318,19 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
           </dl>
         )}
 
-        {mode !== "test" && (
+        {live && savedCard && (
           <fieldset>
             <legend className="mb-1.5 block text-sm font-semibold text-ink-700">Pay with</legend>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="space-y-2.5">
               {[
-                { id: "bank_transfer", label: "Bank transfer", hint: "Any bank app or OPay", Icon: Landmark },
-                { id: "card", label: "Card", hint: "Nigerian debit card", Icon: CreditCard },
-              ].map(({ id, label, hint, Icon }) => {
+                {
+                  id: "saved_card",
+                  Icon: CreditCard,
+                  label: `${savedCard.brand ? savedCard.brand.charAt(0).toUpperCase() + savedCard.brand.slice(1) : "Card"} •••• ${savedCard.last4}`,
+                  hint: savedCard.expMonth && savedCard.expYear ? `Saved card · expires ${savedCard.expMonth}/${String(savedCard.expYear).slice(-2)}` : "Saved card · one tap",
+                },
+                { id: "checkout", Icon: Smartphone, label: "Other ways to pay", hint: "OPay or bank app, transfer, USSD, or a new card" },
+              ].map(({ id, Icon, label, hint }) => {
                 const active = method === id;
                 return (
                   <button
@@ -318,14 +338,14 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
                     type="button"
                     aria-pressed={active}
                     onClick={() => setMethod(id)}
-                    className={`focus-ring press flex items-start gap-2.5 rounded-xl border bg-white px-3 py-3 text-left ${
+                    className={`focus-ring press flex w-full items-center gap-3 rounded-xl border bg-white px-3.5 py-3 text-left ${
                       active
                         ? "border-cyan-400 bg-cyan-50 shadow-[0_0_0_1px_var(--color-cyan-400)]"
                         : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
-                    <Icon size={18} className={`mt-0.5 shrink-0 ${active ? "text-cyan-700" : "text-ink-500"}`} aria-hidden="true" />
-                    <span className="min-w-0">
+                    <Icon size={18} className={`shrink-0 ${active ? "text-cyan-700" : "text-ink-500"}`} aria-hidden="true" />
+                    <span className="min-w-0 flex-1">
                       <span className={`block text-sm font-bold ${active ? "text-cyan-800" : "text-ink-800"}`}>{label}</span>
                       <span className="block text-xs text-ink-500">{hint}</span>
                     </span>
@@ -333,7 +353,41 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
                 );
               })}
             </div>
+            <button
+              type="button"
+              disabled={removing || busy}
+              onClick={async () => {
+                setRemoving(true);
+                try {
+                  await removeSavedCard();
+                  setMethod("checkout");
+                  onCardRemoved();
+                } catch (err) {
+                  setError(errorMessage(err, "Could not remove the card. Please try again."));
+                } finally {
+                  setRemoving(false);
+                }
+              }}
+              className="focus-ring mt-2 rounded text-xs font-semibold text-ink-500 underline-offset-2 hover:text-red-600 hover:underline disabled:opacity-50"
+            >
+              {removing ? "Removing…" : "Remove saved card"}
+            </button>
           </fieldset>
+        )}
+
+        {live && !useSaved && (
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 px-3.5 py-3 text-sm text-ink-700">
+            <input
+              type="checkbox"
+              checked={saveCard}
+              onChange={(e) => setSaveCard(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-cyan-600"
+            />
+            <span>
+              <span className="block font-semibold">Save my card for one-tap top-ups</span>
+              <span className="block text-xs text-ink-500">Only if you pay by card. You can remove it anytime.</span>
+            </span>
+          </label>
         )}
 
         <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 px-3.5 py-3 text-xs text-ink-500">
@@ -341,9 +395,9 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
           <span>
             {mode === "test"
               ? "Test mode: the amount is added instantly and no real money is charged."
-              : method === "bank_transfer"
-                ? "Paystack will show you an account number. Send the exact amount from your bank app or OPay, then wait on the page: your wallet is credited automatically once the transfer arrives (usually within a minute)."
-                : "You'll pay securely on Paystack. Your wallet is credited as soon as the payment is confirmed."}
+              : useSaved
+                ? `Tap Pay and we'll charge your card •••• ${savedCard.last4} straight away. No OTP page in most cases.`
+                : "On Paystack you can pay with OPay or your bank app, bank transfer, USSD or card. Your wallet is credited as soon as the payment is confirmed."}
           </span>
         </div>
 
@@ -361,7 +415,9 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
             ? "Processing…"
             : !valid
               ? "Enter an amount"
-              : fee > 0 && total
+              : useSaved
+                ? `Pay ${formatNaira(total || value)} with card •••• ${savedCard.last4}`
+                : fee > 0 && total
                 ? `Pay ${formatNaira(total)}`
                 : mode === "live"
                   ? `Pay ${formatNaira(value)}`
@@ -528,6 +584,14 @@ function WalletContent() {
         <FundPanel
           limits={summary?.limits}
           mode={summary?.mode}
+          savedCard={summary?.savedCard || null}
+          onCardRemoved={() => setSummary((current) => (current ? { ...current, savedCard: null } : current))}
+          onPending={(text) => {
+            setFundOpen(false);
+            setNotice({ tone: "info", text: text || "We're confirming your payment. Your wallet updates automatically once it's confirmed." });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            load(1).catch(() => {});
+          }}
           onClose={() => {
             setFundOpen(false);
             router.replace("/wallet", { scroll: false });

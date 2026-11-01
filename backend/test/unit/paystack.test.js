@@ -109,6 +109,7 @@ test("verifyPayment normalizes Paystack's response", async () => {
     channel: null,
     cardCountry: null,
     cardBank: null,
+    authorization: null,
   });
 });
 
@@ -179,4 +180,32 @@ test("initializePayment passes only known channels", async () => {
   assert.deepEqual(bodies[0].channels, ["bank_transfer"]);
   assert.equal(bodies[1].channels, undefined);
   assert.equal(bodies[2].channels, undefined);
+});
+
+test("verifyPayment exposes the reusable card authorization; chargeAuthorization posts it", async () => {
+  paystack.__setFetch(async () =>
+    jsonResponse(200, {
+      status: true,
+      data: {
+        status: "success", amount: 100, currency: "NGN", reference: "ESCW-1", id: 1, channel: "card",
+        authorization: { authorization_code: "AUTH_x", reusable: true, channel: "card", card_type: "visa ", last4: "4081", bank: "TB", exp_month: "12", exp_year: "2030", signature: "SIG", country_code: "NG" },
+      },
+    })
+  );
+  const v = await paystack.verifyPayment("ESCW-1");
+  assert.deepEqual(v.authorization, { code: "AUTH_x", reusable: true, channel: "card", signature: "SIG", brand: "visa", last4: "4081", bank: "TB", expMonth: "12", expYear: "2030" });
+
+  let call;
+  paystack.__setFetch(async (url, opts) => {
+    call = { url, body: JSON.parse(opts.body) };
+    return jsonResponse(200, { status: true, data: { status: "success", reference: "ESCW-2" } });
+  });
+  assert.deepEqual(await paystack.chargeAuthorization({ email: "a@b.co", amountKobo: 50000, authorizationCode: "AUTH_x", reference: "ESCW-2" }), { status: "success" });
+  assert.equal(call.url, "https://api.paystack.co/transaction/charge_authorization");
+  assert.deepEqual(call.body, { email: "a@b.co", amount: "50000", currency: "NGN", authorization_code: "AUTH_x", reference: "ESCW-2" });
+
+  paystack.__setFetch(async () => jsonResponse(400, { status: false, message: "Declined" }));
+  assert.deepEqual(await paystack.chargeAuthorization({ email: "a@b.co", amountKobo: 50000, authorizationCode: "AUTH_x", reference: "ESCW-3" }), { status: "failed" });
+  paystack.__setFetch(async () => jsonResponse(502, null));
+  await assert.rejects(paystack.chargeAuthorization({ email: "a@b.co", amountKobo: 50000, authorizationCode: "AUTH_x", reference: "ESCW-4" }), { code: "charge_unknown" });
 });

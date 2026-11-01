@@ -9,6 +9,10 @@
 //   - GET  https://api.paystack.co/transaction/verify/:reference
 //       response: { status: true, data: { status, amount, currency, reference, paid_at, id,
 //                   channel, authorization: { country_code, bank, ... } } }
+//   - POST https://api.paystack.co/transaction/charge_authorization
+//       body: email, amount (kobo string), authorization_code, reference,
+//             currency, metadata — charges a card saved from an earlier
+//             payment (authorization.reusable === true)
 //   - POST https://api.paystack.co/refund
 //       body: transaction (reference or id); full refund when amount is omitted
 //   - Webhooks carry `x-paystack-signature`: an HMAC SHA512 of the event
@@ -147,7 +151,52 @@ const verifyPayment = async (reference) => {
     channel: data.channel ? String(data.channel).toLowerCase() : null,
     cardCountry: auth.country_code ? String(auth.country_code).toUpperCase() : null,
     cardBank: auth.bank ? String(auth.bank) : null,
+    // The reusable card token (server-side only, never sent to browsers).
+    authorization: auth.authorization_code
+      ? {
+          code: String(auth.authorization_code),
+          reusable: auth.reusable === true,
+          channel: auth.channel ? String(auth.channel).toLowerCase() : null,
+          signature: auth.signature ? String(auth.signature) : null,
+          brand: auth.card_type ? String(auth.card_type).trim() : null,
+          last4: auth.last4 ? String(auth.last4) : null,
+          bank: auth.bank ? String(auth.bank) : null,
+          expMonth: auth.exp_month ? String(auth.exp_month) : null,
+          expYear: auth.exp_year ? String(auth.exp_year) : null,
+        }
+      : null,
   };
+};
+
+// Charges a saved card. -> { status } where status is Paystack's data.status
+// ("success", "failed", or something still in progress such as "pending" /
+// "send_otp"). Throws PaymentProviderError when Paystack cannot be reached:
+// the charge may or may not have happened, so the caller keeps it pending
+// and lets the webhook / verify decide.
+const chargeAuthorization = async ({ email, amountKobo, authorizationCode, reference, metadata }) => {
+  if (!Number.isInteger(amountKobo) || amountKobo <= 0) {
+    throw new PaymentProviderError("Invalid payment amount.", "invalid_amount");
+  }
+  if (!isValidReference(reference)) {
+    throw new PaymentProviderError("Invalid payment reference.", "invalid_reference");
+  }
+  if (!email || !authorizationCode) {
+    throw new PaymentProviderError("Missing card details.", "invalid_card");
+  }
+  const { httpStatus, json } = await request("POST", "/transaction/charge_authorization", {
+    email,
+    amount: String(amountKobo),
+    currency: "NGN",
+    authorization_code: authorizationCode,
+    reference,
+    metadata,
+  });
+  const data = json && json.data;
+  if (httpStatus >= 500 || !json) {
+    throw new PaymentProviderError("Payment provider did not answer.", "charge_unknown");
+  }
+  if (json.status !== true || !data) return { status: "failed" };
+  return { status: String(data.status || "").toLowerCase() };
 };
 
 // Full refund of a successful payment back to the customer's card/account.
@@ -184,6 +233,7 @@ module.exports = {
   initializePayment,
   verifyPayment,
   refundPayment,
+  chargeAuthorization,
   verifyWebhookSignature,
   isValidReference,
   PaymentProviderError,

@@ -88,7 +88,7 @@ const walletEntrySchema = new mongoose.Schema(
     paidAt: Date,
     verifiedVia: {
       type: String,
-      enum: ["test", "callback", "webhook", "reconciliation"],
+      enum: ["test", "callback", "webhook", "reconciliation", "saved_card"],
     },
     // Purchase/refund: the order this entry belongs to.
     orderTransactionId: {
@@ -116,6 +116,10 @@ const walletEntrySchema = new mongoose.Schema(
     // state of the automatic refund: requested | failed | not_supported.
     cardCountry: { type: String, trim: true },
     refundStatus: { type: String, trim: true },
+    // The customer asked to save the card used for this top-up.
+    saveCard: { type: Boolean },
+    // How it was paid: checkout (Paystack page) or saved_card.
+    payVia: { type: String, trim: true },
     // When the owner was emailed about this needing review.
     alertedAt: { type: Date },
   },

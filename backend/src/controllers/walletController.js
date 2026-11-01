@@ -26,7 +26,7 @@ const getWallet = async (req, res) => {
     ]);
     return res.json({
       success: true,
-      wallet: walletSummary(balanceKobo),
+      wallet: { ...walletSummary(balanceKobo), savedCard: await wallet.getSavedCard(req.userId) },
       entries: entries.map((e) => e.toJSON()),
       pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
     });
@@ -55,10 +55,11 @@ const quoteFunding = async (req, res) => {
   return res.json({ success: true, quote: { amount: q.amountKobo / 100, fee: q.feeKobo / 100, total: q.chargeKobo / 100 } });
 };
 
-// POST /api/wallet/fund { amount, clientReference, method: "card" | "bank_transfer" }
+// POST /api/wallet/fund { amount, clientReference, method: "checkout" | "saved_card", saveCard }
 const fundWallet = async (req, res) => {
   const { amount, clientReference } = req.body || {};
-  const method = (req.body || {}).method === "bank_transfer" ? "bank_transfer" : "card";
+  const method = (req.body || {}).method === "saved_card" ? "saved_card" : "checkout";
+  const saveCard = (req.body || {}).saveCard === true;
   const value = Number(amount);
   if (!Number.isInteger(value) || value < FUNDING_MIN_NAIRA || value > FUNDING_MAX_NAIRA) {
     return res.status(400).json({
@@ -72,7 +73,7 @@ const fundWallet = async (req, res) => {
     const user = await User.findById(req.userId).select("email");
     if (!user) return res.status(401).json({ success: false, message: "Not authenticated." });
 
-    const result = await wallet.startFunding({ userId: req.userId, email: user.email, amountNaira: value, clientReference: ref, method });
+    const result = await wallet.startFunding({ userId: req.userId, email: user.email, amountNaira: value, clientReference: ref, method, saveCard });
     const body = {
       success: true,
       entry: result.entry.toJSON(),
@@ -81,8 +82,15 @@ const fundWallet = async (req, res) => {
     const checkoutUrl = result.checkoutUrl || (result.reused && result.entry.status === "pending" ? result.entry.checkoutUrl : null);
     if (checkoutUrl) body.checkoutUrl = checkoutUrl;
     if (result.reused) body.reused = true;
+    if (result.pending) {
+      body.pending = true;
+      body.message = "We're confirming your card payment. Your wallet updates automatically once it's confirmed.";
+    }
     return res.status(result.reused ? 200 : 201).json(body);
   } catch (error) {
+    if (error && ["no_saved_card", "card_declined", "card_needs_action"].includes(error.code)) {
+      return res.status(402).json({ success: false, code: error.code, message: error.message });
+    }
     if (error && error.code === "payment_init_failed") {
       return res.status(502).json({ success: false, message: error.message });
     }
@@ -124,4 +132,14 @@ const verifyFunding = async (req, res) => {
   }
 };
 
-module.exports = { getWallet, getBalance, fundWallet, verifyFunding, quoteFunding };
+// DELETE /api/wallet/card — forget the saved card.
+const removeCard = async (req, res) => {
+  try {
+    await wallet.removeSavedCard(req.userId);
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not remove the card. Please try again." });
+  }
+};
+
+module.exports = { getWallet, getBalance, fundWallet, verifyFunding, quoteFunding, removeCard };

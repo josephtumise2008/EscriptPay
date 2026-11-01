@@ -194,8 +194,16 @@ export const getWalletBalance = async () => {
 
 // Resolves to { entry, wallet, checkoutUrl? } — with Paystack enabled the
 // customer pays on checkout and the wallet is credited after verification.
-export const fundWallet = async ({ amount, clientReference, method }) => {
-  const { data } = await api.post("/api/wallet/fund", { amount, clientReference, method });
+// method: "checkout" (Paystack page: OPay/bank app, transfer, USSD, card) or
+// "saved_card" (charges the saved card, no page). saveCard: remember the card
+// if they pay by card on checkout.
+export const fundWallet = async ({ amount, clientReference, method, saveCard }) => {
+  const { data } = await api.post("/api/wallet/fund", { amount, clientReference, method, saveCard });
+  return data;
+};
+
+export const removeSavedCard = async () => {
+  const { data } = await api.delete("/api/wallet/card");
   return data;
 };
 

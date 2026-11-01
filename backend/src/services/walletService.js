@@ -99,12 +99,92 @@ const createWalletService = ({
     return { outcome: "credited", entry: credited, balanceKobo: balance };
   };
 
+  // Public view of a saved card (no token).
+  const publicCard = (user) => {
+    const c = user && user.savedCard;
+    if (!c || !c.last4) return null;
+    return { brand: c.brand || "Card", last4: c.last4, bank: c.bank || null, expMonth: c.expMonth || null, expYear: c.expYear || null };
+  };
+  const getSavedCard = async (userId) => publicCard(await User.findById(userId, { savedCard: 1 }));
+  const removeSavedCard = async (userId) => {
+    await User.updateOne({ _id: userId }, { $unset: { savedCard: "" } });
+  };
+
+  // After a verified card top-up the customer asked to save: keep the
+  // reusable authorization for one-tap top-ups.
+  const rememberCard = async (entry, verified) => {
+    if (!entry.saveCard) return;
+    const a = verified && verified.authorization;
+    if (!a || a.channel !== "card" || a.reusable !== true || !a.code || !a.last4) return;
+    if (isForeignCard(verified, config)) return;
+    await User.updateOne(
+      { _id: entry.user },
+      {
+        $set: {
+          savedCard: {
+            authorizationCode: a.code,
+            signature: a.signature || undefined,
+            brand: a.brand || "Card",
+            last4: a.last4,
+            bank: a.bank || undefined,
+            expMonth: a.expMonth || undefined,
+            expYear: a.expYear || undefined,
+            savedAt: new Date(),
+          },
+        },
+      }
+    );
+    logEvent("wallet.card_saved", { reference: entry.reference });
+  };
+
+  const fail = (message, code) => Object.assign(new Error(message), { code });
+
+  // One-tap top-up with the saved card. The charge is confirmed through the
+  // same verify path as checkout payments (amount, currency, card country).
+  const chargeSavedCard = async (entry, { userId, email, reference, chargeKobo }) => {
+    const user = await User.findById(userId, "+savedCard.authorizationCode");
+    const code = user && user.savedCard && user.savedCard.authorizationCode;
+    if (!code || typeof payment.chargeAuthorization !== "function") {
+      await WalletEntry.updateOne({ _id: entry._id, status: "pending" }, { $set: { status: "failed", failureReason: "no_saved_card" } });
+      throw fail("You don't have a saved card. Choose another way to pay.", "no_saved_card");
+    }
+    let charged;
+    try {
+      charged = await payment.chargeAuthorization({
+        email,
+        amountKobo: chargeKobo,
+        authorizationCode: code,
+        reference,
+        metadata: { walletReference: reference, purpose: "wallet_funding", payVia: "saved_card" },
+      });
+    } catch (error) {
+      // Unknown: Paystack's webhook or a later verify settles it.
+      logEvent("wallet.saved_card_unknown", { reference, code: error && error.code });
+      return { entry, pending: true };
+    }
+    if (charged.status === "success") {
+      const result = await confirmFunding(reference, { source: "saved_card" });
+      if (result.outcome === "credited" || result.outcome === "already_credited") {
+        return { entry: result.entry, balanceKobo: result.balanceKobo ?? (await getBalanceKobo(userId)) };
+      }
+      return { entry: result.entry || entry, pending: result.outcome === "unpaid" || result.outcome === "in_progress" };
+    }
+    if (charged.status === "failed") {
+      await WalletEntry.updateOne({ _id: entry._id, status: "pending" }, { $set: { status: "failed", failureReason: "card_declined" } });
+      throw fail("Your saved card was declined. Try again or choose another way to pay.", "card_declined");
+    }
+    // e.g. the bank wants an OTP: this can't finish without the customer.
+    await WalletEntry.updateOne({ _id: entry._id, status: "pending" }, { $set: { status: "failed", failureReason: "card_needs_otp" } });
+    throw fail("Your bank wants to confirm this payment. Please choose “Other ways to pay” and use your card there.", "card_needs_action");
+  };
+
   // Starts a wallet top-up. Test mode credits immediately (no real money);
   // Paystack returns a checkout URL and credits only after verification.
-  // method: "bank_transfer" opens Paystack checkout straight on its
-  // pay-by-transfer page (a one-time account number); "card" (default)
-  // opens it on the card form.
-  const startFunding = async ({ userId, email, amountNaira, clientReference, method }) => {
+  // Checkout shows every method enabled on Paystack (bank app/OPay, transfer,
+  // USSD, card). method "saved_card" charges the customer's saved card
+  // instead, without a checkout page. saveCard: remember the card if this
+  // top-up is paid by card.
+  const startFunding = async ({ userId, email, amountNaira, clientReference, method, saveCard }) => {
     if (clientReference) {
       const existing = await WalletEntry.findOne({ user: userId, clientReference });
       if (existing) return { reused: true, entry: existing };
@@ -133,6 +213,8 @@ const createWalletService = ({
         paymentReference: checkout ? reference : undefined,
         clientReference,
         description: "Wallet top-up",
+        saveCard: checkout && saveCard === true ? true : undefined,
+        payVia: checkout ? (method === "saved_card" ? "saved_card" : "checkout") : undefined,
       });
     } catch (error) {
       if (error && error.code === 11000 && clientReference) {
@@ -148,14 +230,15 @@ const createWalletService = ({
       return { entry: result.entry, balanceKobo: result.balanceKobo };
     }
 
+    if (method === "saved_card") return chargeSavedCard(entry, { userId, email, reference, chargeKobo: quote.chargeKobo });
+
     try {
       const init = await payment.initializePayment({
         email,
         amountKobo: quote.chargeKobo,
         reference,
         callbackUrl: `${config.appUrl}/payment/callback?purpose=wallet`,
-        metadata: { walletReference: reference, purpose: "wallet_funding", method: method === "bank_transfer" ? "bank_transfer" : "card" },
-        channels: method === "bank_transfer" ? ["bank_transfer"] : ["card"],
+        metadata: { walletReference: reference, purpose: "wallet_funding" },
       });
       const updated = await WalletEntry.findOneAndUpdate(
         { _id: entry._id, status: "pending" },
@@ -228,11 +311,15 @@ const createWalletService = ({
           { $set: { status: "pending" } }
         );
       }
-      return applyFunding(entry, {
+      const applied = await applyFunding(entry, {
         source,
         gatewayTransactionId: verified.gatewayTransactionId,
         paidAt: verified.paidAt,
       });
+      if (applied.outcome === "credited") {
+        await rememberCard(applied.entry || entry, verified).catch((e) => logEvent("wallet.card_save_failed", { message: e && e.message }));
+      }
+      return applied;
     }
 
     if (verified.status === "failed" || verified.status === "reversed") {
@@ -345,6 +432,8 @@ const createWalletService = ({
     getBalanceKobo,
     startFunding,
     confirmFunding,
+    getSavedCard,
+    removeSavedCard,
     debitForOrder,
     reverseDebit,
     recordPurchase,
