@@ -22,6 +22,8 @@ const crypto = require("crypto");
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 const REQUEST_TIMEOUT_MS = Number(process.env.PAYSTACK_TIMEOUT_MS || 15000);
 const REFERENCE_PATTERN = /^[A-Za-z0-9.=-]{1,100}$/;
+// Payment methods a checkout may be limited to (Paystack channel names).
+const ALLOWED_CHANNELS = ["card", "bank", "ussd", "bank_transfer"];
 
 class PaymentProviderError extends Error {
   constructor(message, code) {
@@ -81,7 +83,7 @@ const request = async (method, path, body) => {
 const isValidReference = (reference) => typeof reference === "string" && REFERENCE_PATTERN.test(reference);
 
 // Starts a checkout. Does NOT mean the customer has paid.
-const initializePayment = async ({ email, amountKobo, reference, callbackUrl, metadata }) => {
+const initializePayment = async ({ email, amountKobo, reference, callbackUrl, metadata, channels }) => {
   if (!Number.isInteger(amountKobo) || amountKobo <= 0) {
     throw new PaymentProviderError("Invalid payment amount.", "invalid_amount");
   }
@@ -99,6 +101,8 @@ const initializePayment = async ({ email, amountKobo, reference, callbackUrl, me
     reference,
     callback_url: callbackUrl,
     metadata,
+    // Optional: open checkout on one method only (e.g. ["bank_transfer"]).
+    ...(Array.isArray(channels) && channels.length && channels.every((c) => ALLOWED_CHANNELS.includes(c)) ? { channels } : {}),
   });
 
   const data = json && json.data;

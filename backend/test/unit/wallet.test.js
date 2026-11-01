@@ -14,8 +14,9 @@ const setup = ({ provider = "test", balance = 0, verification, walletFee, allowe
     provider === "paystack"
       ? {
           requiresCheckout: true,
-          initializePayment: async ({ reference }) => {
+          initializePayment: async ({ reference, channels }) => {
             calls.init += 1;
+            calls.channels = channels;
             return { checkoutUrl: `https://checkout.paystack.com/${reference}` };
           },
           verifyPayment: async (reference) => {
@@ -227,4 +228,12 @@ test("paystack: a Nigerian card top-up is credited", async () => {
   await wallet.confirmFunding(started.entry.paymentReference, { source: "webhook" });
   assert.equal(balanceOf(), 500000);
   assert.equal(calls.refund, 0);
+});
+
+test("paystack top-up: bank transfer opens checkout on transfer, card on the card form", async () => {
+  const { wallet, calls } = setup({ provider: "paystack" });
+  await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 2000, method: "bank_transfer" });
+  assert.deepEqual(calls.channels, ["bank_transfer"]);
+  await wallet.startFunding({ userId: "u1", email: "a@b.c", amountNaira: 2000 });
+  assert.deepEqual(calls.channels, ["card"]);
 });

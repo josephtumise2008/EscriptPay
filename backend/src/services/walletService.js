@@ -101,7 +101,10 @@ const createWalletService = ({
 
   // Starts a wallet top-up. Test mode credits immediately (no real money);
   // Paystack returns a checkout URL and credits only after verification.
-  const startFunding = async ({ userId, email, amountNaira, clientReference }) => {
+  // method: "bank_transfer" opens Paystack checkout straight on its
+  // pay-by-transfer page (a one-time account number); "card" (default)
+  // opens it on the card form.
+  const startFunding = async ({ userId, email, amountNaira, clientReference, method }) => {
     if (clientReference) {
       const existing = await WalletEntry.findOne({ user: userId, clientReference });
       if (existing) return { reused: true, entry: existing };
@@ -151,7 +154,8 @@ const createWalletService = ({
         amountKobo: quote.chargeKobo,
         reference,
         callbackUrl: `${config.appUrl}/payment/callback?purpose=wallet`,
-        metadata: { walletReference: reference, purpose: "wallet_funding" },
+        metadata: { walletReference: reference, purpose: "wallet_funding", method: method === "bank_transfer" ? "bank_transfer" : "card" },
+        channels: method === "bank_transfer" ? ["bank_transfer"] : ["card"],
       });
       const updated = await WalletEntry.findOneAndUpdate(
         { _id: entry._id, status: "pending" },

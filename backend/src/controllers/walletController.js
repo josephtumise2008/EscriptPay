@@ -55,9 +55,10 @@ const quoteFunding = async (req, res) => {
   return res.json({ success: true, quote: { amount: q.amountKobo / 100, fee: q.feeKobo / 100, total: q.chargeKobo / 100 } });
 };
 
-// POST /api/wallet/fund { amount, clientReference }
+// POST /api/wallet/fund { amount, clientReference, method: "card" | "bank_transfer" }
 const fundWallet = async (req, res) => {
   const { amount, clientReference } = req.body || {};
+  const method = (req.body || {}).method === "bank_transfer" ? "bank_transfer" : "card";
   const value = Number(amount);
   if (!Number.isInteger(value) || value < FUNDING_MIN_NAIRA || value > FUNDING_MAX_NAIRA) {
     return res.status(400).json({
@@ -71,7 +72,7 @@ const fundWallet = async (req, res) => {
     const user = await User.findById(req.userId).select("email");
     if (!user) return res.status(401).json({ success: false, message: "Not authenticated." });
 
-    const result = await wallet.startFunding({ userId: req.userId, email: user.email, amountNaira: value, clientReference: ref });
+    const result = await wallet.startFunding({ userId: req.userId, email: user.email, amountNaira: value, clientReference: ref, method });
     const body = {
       success: true,
       entry: result.entry.toJSON(),

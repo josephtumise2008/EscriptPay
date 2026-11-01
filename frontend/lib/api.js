@@ -194,8 +194,8 @@ export const getWalletBalance = async () => {
 
 // Resolves to { entry, wallet, checkoutUrl? } — with Paystack enabled the
 // customer pays on checkout and the wallet is credited after verification.
-export const fundWallet = async ({ amount, clientReference }) => {
-  const { data } = await api.post("/api/wallet/fund", { amount, clientReference });
+export const fundWallet = async ({ amount, clientReference, method }) => {
+  const { data } = await api.post("/api/wallet/fund", { amount, clientReference, method });
   return data;
 };
 

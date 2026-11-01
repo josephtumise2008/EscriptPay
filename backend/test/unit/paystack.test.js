@@ -164,3 +164,19 @@ test("webhook signature: tampered body, wrong key, missing or malformed header a
   // A re-serialized (parsed) body is not the raw body.
   assert.equal(paystack.verifyWebhookSignature(JSON.parse(raw.toString()), sig), false);
 });
+
+test("initializePayment passes only known channels", async () => {
+  const bodies = [];
+  paystack.__setFetch(async (url, opts) => {
+    const body = JSON.parse(opts.body);
+    bodies.push(body);
+    return jsonResponse(200, { status: true, data: { authorization_url: "https://checkout.paystack.com/x", reference: body.reference } });
+  });
+  const args = { email: "a@b.co", amountKobo: 100, reference: "R-1", callbackUrl: "x" };
+  await paystack.initializePayment({ ...args, channels: ["bank_transfer"] });
+  await paystack.initializePayment({ ...args, channels: ["evil"] });
+  await paystack.initializePayment(args);
+  assert.deepEqual(bodies[0].channels, ["bank_transfer"]);
+  assert.equal(bodies[1].channels, undefined);
+  assert.equal(bodies[2].channels, undefined);
+});

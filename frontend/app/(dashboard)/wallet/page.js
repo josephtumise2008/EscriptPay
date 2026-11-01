@@ -16,6 +16,8 @@ import {
   X,
   ShieldCheck,
   Clock,
+  Landmark,
+  CreditCard,
 } from "lucide-react";
 import { HideBalanceButton, MASKED } from "@/components/WalletBalance";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -114,6 +116,8 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
   const [custom, setCustom] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Bank transfer first: most customers top up from a bank app or OPay.
+  const [method, setMethod] = useState("bank_transfer");
   const clientRef = useRef(null);
   const panelRef = useRef(null);
 
@@ -174,7 +178,7 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
     if (!clientRef.current) clientRef.current = makeReference();
     setBusy(true);
     try {
-      const data = await fundWallet({ amount: value, clientReference: clientRef.current });
+      const data = await fundWallet({ amount: value, clientReference: clientRef.current, method });
       clientRef.current = null;
       if (data.checkoutUrl) {
         if (!isTrustedCheckoutUrl(data.checkoutUrl)) throw new Error("Unexpected payment page. Please contact support.");
@@ -289,7 +293,7 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
               <dd className="font-semibold text-ink-900">{formatNaira(value)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-ink-500">Card processing fee</dt>
+              <dt className="text-ink-500">Processing fee</dt>
               <dd className="font-semibold text-ink-900">{formatNaira(fee)}</dd>
             </div>
             <div className="flex justify-between border-t border-slate-100 pt-1.5">
@@ -299,12 +303,47 @@ function FundPanel({ limits, mode, onClose, onFunded }) {
           </dl>
         )}
 
+        {mode !== "test" && (
+          <fieldset>
+            <legend className="mb-1.5 block text-sm font-semibold text-ink-700">Pay with</legend>
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { id: "bank_transfer", label: "Bank transfer", hint: "Any bank app or OPay", Icon: Landmark },
+                { id: "card", label: "Card", hint: "Nigerian debit card", Icon: CreditCard },
+              ].map(({ id, label, hint, Icon }) => {
+                const active = method === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setMethod(id)}
+                    className={`focus-ring press flex items-start gap-2.5 rounded-xl border bg-white px-3 py-3 text-left ${
+                      active
+                        ? "border-cyan-400 bg-cyan-50 shadow-[0_0_0_1px_var(--color-cyan-400)]"
+                        : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Icon size={18} className={`mt-0.5 shrink-0 ${active ? "text-cyan-700" : "text-ink-500"}`} aria-hidden="true" />
+                    <span className="min-w-0">
+                      <span className={`block text-sm font-bold ${active ? "text-cyan-800" : "text-ink-800"}`}>{label}</span>
+                      <span className="block text-xs text-ink-500">{hint}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        )}
+
         <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 px-3.5 py-3 text-xs text-ink-500">
           <ShieldCheck size={16} className="mt-px shrink-0 text-emerald-600" aria-hidden="true" />
           <span>
             {mode === "test"
               ? "Test mode: the amount is added instantly and no real money is charged."
-              : "You'll pay securely on Paystack. Your wallet is credited as soon as the payment is confirmed."}
+              : method === "bank_transfer"
+                ? "Paystack will show you an account number. Send the exact amount from your bank app or OPay, then wait on the page: your wallet is credited automatically once the transfer arrives (usually within a minute)."
+                : "You'll pay securely on Paystack. Your wallet is credited as soon as the payment is confirmed."}
           </span>
         </div>
 
