@@ -246,7 +246,7 @@ const createWalletService = ({
         AFTER
       );
       logEvent("wallet.funding_initialized", { reference });
-      return { entry: updated || entry, checkoutUrl: init.checkoutUrl };
+      return { entry: updated || entry, checkoutUrl: init.checkoutUrl, accessCode: init.accessCode || null };
     } catch (error) {
       logEvent("wallet.funding_init_failed", { reference, code: error && error.code });
       await WalletEntry.updateOne(

@@ -105,7 +105,7 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
 
       clientRef.current = null;
       if (data.wallet) applyBalance(data.wallet.balance);
-      continueAfterOrder(router, data, "data");
+      await continueAfterOrder(router, data, "data");
     } catch (error) {
       // Reset the idempotency key so a genuine retry creates a fresh order.
       clientRef.current = null;

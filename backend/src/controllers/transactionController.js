@@ -140,7 +140,7 @@ const startOrder = async (req, res, spec) => {
       logEvent("payment.initialized", { transactionId: created.transactionId });
       return res
         .status(201)
-        .json({ success: true, transaction: serialize(updated || created), checkoutUrl: init.checkoutUrl });
+        .json({ success: true, transaction: serialize(updated || created), checkoutUrl: init.checkoutUrl, accessCode: init.accessCode || undefined });
     } catch (error) {
       logEvent("payment.init_failed", { transactionId: created.transactionId, code: error && error.code });
       await Transaction.updateOne(

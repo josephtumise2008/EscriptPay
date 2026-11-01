@@ -24,7 +24,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { useWallet } from "@/lib/wallet-context";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { getWallet, fundWallet, getFundingQuote, removeSavedCard, errorMessage } from "@/lib/api";
-import { isTrustedCheckoutUrl } from "@/lib/checkout";
+import { openCheckout, preloadCheckout } from "@/lib/checkout";
 import { formatNaira, formatDateTime } from "@/lib/format";
 
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000, 20000, 50000];
@@ -157,6 +157,9 @@ function FundPanel({ limits, mode, savedCard, onClose, onFunded, onPending, onCa
   // on screen straight away without scrolling.
   useScrollLock(true);
   useEffect(() => {
+    if (live) preloadCheckout();
+  }, [live]);
+  useEffect(() => {
     panelRef.current?.focus({ preventScroll: true });
     const onKey = (event) => {
       if (event.key === "Escape" && !busy) onClose();
@@ -191,8 +194,14 @@ function FundPanel({ limits, mode, savedCard, onClose, onFunded, onPending, onCa
       });
       clientRef.current = null;
       if (data.checkoutUrl) {
-        if (!isTrustedCheckoutUrl(data.checkoutUrl)) throw new Error("Unexpected payment page. Please contact support.");
-        window.location.assign(data.checkoutUrl);
+        const reference = data.entry.reference;
+        await openCheckout({
+          checkoutUrl: data.checkoutUrl,
+          accessCode: data.accessCode,
+          onSuccess: (ref) => router.push(`/payment/callback?purpose=wallet&reference=${encodeURIComponent(ref || reference)}`),
+          // Closed without paying: stay on the sheet so they can try again.
+          onCancel: () => setBusy(false),
+        });
         return;
       }
       if (data.pending) {

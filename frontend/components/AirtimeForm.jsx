@@ -109,7 +109,7 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
 
       clientRef.current = null;
       if (data.wallet) applyBalance(data.wallet.balance);
-      continueAfterOrder(router, data, "airtime");
+      await continueAfterOrder(router, data, "airtime");
     } catch (error) {
       clientRef.current = null;
       setSubmitError(errorMessage(error, "Purchase could not be completed. Please try again."));

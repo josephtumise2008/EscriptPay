@@ -81,6 +81,7 @@ const fundWallet = async (req, res) => {
     };
     const checkoutUrl = result.checkoutUrl || (result.reused && result.entry.status === "pending" ? result.entry.checkoutUrl : null);
     if (checkoutUrl) body.checkoutUrl = checkoutUrl;
+    if (checkoutUrl && result.accessCode) body.accessCode = result.accessCode;
     if (result.reused) body.reused = true;
     if (result.pending) {
       body.pending = true;

@@ -15,7 +15,7 @@ import { getTransaction, errorMessage } from "@/lib/api";
 import { useWallet } from "@/lib/wallet-context";
 import { formatDateTime, formatNaira } from "@/lib/format";
 import { statusLabel, describeTransaction, isAwaitingUpdate } from "@/lib/transactions";
-import { isTrustedCheckoutUrl } from "@/lib/checkout";
+import { isTrustedCheckoutUrl, openCheckout } from "@/lib/checkout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 const STATUS_ICONS = {
@@ -219,6 +219,14 @@ function SuccessContent() {
         {resumeCheckoutUrl && (
           <a
             href={resumeCheckoutUrl}
+            onClick={(event) => {
+              event.preventDefault();
+              openCheckout({
+                checkoutUrl: resumeCheckoutUrl,
+                onSuccess: (ref) =>
+                  router.push(`/payment/callback?reference=${encodeURIComponent(ref || transaction.paymentReference || transaction.transactionId)}`),
+              }).catch(() => window.location.assign(resumeCheckoutUrl));
+            }}
             className="gradient-btn focus-ring mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold brand-contrast sm:w-auto"
           >
             <Banknote size={16} aria-hidden="true" />
