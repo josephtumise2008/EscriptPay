@@ -6,6 +6,7 @@ import AppSplash from "@/components/AppSplash";
 import { SPLASH_CSS, SPLASH_SCRIPT } from "@/lib/splash";
 import { InstallSheetHost } from "@/components/InstallApp";
 import { PwaRegister } from "@/lib/pwa";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const inter = Inter({
@@ -120,6 +121,7 @@ window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();win
           </AuthProvider>
         </ThemeProvider>
         <PwaRegister />
+        <SpeedInsights />
       </body>
     </html>
   );
