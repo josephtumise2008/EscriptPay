@@ -22,6 +22,7 @@ const getNetworks = (req, res) => {
     },
   ];
 
+  res.set("Cache-Control", "public, max-age=3600, s-maxage=86400");
   res.json({
     success: true,
     count: networks.length,

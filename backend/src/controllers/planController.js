@@ -12,6 +12,10 @@ const getPlans = async (req, res) => {
     // field are treated as active.
     const plans = await Plan.find({ active: { $ne: false } });
 
+    // Same for everyone: let Vercel's CDN serve it for 2 minutes (and an
+    // older copy for up to 10 more while it refreshes), so busy times don't
+    // hit the database. Price edits show within ~2 minutes.
+    res.set("Cache-Control", "public, max-age=0, s-maxage=120, stale-while-revalidate=600");
     res.json({
       success: true,
       count: plans.length,

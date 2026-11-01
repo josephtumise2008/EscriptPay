@@ -21,7 +21,7 @@ const startOfLagosDay = (daysAgo) => {
 // GET /api/admin/overview?days=30
 const overview = async (req, res) => {
   try {
-    await require("../services/orderStatus").refreshStaleOrders({}, { limit: 20 }).catch(() => {});
+    await require("../services/orderStatus").refreshStaleOrders({}, { limit: 20, budgetMs: 3000 }).catch(() => {});
     const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 30));
     const since = startOfLagosDay(days - 1);
     const mode = config.paymentMode;

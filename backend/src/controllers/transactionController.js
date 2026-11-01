@@ -262,7 +262,7 @@ const startWalletOrder = async (req, res, spec, clientReference) => {
 //   ?page=1&limit=25 (pagination; without these the full list is returned)
 const getUserTransactions = async (req, res) => {
   try {
-    await refreshStaleOrders({ user: req.userId }).catch(() => {});
+    await refreshStaleOrders({ user: req.userId }, { budgetMs: 1500 }).catch(() => {});
     const { status, type, network, q, from, to, page, limit } = req.query || {};
     const query = { user: req.userId };
 

@@ -184,6 +184,8 @@ const transactionSchema = new mongoose.Schema(
     // state of the automatic refund: requested | failed | not_supported.
     cardCountry: { type: String, trim: true },
     refundStatus: { type: String, trim: true },
+    // When the owner was emailed about this needing review.
+    alertedAt: { type: Date },
   },
   {
     timestamps: true,
