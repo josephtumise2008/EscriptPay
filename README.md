@@ -3,18 +3,25 @@
 Airtime and mobile data for Nigerian networks — MTN, Airtel, Glo and 9mobile —
 with clear prices and a receipt for every order.
 
-> **Status:** test mode. Payments and delivery are simulated; no real money is
-> charged and no airtime or data is delivered yet.
+> **Status:** live at [escriptpay.com](https://escriptpay.com). Real payments
+> through Paystack and real airtime/data delivery through ClubKonnect.
 
 ## Features
 
-- Account sign-up, login and password reset (secure httpOnly cookie sessions)
-- Data plans per network with server-side pricing
-- Airtime top-ups from ₦100 to ₦10,000
-- Paystack checkout (test mode) with server-side payment verification and
-  signed webhooks
+- Account sign-up, email verification, login and password reset (secure
+  httpOnly cookie sessions)
+- Data plans per network with server-side pricing; airtime from ₦100 to ₦10,000
+- Wallet: top up with OPay/bank app, transfer, USSD or card (Paystack popup,
+  stays inside the installed app), optional saved card for one-tap top-ups
+- Server-side payment verification and signed webhooks; card payments from
+  outside Nigeria are blocked and refunded automatically
+- Reliable delivery: instant retries on connection failures, re-send when the
+  supplier never received an order, automatic wallet refunds otherwise
+- Scheduled background checks and owner email alerts (orders needing review,
+  low supplier balance)
+- Owner Business page: sales, profit, wallet balances, supplier balance
 - Transaction history with search, filters, receipts and CSV export
-- Light, dark and system themes; responsive layout with a mobile tab bar
+- Installable app (PWA), light/dark themes, mobile tab bar
 
 ## Tech stack
 
