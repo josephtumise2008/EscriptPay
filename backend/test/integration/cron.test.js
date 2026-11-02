@@ -74,6 +74,11 @@ test("orders needing review are emailed to the owner once", { skip }, async () =
     cardCountry: "PR",
     refundStatus: "requested",
   });
+  // Too fresh: it may still settle by itself, so no email yet.
+  sent.length = 0;
+  assert.equal((await (await call("Bearer cron-test-secret")).json()).reviewAlerts, 0);
+  assert.equal(sent.length, 0);
+  await Transaction.collection.updateOne({ transactionId: "ESCP-20261101-ALERT1" }, { $set: { updatedAt: new Date(Date.now() - 10 * 60 * 1000) } });
   sent.length = 0;
   const r = await (await call("Bearer cron-test-secret")).json();
   assert.equal(r.reviewAlerts, 1);

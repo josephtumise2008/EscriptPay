@@ -25,6 +25,7 @@ const run = async () => {
   console.log(`  ${tx.type} ${tx.network} · ${tx.plan} · ${tx.phone} · ₦${tx.amount} · paid with ${tx.paymentProvider}`);
   console.log(`  status:          ${tx.status}   payment: ${tx.paymentStatus}   delivery: ${tx.providerStatus}`);
   console.log(`  supplier code:   ${tx.providerStatusCode || "-"}   supplier order: ${tx.providerReference || "-"}`);
+  if (tx.purchaseErrorCode) console.log(`  purchase error:  ${tx.purchaseErrorCode}`);
   console.log(`  failure reason:  ${tx.failureReason || "-"}   needs review: ${tx.needsReview ? "yes" : "no"}`);
   console.log(`  created ${tx.createdAt.toISOString()}  started ${tx.fulfillmentStartedAt ? tx.fulfillmentStartedAt.toISOString() : "-"}  attempts ${tx.fulfillmentAttempts || 0}`);
   if (user) console.log(`  customer wallet: ₦${((user.walletBalances || {})[tx.mode] || 0) / 100}`);

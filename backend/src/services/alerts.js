@@ -51,11 +51,17 @@ const sendToOwner = async (subject, lines) => {
 
 const naira = (kobo) => `N${(kobo / 100).toLocaleString("en-NG")}`;
 
+// Most unclear orders settle by themselves within a few minutes (the sweep
+// confirms delivery, or refunds a wallet order the supplier never got), so
+// only alert about ones still needing review after this long.
+const REVIEW_ALERT_DELAY_MS = Number(process.env.REVIEW_ALERT_DELAY_MINUTES || 6) * 60 * 1000;
+
 const reviewAlerts = async () => {
   const mode = config.paymentMode;
+  const settledBefore = new Date(Date.now() - REVIEW_ALERT_DELAY_MS);
   const [orders, fundings] = await Promise.all([
-    Transaction.find({ mode, needsReview: true, alertedAt: { $exists: false } }).limit(20).lean(),
-    WalletEntry.find({ mode, kind: "funding", needsReview: true, alertedAt: { $exists: false } }).limit(20).lean(),
+    Transaction.find({ mode, needsReview: true, alertedAt: { $exists: false }, updatedAt: { $lte: settledBefore } }).limit(20).lean(),
+    WalletEntry.find({ mode, kind: "funding", needsReview: true, alertedAt: { $exists: false }, updatedAt: { $lte: settledBefore } }).limit(20).lean(),
   ]);
   if (!orders.length && !fundings.length) return 0;
 

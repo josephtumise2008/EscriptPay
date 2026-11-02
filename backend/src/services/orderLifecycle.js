@@ -187,6 +187,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     if (result && (result.statusCode !== undefined && result.statusCode !== null)) set.providerStatusCode = String(result.statusCode);
     else if (result && result.status) set.providerStatusCode = String(result.status).slice(0, 40);
     if (result && result.attention) logEvent("vtu.attention", { transactionId: claimed.transactionId, statusCode: set.providerStatusCode });
+    if (result && result.errorCode) set.purchaseErrorCode = String(result.errorCode).slice(0, 40);
 
     if (outcome === "delivered") {
       Object.assign(set, { providerStatus: "successful", status: "successful", deliveredAt: new Date() });
