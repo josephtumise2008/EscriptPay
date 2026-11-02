@@ -5,12 +5,17 @@ const { createFakeModel } = require("../helpers/fakeModel");
 
 const old = () => new Date(Date.now() - 60 * 1000);
 
-const setup = ({ tx, query }) => {
+const setup = ({ tx, query, purchase }) => {
   const Transaction = createFakeModel({ docs: [{ _id: "t1", transactionId: "ESCP-1", fulfillmentStartedAt: old(), ...tx }] });
-  const calls = { query: 0 };
+  const calls = { query: 0, purchase: 0, requestIds: [] };
   const vtu = {
     name: "fake",
     simulated: false,
+    purchase: async ({ requestId }) => {
+      calls.purchase += 1;
+      calls.requestIds.push(requestId);
+      return purchase ? purchase() : { outcome: "delivered", reference: "SUP-R" };
+    },
     queryStatus: async () => {
       calls.query += 1;
       await new Promise((r) => setImmediate(r));
@@ -123,7 +128,7 @@ test("supplier's face-value 'amount charged' never raises the known cost; a lowe
   assert.equal(lower.doc().costSource, "supplier");
 });
 
-test("an order the supplier never received fails after the grace period (wallet refund follows)", async () => {
+test("an order the supplier never received, even after the re-send, fails after the grace period (wallet refund follows)", async () => {
   const fresh = setup({
     tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "wallet", needsReview: true, fulfillmentStartedAt: new Date() },
     query: { outcome: "not_found", status: "TRANSACTION_BEYOND_30_DAYS" },
@@ -132,7 +137,7 @@ test("an order the supplier never received fails after the grace period (wallet 
   assert.equal(fresh.doc().providerStatus, "unknown", "too early to believe 'not found'");
 
   const old5 = setup({
-    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "wallet", needsReview: true, fulfillmentStartedAt: new Date(Date.now() - 5 * 60 * 1000) },
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "wallet", needsReview: true, resendCount: 1, fulfillmentStartedAt: new Date(Date.now() - 5 * 60 * 1000) },
     query: { outcome: "not_found", status: "TRANSACTION_BEYOND_30_DAYS" },
   });
   const r = await old5.lifecycle.reconcileOrder("t1");
@@ -142,10 +147,47 @@ test("an order the supplier never received fails after the grace period (wallet 
   assert.equal(old5.doc().needsReview, false);
 
   const card = setup({
-    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "paystack", needsReview: true, fulfillmentStartedAt: new Date(Date.now() - 5 * 60 * 1000) },
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "paystack", needsReview: true, resendCount: 1, fulfillmentStartedAt: new Date(Date.now() - 5 * 60 * 1000) },
     query: { outcome: "not_found", status: "TRANSACTION_BEYOND_30_DAYS" },
   });
   await card.lifecycle.reconcileOrder("t1");
   assert.equal(card.doc().providerStatus, "failed");
   assert.equal(card.doc().needsReview, true, "card payment needs a person to refund");
+});
+
+test("the supplier never got the order: it is sent again once (same RequestID) instead of refunding", async () => {
+  const { lifecycle, calls, doc } = setup({
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", paymentProvider: "wallet", needsReview: true, failureReason: "delivery_unconfirmed", fulfillmentStartedAt: new Date(Date.now() - 30 * 1000) },
+    query: { outcome: "not_found", status: "TRANSACTION_BEYOND_30_DAYS" },
+  });
+  const r = await lifecycle.reconcileOrder("t1");
+  assert.equal(r.outcome, "delivered");
+  assert.equal(calls.purchase, 1);
+  assert.deepEqual(calls.requestIds, ["ESCP-1"]);
+  assert.equal(doc().status, "successful");
+  assert.equal(doc().resendCount, 1);
+  assert.equal(doc().needsReview, false);
+});
+
+test("no re-send while the first request may still be in flight, and never more than once", async () => {
+  const young = setup({
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", fulfillmentStartedAt: new Date(Date.now() - 5 * 1000) },
+    query: { outcome: "not_found" },
+  });
+  await young.lifecycle.reconcileOrder("t1");
+  assert.equal(young.calls.purchase, 0);
+
+  const resent = setup({
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", resendCount: 1, fulfillmentStartedAt: new Date(Date.now() - 30 * 1000) },
+    query: { outcome: "not_found" },
+  });
+  await resent.lifecycle.reconcileOrder("t1");
+  assert.equal(resent.calls.purchase, 0);
+
+  const withRef = setup({
+    tx: { providerStatus: "unknown", status: "pending", paymentStatus: "successful", providerReference: "99", fulfillmentStartedAt: new Date(Date.now() - 5 * 60 * 1000) },
+    query: { outcome: "not_found" },
+  });
+  await withRef.lifecycle.reconcileOrder("t1");
+  assert.equal(withRef.calls.purchase, 0, "the supplier gave an order number, so it did receive it");
 });

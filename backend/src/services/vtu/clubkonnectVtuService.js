@@ -75,8 +75,11 @@ const callbackUrl = () => {
   return base.startsWith("https://") ? `${base}/api/vtu/clubkonnect/callback` : "";
 };
 
+const NOT_SENT_CODES = ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "ENETUNREACH", "EHOSTUNREACH", "UND_ERR_CONNECT_TIMEOUT"];
+
 // GET <path>?<params>. Returns parsed JSON. Throws VtuProviderError with
-// code "timeout" | "network" | "http_<status>" | "bad_response".
+// code "not_sent" (connection never made) | "timeout" | "network" |
+// "http_<status>" | "bad_response".
 const get = async (path, params) => {
   const url = `${BASE_URL}/${path}?${new URLSearchParams(params).toString()}`;
   const controller = new AbortController();
@@ -86,6 +89,12 @@ const get = async (path, params) => {
     response = await fetchImpl(url, { method: "GET", headers: { Accept: "application/json" }, signal: controller.signal });
   } catch (error) {
     const timedOut = error && error.name === "AbortError";
+    // Failures while CONNECTING mean the request never left us, so the
+    // supplier certainly didn't get it and it is safe to send again at once.
+    const cause = (error && error.cause && error.cause.code) || (error && error.code) || "";
+    if (!timedOut && NOT_SENT_CODES.includes(cause)) {
+      throw new VtuProviderError("Could not connect to the VTU supplier.", "not_sent");
+    }
     throw new VtuProviderError(timedOut ? "VTU supplier timed out." : "Could not reach the VTU supplier.", timedOut ? "timeout" : "network");
   } finally {
     clearTimeout(timer);
@@ -213,7 +222,8 @@ const purchase = async ({ type, network, phone, amount, plan, requestId }) => {
     try {
       code = await dataPlanCode(networkCode, String(planId));
     } catch {
-      return { outcome: "failed", errorCode: "plan_lookup_failed" };
+      // Nothing was sent: the plan list couldn't be fetched.
+      return { outcome: "failed", errorCode: "plan_lookup_failed", notSent: true };
     }
     if (!code) return { outcome: "failed", errorCode: "plan_unavailable" };
     path = "APIDatabundleV1.asp";

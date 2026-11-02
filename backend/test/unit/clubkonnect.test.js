@@ -182,3 +182,18 @@ test("wallet balance", async () => {
 test("query for an order ClubKonnect never received means not_found", () => {
   assert.equal(ck.interpret({ status: "TRANSACTION_BEYOND_30_DAYS" }).outcome, "not_found");
 });
+
+test("a connection that never opened is 'not_sent' (safe to retry); a reset after sending is not", async () => {
+  const refused = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNREFUSED" } });
+  ck.__setFetch(fakeFetch(refused));
+  await assert.rejects(
+    () => ck.purchase({ type: "airtime", network: "MTN", phone: "08031234567", amount: 100, requestId: "X" }),
+    (e) => e.code === "not_sent"
+  );
+  const reset = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } });
+  ck.__setFetch(fakeFetch(reset));
+  await assert.rejects(
+    () => ck.purchase({ type: "airtime", network: "MTN", phone: "08031234567", amount: 100, requestId: "X" }),
+    (e) => e.code === "network"
+  );
+});

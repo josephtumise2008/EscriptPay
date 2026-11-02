@@ -127,6 +127,9 @@ const transactionSchema = new mongoose.Schema(
     vtuProvider: {
       type: String,
     },
+    // Times the order was sent again after the supplier confirmed it never
+    // received it (same RequestID).
+    resendCount: { type: Number, default: 0, min: 0 },
     fulfillmentAttempts: {
       type: Number,
       default: 0,

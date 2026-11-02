@@ -276,3 +276,41 @@ test("a failed automatic refund is recorded for the admin", async () => {
   assert.equal((await lifecycle.confirmPayment("ESCP-20261022-AAAAAA", { source: "webhook" })).outcome, "mismatch");
   assert.equal(cur.doc().refundStatus, "failed");
 });
+
+const { createOrderLifecycle: makeLifecycle } = require("../../src/services/orderLifecycle");
+const lifecycleWith = (purchase) => {
+  const { createFakeTransactionModel: fake } = require("../helpers/fakeTransactionModel");
+  const Transaction = fake([baseTx({ paymentStatus: "successful" })]);
+  const calls = { purchase: 0 };
+  const lifecycle = makeLifecycle({
+    Transaction,
+    Plan: null,
+    payment: {},
+    vtu: { name: "fake", simulated: false, purchase: async (args) => { calls.purchase += 1; return purchase(calls.purchase, args); } },
+    config: paystackConfig,
+  });
+  return { lifecycle, calls, doc: () => Transaction.docs[0] };
+};
+
+test("a request that never left us (connection failed) is retried at once and delivered", async () => {
+  const notSent = Object.assign(new Error("x"), { code: "not_sent" });
+  const { lifecycle, calls, doc } = lifecycleWith((n) => {
+    if (n < 3) throw notSent;
+    return { outcome: "delivered", reference: "SUP-9" };
+  });
+  const r = await lifecycle.fulfillOrder(doc());
+  assert.equal(r.outcome, "delivered");
+  assert.equal(calls.purchase, 3);
+  assert.equal(doc().status, "successful");
+});
+
+test("a timeout is never re-sent blindly (it may have arrived)", async () => {
+  const timeout = Object.assign(new Error("x"), { code: "timeout" });
+  const { lifecycle, calls, doc } = lifecycleWith(() => {
+    throw timeout;
+  });
+  const r = await lifecycle.fulfillOrder(doc());
+  assert.equal(r.outcome, "unknown");
+  assert.equal(calls.purchase, 1);
+  assert.equal(doc().purchaseErrorCode, "timeout");
+});

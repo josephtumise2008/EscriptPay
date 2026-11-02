@@ -22,8 +22,19 @@
 const PAYMENT_CONFIRMABLE = ["pending", "expired", "failed"];
 // How long the supplier may take to show an order before "no such order"
 // is believed.
-const NOT_FOUND_GRACE_MS = Number(process.env.VTU_NOT_FOUND_GRACE_SECONDS || 180) * 1000;
+const NOT_FOUND_GRACE_MS = Number(process.env.VTU_NOT_FOUND_GRACE_SECONDS || 60) * 1000;
 const AFTER = { returnDocument: "after" };
+// Connection failures (the request never left us) are retried at once, this
+// many times in total, with these pauses in between.
+const SEND_ATTEMPTS = 3;
+const SEND_RETRY_DELAYS_MS = [400, 1200];
+// When the supplier says it has no record of an order (and gave us no order
+// reference), send it again this many times before giving up and refunding.
+const MAX_RESENDS = Number(process.env.VTU_MAX_RESENDS ?? 1);
+// ...but only once the order is at least this old, so a request that is
+// still in flight isn't sent twice.
+const RESEND_AFTER_MS = Number(process.env.VTU_RESEND_AFTER_SECONDS || 20) * 1000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const { isForeignCard, refundBlockedPayment } = require("./payment/cardCheck");
 
 const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEvent = () => {} }) => {
@@ -158,26 +169,46 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     );
     if (!claimed) return { outcome: "already_claimed", tx: await reload(tx._id) };
 
+    return dispatch(claimed);
+  };
+
+  // Sends a claimed (providerStatus "processing") order to the supplier and
+  // records the result. Requests that certainly never reached the supplier
+  // (connection failures) are retried immediately; anything ambiguous
+  // (timeout, unreadable reply) is never re-sent blindly: it becomes
+  // "unknown" and reconcileOrder asks the supplier first.
+  const dispatch = async (claimed) => {
     let plan = null;
     if (claimed.type === "data" && claimed.planId && Plan) {
       plan = await Plan.findById(claimed.planId);
     }
 
     let result;
-    try {
-      result = await vtu.purchase({
-        type: claimed.type,
-        network: claimed.network,
-        phone: claimed.phone,
-        amount: claimed.amount,
-        plan,
-        transaction: claimed,
-        requestId: claimed.transactionId,
-      });
-    } catch (error) {
-      // Timeout / network error / unparseable response: the supplier MAY
-      // have delivered. Do not retry blindly — reconcile.
-      result = { outcome: "unknown", errorCode: error && error.code, status: `error_${(error && error.code) || "unknown"}` };
+    for (let attempt = 1; attempt <= SEND_ATTEMPTS; attempt += 1) {
+      let notSent = false;
+      try {
+        result = await vtu.purchase({
+          type: claimed.type,
+          network: claimed.network,
+          phone: claimed.phone,
+          amount: claimed.amount,
+          plan,
+          transaction: claimed,
+          requestId: claimed.transactionId,
+        });
+        notSent = Boolean(result && result.outcome === "failed" && result.notSent);
+      } catch (error) {
+        result = { outcome: "unknown", errorCode: error && error.code, status: `error_${(error && error.code) || "unknown"}` };
+        notSent = Boolean(error && error.code === "not_sent");
+      }
+      if (!notSent || attempt === SEND_ATTEMPTS) break;
+      logEvent("fulfilment.retry", { transactionId: claimed.transactionId, attempt, errorCode: result && result.errorCode });
+      await sleep(SEND_RETRY_DELAYS_MS[attempt - 1] || 1000);
+    }
+    // Still not sent after the quick retries: let reconcile decide (it will
+    // find no record and send again / refund) instead of failing outright.
+    if (result && result.outcome === "failed" && result.notSent) {
+      result = { outcome: "unknown", errorCode: result.errorCode, status: `error_${result.errorCode}` };
     }
 
     const outcome = ["delivered", "accepted", "failed"].includes(result && result.outcome) ? result.outcome : "unknown";
@@ -280,6 +311,32 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     const ageMs = Date.now() - new Date(claimed.fulfillmentStartedAt || claimed.createdAt).getTime();
     const neverArrived = result.outcome === "not_found" && !claimed.providerReference && ageMs >= notFoundGraceMs;
     if (result.outcome === "not_found" && !set.providerStatusCode && result.status) set.providerStatusCode = String(result.status).slice(0, 40);
+
+    // The supplier never got it: send it again (same RequestID) so the
+    // customer still gets their airtime/data, before ever refunding.
+    const canResend =
+      result.outcome === "not_found" && !claimed.providerReference && ageMs >= RESEND_AFTER_MS && (claimed.resendCount || 0) < MAX_RESENDS;
+    if (canResend) {
+      const resending = await Transaction.findOneAndUpdate(
+        {
+          _id: claimed._id,
+          providerStatus: { $in: ["processing", "unknown"] },
+          ...(claimed.resendCount ? { resendCount: claimed.resendCount } : { $or: [{ resendCount: { $exists: false } }, { resendCount: 0 }] }),
+        },
+        {
+          $set: { ...set, providerStatus: "processing", status: "pending", needsReview: false, fulfillmentStartedAt: new Date() },
+          $unset: { failureReason: "" },
+          $inc: { resendCount: 1, fulfillmentAttempts: 1 },
+        },
+        AFTER
+      );
+      if (resending) {
+        logEvent("fulfilment.resend", { transactionId: claimed.transactionId, source });
+        const sent = await dispatch(resending);
+        return { outcome: sent.outcome === "delivered" ? "delivered" : sent.outcome === "failed" ? "failed" : "pending", tx: sent.tx };
+      }
+      return { outcome: "pending", tx: await reload(claimed._id) };
+    }
 
     let outcome = "pending";
     if (neverArrived) {
