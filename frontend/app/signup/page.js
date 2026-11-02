@@ -95,7 +95,7 @@ export default function SignupPage() {
             label="Full Name"
             value={values.fullName}
             onChange={set("fullName")}
-            placeholder="Joseph Abimbola"
+            placeholder="Your full name"
             autoComplete="name"
             required
             error={errors.fullName}
