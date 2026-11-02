@@ -184,8 +184,9 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     }
 
     let result;
+    let notSent = false;
     for (let attempt = 1; attempt <= SEND_ATTEMPTS; attempt += 1) {
-      let notSent = false;
+      notSent = false;
       try {
         result = await vtu.purchase({
           type: claimed.type,
@@ -205,10 +206,11 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
       logEvent("fulfilment.retry", { transactionId: claimed.transactionId, attempt, errorCode: result && result.errorCode });
       await sleep(SEND_RETRY_DELAYS_MS[attempt - 1] || 1000);
     }
-    // Still not sent after the quick retries: let reconcile decide (it will
-    // find no record and send again / refund) instead of failing outright.
-    if (result && result.outcome === "failed" && result.notSent) {
-      result = { outcome: "unknown", errorCode: result.errorCode, status: `error_${result.errorCode}` };
+    // Still couldn't connect after the quick retries: the supplier certainly
+    // never got it, so stop now (wallet orders are refunded straight away)
+    // and tell the customer it was a network connection error.
+    if (notSent) {
+      result = { outcome: "failed", errorCode: (result && result.errorCode) || "not_sent", networkError: true };
     }
 
     const outcome = ["delivered", "accepted", "failed"].includes(result && result.outcome) ? result.outcome : "unknown";
@@ -226,9 +228,10 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
       Object.assign(set, {
         providerStatus: "failed",
         status: "failed",
-        failureReason: "delivery_failed",
-        // Paid but definitively not delivered: refund needed.
-        needsReview: paid,
+        failureReason: result.networkError ? "network_error" : "delivery_failed",
+        // Paid but definitively not delivered: wallet orders are refunded
+        // automatically; card payments need a person to refund.
+        needsReview: paid && claimed.paymentProvider !== "wallet",
       });
     } else if (outcome === "accepted") {
       // Supplier took the order but has not confirmed delivery yet.

@@ -185,14 +185,14 @@ export const describeTransaction = (tx = {}) => {
   if (tx.providerStatus === "failed" && tx.paymentProvider === "wallet" && tx.paymentStatus === "successful") {
     return {
       tone: "failed",
-      title: "Didn't go through",
+      title: "Network connection error",
       message: `The network connection was poor, so this ${what} wasn't delivered. You weren't charged: the money is back in your EscriptPay wallet. Please try again.`,
     };
   }
   if (tx.providerStatus === "failed") {
     return {
       tone: "failed",
-      title: "Delivery failed",
+      title: tx.failureReason === "network_error" || tx.purchaseErrorCode === "not_sent" ? "Network connection error" : "Delivery failed",
       message:
         tx.paymentStatus !== "successful"
           ? `The ${what} could not be delivered.`

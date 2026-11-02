@@ -314,3 +314,16 @@ test("a timeout is never re-sent blindly (it may have arrived)", async () => {
   assert.equal(calls.purchase, 1);
   assert.equal(doc().purchaseErrorCode, "timeout");
 });
+
+test("still can't connect after the quick retries: fails at once as a network error (no waiting)", async () => {
+  const notSent = Object.assign(new Error("x"), { code: "not_sent" });
+  const { lifecycle, calls, doc } = lifecycleWith(() => {
+    throw notSent;
+  });
+  const r = await lifecycle.fulfillOrder(doc());
+  assert.equal(r.outcome, "failed");
+  assert.equal(calls.purchase, 3);
+  assert.equal(doc().status, "failed");
+  assert.equal(doc().failureReason, "network_error");
+  assert.equal(doc().purchaseErrorCode, "not_sent");
+});
