@@ -29,6 +29,7 @@ import TrustReceipt from "@/components/TrustReceipt";
 import HeroBackdrop from "@/components/HeroBackdrop";
 import InstallApp from "@/components/InstallApp";
 import { HERO_PHOTO } from "@/lib/data";
+import ServicesShowcase from "@/components/ServicesShowcase";
 
 const NETWORKS = [
   { name: "MTN", dot: "bg-yellow-400" },
@@ -360,13 +361,14 @@ export default function HomePage() {
 
           <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-8 sm:px-6 sm:pt-14 lg:grid-cols-[1.15fr_1fr] lg:gap-8 lg:px-8 lg:pb-20 lg:pt-12">
             <div className="text-center lg:text-left">
-              <p className="anim-pop inline-flex items-center gap-2 rounded-full border border-cyan-200/70 bg-white/80 py-1.5 pl-1.5 pr-3.5 text-xs font-semibold text-ink-700 shadow-sm backdrop-blur">
+              <a href="#services" className="anim-pop inline-flex items-center gap-2 rounded-full border border-cyan-200/70 bg-white/80 py-1.5 pl-1.5 pr-3.5 text-xs font-semibold text-ink-700 shadow-sm backdrop-blur transition-colors hover:border-violet-300">
                 <span className="wallet-gradient inline-flex h-6 items-center gap-1 rounded-full px-2 text-[11px] font-bold brand-contrast">
                   <Zap size={12} aria-hidden="true" />
-                  Instant
+                  New
                 </span>
-                MTN · Airtel · Glo · 9mobile
-              </p>
+                Cable TV · Electricity · WAEC &amp; JAMB
+                <ArrowRight size={13} aria-hidden="true" />
+              </a>
 
               <h1
                 id="hero-heading"
@@ -395,7 +397,7 @@ export default function HomePage() {
               </h1>
 
               <p className="anim-line mx-auto mt-5 max-w-xl text-base leading-relaxed text-ink-500 sm:text-lg lg:mx-0" style={{ animationDelay: "380ms" }}>
-                Top up any Nigerian line in seconds. Fund your wallet once, buy in one tap, and get a receipt for every order.
+                Top up any Nigerian line, renew your TV and buy electricity tokens or exam PINs in seconds. Fund your wallet once, pay in one tap, and get a receipt for every order.
               </p>
 
               {/* Live price highlights from the real catalogue */}
@@ -476,6 +478,8 @@ export default function HomePage() {
             </ul>
           </div>
         </section>
+
+        <ServicesShowcase cheapest1GB={cheapest1GB ? cheapest1GB.price : null} />
 
         {/* How it works */}
         <section id="how-it-works" aria-labelledby="how-heading" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Menu,
+  LayoutGrid,
   X,
   LayoutDashboard,
   ChevronRight,
@@ -29,6 +30,7 @@ import { useScrollLock, releaseScrollLock } from "@/hooks/useScrollLock";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/#services", label: "Services", icon: LayoutGrid },
   { href: "/#how-it-works", label: "How it works", icon: ListChecks },
   { href: "/#why-escriptpay", label: "Why EscriptPay", icon: ShieldCheck },
   { href: "/#faq", label: "FAQ", icon: HelpCircle },

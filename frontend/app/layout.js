@@ -39,7 +39,7 @@ const STARTUP_IMAGES = [
 ];
 const TITLE = "EscriptPay — Cheaper data. Instant airtime.";
 const DESCRIPTION =
-  "Buy MTN, Airtel, Glo and 9mobile data and airtime in seconds. Fund your wallet once and buy in one tap, with a receipt for every order.";
+  "Buy MTN, Airtel, Glo and 9mobile data and airtime, renew DStv, GOtv and StarTimes, pay electricity bills and buy WAEC & JAMB PINs in seconds. Fund your wallet once and pay in one tap.";
 
 const STRUCTURED_DATA = [
   { "@context": "https://schema.org", "@type": "WebSite", name: "EscriptPay", alternateName: "EscriptPay.com", url: `${SITE_URL}/` },
@@ -56,7 +56,7 @@ export const metadata = {
   applicationName: "EscriptPay",
   // One official address for search engines (escriptpay.com, not www).
   alternates: { canonical: "/" },
-  keywords: ["EscriptPay", "buy data", "cheap data", "airtime", "MTN", "Airtel", "Glo", "9mobile", "Nigeria"],
+  keywords: ["EscriptPay", "buy data", "cheap data", "airtime", "MTN", "Airtel", "Glo", "9mobile", "DStv", "GOtv", "StarTimes", "electricity token", "IBEDC", "WAEC PIN", "JAMB PIN", "Nigeria"],
   openGraph: {
     type: "website",
     url: SITE_URL,

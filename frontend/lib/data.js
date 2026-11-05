@@ -16,6 +16,11 @@ export const FAQ_ITEMS = [
       "MTN, Airtel, Glo and 9mobile. Data bundles are listed per network with their price and validity, and airtime can be bought in any whole amount from ₦100 to ₦10,000.",
   },
   {
+    question: "Can I pay for cable TV, electricity and exam PINs?",
+    answer:
+      "Yes. Renew DStv, GOtv and StarTimes, buy prepaid electricity tokens or pay postpaid bills for IBEDC, EKEDC, IKEDC and nine other companies, and buy WAEC result checker PINs (JAMB PINs when available). We show the name on the smartcard, meter or JAMB profile before you pay, and your token or PIN appears on screen and in your email. Paying from your wallet has no fee; card and bank payments add only Paystack's fee.",
+  },
+  {
     question: "How do I pay?",
     answer:
       "Pay with your EscriptPay wallet, or by card, bank transfer or USSD through Paystack's secure checkout. EscriptPay never asks for or stores your card details. Your order is only processed after our server has confirmed the payment with the payment provider — a browser redirect alone is never treated as proof of payment.",
