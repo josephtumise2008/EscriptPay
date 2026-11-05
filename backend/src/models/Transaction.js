@@ -19,7 +19,7 @@ const transactionSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["data", "airtime"],
+      enum: ["data", "airtime", "cable", "electricity", "exam"],
       default: "data",
       required: true,
     },
@@ -190,6 +190,25 @@ const transactionSchema = new mongoose.Schema(
     // Why the purchase request itself failed (timeout, network, ...), kept
     // even after later status checks update providerStatusCode.
     purchaseErrorCode: { type: String, trim: true },
+    // ---- Bills (cable TV, electricity, exam PINs) ----
+    // Smartcard / meter / JAMB profile number, and the name the supplier
+    // returned for it when we checked it before payment.
+    account: { type: String, trim: true },
+    customerName: { type: String, trim: true },
+    // Supplier codes: cable provider (dstv) / electricity company (07) /
+    // exam (waec); package (dstv-padi / waecdirect); meter type 01 | 02.
+    serviceCode: { type: String, trim: true },
+    packageCode: { type: String, trim: true },
+    meterType: { type: String, trim: true },
+    // Electricity: the token value bought (what the supplier is asked for).
+    faceAmountKobo: { type: Number, min: 0 },
+    // Card/bank payments: the processor fee added on top of `amount`.
+    feeKobo: { type: Number, min: 0 },
+    // What the customer receives: electricity token, exam PINs.
+    token: { type: String, trim: true },
+    cardDetails: { type: String, trim: true },
+    pins: [{ _id: false, serial: String, pin: String }],
+    deliveryEmailedAt: { type: Date },
     // When the owner was emailed about this needing review.
     alertedAt: { type: Date },
   },

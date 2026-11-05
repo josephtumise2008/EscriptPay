@@ -37,8 +37,24 @@ const RESEND_AFTER_MS = Number(process.env.VTU_RESEND_AFTER_SECONDS || 20) * 100
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const { isForeignCard, refundBlockedPayment } = require("./payment/cardCheck");
 
-const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEvent = () => {} }) => {
+// Fields that carry what the customer bought (electricity token, PINs).
+const { parsePins } = require("./billsText");
+const deliverables = (result, tx) => {
+  const set = {};
+  if (result && result.token && !(tx && tx.token)) set.token = String(result.token).slice(0, 200);
+  if (result && result.cardDetails && !(tx && tx.cardDetails)) {
+    set.cardDetails = String(result.cardDetails).slice(0, 2000);
+    const pins = parsePins(result.cardDetails);
+    if (pins.length) set.pins = pins;
+  }
+  return set;
+};
+
+const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEvent = () => {}, onDelivered = null }) => {
   const reload = (id) => Transaction.findById(id);
+  const delivered = (tx) => {
+    if (tx && onDelivered) Promise.resolve(onDelivered(tx)).catch(() => {});
+  };
 
   // Verify a payment with the provider and record the result. Idempotent:
   // safe to call any number of times, from the callback page and webhooks.
@@ -221,6 +237,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
     else if (result && result.status) set.providerStatusCode = String(result.status).slice(0, 40);
     if (result && result.attention) logEvent("vtu.attention", { transactionId: claimed.transactionId, statusCode: set.providerStatusCode });
     if (result && result.errorCode) set.purchaseErrorCode = String(result.errorCode).slice(0, 40);
+    Object.assign(set, deliverables(result, claimed));
 
     if (outcome === "delivered") {
       Object.assign(set, { providerStatus: "successful", status: "successful", deliveredAt: new Date() });
@@ -251,6 +268,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
       AFTER
     );
     logEvent("fulfilment.result", { transactionId: claimed.transactionId, outcome, errorCode: result && result.errorCode });
+    if (outcome === "delivered") delivered(updated);
     return { outcome, tx: updated || (await reload(claimed._id)) };
   };
 
@@ -292,7 +310,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
       return { outcome: "pending", tx: claimed };
     }
 
-    const set = {};
+    const set = deliverables(result, claimed);
     if (result.reference && !claimed.providerReference) set.providerReference = result.reference;
     if (result.statusCode !== undefined && result.statusCode !== null) set.providerStatusCode = String(result.statusCode);
     // The supplier's own figure for what this order cost us. ClubKonnect's
@@ -374,6 +392,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
       AFTER
     );
     logEvent("reconcile.result", { transactionId: claimed.transactionId, outcome, source, statusCode: set.providerStatusCode });
+    if (outcome === "delivered") delivered(updated);
     if (result.attention) logEvent("vtu.attention", { transactionId: claimed.transactionId, statusCode: set.providerStatusCode });
     return { outcome, tx: updated || (await reload(claimed._id)) };
   };

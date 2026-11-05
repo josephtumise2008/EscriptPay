@@ -14,6 +14,16 @@
 //   (e.g. "5") from PlansV3; the older PRODUCT_ID (e.g. "2000") is rejected
 //   with INVALID_DATAPLAN. Plans are stored by PRODUCT_ID, so the code is
 //   looked up from PlansV3 (cached) just before each data order.
+//   Cable TV: APICableTVV1.asp?…&CableTV&Package&SmartCardNo&PhoneNo&RequestID&CallBackURL
+//             APIVerifyCableTVV1.asp?…&CableTV&SmartCardNo  -> {"customer_name": "…" | "INVALID_SMARTCARDNO"}
+//             APICableTVPackagesV2.asp?UserID=…  (packages, price, PRODUCT_DISCOUNT_AMOUNT = our cost)
+//   Electricity: APIElectricityV1.asp?…&ElectricCompany&MeterType&MeterNo&Amount&PhoneNo&RequestID&CallBackURL
+//             APIVerifyElectricityV1.asp?…&ElectricCompany&MeterNo&MeterType -> {"customer_name": …}
+//             reply may carry "metertoken"
+//   Exam PINs: APIWAECV1.asp / APIJAMBV1.asp ?…&ExamType&PhoneNo&RequestID&CallBackURL
+//             APIWAECPackagesV2.asp / APIJAMBPackagesV2.asp ?UserID=… -> {"EXAM_TYPE":[{PRODUCT_CODE,PRODUCT_DESCRIPTION,PRODUCT_AMOUNT}]}
+//             APIVerifyJAMBV1.asp?…&ExamType=jamb&ProfileID -> {"customer_name": …}
+//             PINs come back in "carddetails": "Serial No:WRN…, pin: 5728…"
 //   Network codes: MTN 01, Glo 02, 9mobile 03, Airtel 04
 //   Accepted order: {"orderid":"789","statuscode":"100","status":"ORDER_RECEIVED"}
 //   Status codes (APIParaGetDisputeResolutionV1): 100 received, 200 completed,
@@ -136,6 +146,11 @@ const OUTCOME_BY_TEXT = (status) => {
 // Supplier errors that mean our own setup/account needs attention.
 const ATTENTION_CODES = new Set([400, 401, 402, 403, 413, 414, 415, 416, 417]);
 
+const cleanText = (v) => {
+  const t = typeof v === "string" || typeof v === "number" ? String(v).trim() : "";
+  return t && t.length <= 2000 ? t : undefined;
+};
+
 const interpret = (body) => {
   const data = body && typeof body === "object" ? body : {};
   const rawCode = data.statuscode ?? data.StatusCode ?? data.status_code;
@@ -151,6 +166,8 @@ const interpret = (body) => {
     status: String(status || ""),
     remark: typeof (data.remark ?? data.orderremark) === "string" ? (data.remark ?? data.orderremark).slice(0, 200) : undefined,
     amountCharged: Number.isFinite(charged) && charged > 0 ? charged : undefined,
+    token: cleanText(data.metertoken ?? data.MeterToken ?? data.token ?? data.Token),
+    cardDetails: cleanText(data.carddetails ?? data.CardDetails ?? data.pins),
     attention: code !== null ? ATTENTION_CODES.has(code) : /^(INVALID_CREDENTIALS|MISSING_|INSUFFICIENT_)/.test(String(status).toUpperCase()),
   };
 };
@@ -192,7 +209,10 @@ const dataPlanCode = async (networkCode, planId) => {
 // Throws VtuProviderError on timeout/network/unreadable responses; the order
 // lifecycle treats that as "unknown" (may have been delivered) and reconciles
 // it later by RequestID instead of retrying.
-const purchase = async ({ type, network, phone, amount, plan, requestId }) => {
+const BILL_TYPES = ["cable", "electricity", "exam"];
+
+const purchase = async ({ type, network, phone, amount, plan, requestId, transaction }) => {
+  if (BILL_TYPES.includes(type)) return purchaseBill({ type, phone, requestId, transaction });
   const networkCode = NETWORK_CODES[network];
   if (!networkCode) return { outcome: "failed", errorCode: "unsupported_network" };
   if (!requestId) return { outcome: "failed", errorCode: "missing_request_id" };
@@ -245,6 +265,110 @@ const queryStatus = async ({ transaction }) => {
   if (transaction.providerReference) params.OrderID = transaction.providerReference;
   else params.RequestID = transaction.transactionId;
   return interpret(await get("APIQueryV1.asp", params));
+};
+
+// Cable TV, electricity and exam PINs. The order's own fields (set and
+// validated by our server when the order was created) say what to buy.
+const purchaseBill = async ({ type, phone, requestId, transaction: tx }) => {
+  if (!requestId || !tx) return { outcome: "failed", errorCode: "missing_request_id", notSent: true };
+  let phoneNo;
+  try {
+    phoneNo = toLocalMsisdn(phone);
+  } catch {
+    return { outcome: "failed", errorCode: "invalid_phone", notSent: true };
+  }
+  const { userId, apiKey } = credentials();
+  const params = { UserID: userId, APIKey: apiKey, PhoneNo: phoneNo, RequestID: requestId };
+  let path;
+  if (type === "cable") {
+    if (!tx.serviceCode || !tx.packageCode || !tx.account) return { outcome: "failed", errorCode: "bad_order", notSent: true };
+    path = "APICableTVV1.asp";
+    Object.assign(params, { CableTV: tx.serviceCode, Package: tx.packageCode, SmartCardNo: tx.account });
+  } else if (type === "electricity") {
+    const face = Math.round((tx.faceAmountKobo || 0) / 100);
+    if (!tx.serviceCode || !tx.meterType || !tx.account || !(face > 0)) return { outcome: "failed", errorCode: "bad_order", notSent: true };
+    path = "APIElectricityV1.asp";
+    Object.assign(params, { ElectricCompany: tx.serviceCode, MeterType: tx.meterType, MeterNo: tx.account, Amount: String(face) });
+  } else {
+    const exam = tx.serviceCode;
+    if (!["waec", "jamb"].includes(exam) || !tx.packageCode) return { outcome: "failed", errorCode: "bad_order", notSent: true };
+    path = exam === "jamb" ? "APIJAMBV1.asp" : "APIWAECV1.asp";
+    params.ExamType = tx.packageCode;
+    if (exam === "jamb" && tx.account) params.ProfileID = tx.account;
+  }
+  const cb = callbackUrl();
+  if (cb) params.CallBackURL = cb;
+  const result = interpret(await get(path, params));
+  return { ...result, errorCode: result.outcome === "failed" ? `supplier_${result.statusCode ?? result.status}` : undefined };
+};
+
+// Checks a smartcard / meter / JAMB profile number before payment.
+//   -> { valid: true, name } | { valid: false }
+// Throws VtuProviderError when the supplier can't be reached.
+const verifyAccount = async ({ service, provider, account, meterType }) => {
+  const { userId, apiKey } = credentials();
+  let path;
+  const params = { UserID: userId, APIKey: apiKey };
+  if (service === "cable") {
+    path = "APIVerifyCableTVV1.asp";
+    Object.assign(params, { CableTV: provider, SmartCardNo: account });
+  } else if (service === "electricity") {
+    path = "APIVerifyElectricityV1.asp";
+    Object.assign(params, { ElectricCompany: provider, MeterNo: account, MeterType: meterType });
+  } else if (service === "exam" && provider === "jamb") {
+    path = "APIVerifyJAMBV1.asp";
+    Object.assign(params, { ExamType: "jamb", ProfileID: account });
+  } else {
+    throw new VtuProviderError("Nothing to verify.", "unsupported");
+  }
+  const body = await get(path, params);
+  const name = String((body && (body.customer_name ?? body.CustomerName ?? body.name)) || "").trim();
+  if (!name || /^(INVALID|MISSING|ERROR|NOT_)/i.test(name)) return { valid: false };
+  return { valid: true, name: name.slice(0, 120) };
+};
+
+// Every {ID, PRODUCT:[…]} group anywhere in a supplier catalog response.
+const productGroups = (node, out = []) => {
+  if (Array.isArray(node)) node.forEach((n) => productGroups(n, out));
+  else if (node && typeof node === "object") {
+    if (node.ID && Array.isArray(node.PRODUCT)) out.push(node);
+    else Object.values(node).forEach((n) => productGroups(n, out));
+  }
+  return out;
+};
+
+// Cable packages with our cost. -> [{ provider: "dstv", code, name, amount, cost }]
+const getCablePackages = async () => {
+  const { userId } = credentials();
+  const body = await get("APICableTVPackagesV2.asp", { UserID: userId });
+  const out = [];
+  for (const group of productGroups(body)) {
+    const provider = String(group.ID).toLowerCase();
+    for (const p of group.PRODUCT) {
+      const amount = num(p.PACKAGE_AMOUNT);
+      const cost = num(p.PRODUCT_DISCOUNT_AMOUNT);
+      if (!p.PACKAGE_ID || !Number.isFinite(amount) || amount <= 0) continue;
+      out.push({
+        provider,
+        code: String(p.PACKAGE_ID),
+        name: String(p.PACKAGE_NAME || "").replace(/\s+/g, " ").trim(),
+        amount,
+        cost: Number.isFinite(cost) && cost > 0 && cost <= amount ? cost : amount,
+      });
+    }
+  }
+  if (!out.length) throw new VtuProviderError("Cable package list is empty or unreadable.", "bad_response");
+  return out;
+};
+
+// Exam PIN products. exam: "waec" | "jamb". -> [{ code, name, amount }] (may be empty)
+const getExamPackages = async (exam) => {
+  const { userId } = credentials();
+  const body = await get(exam === "jamb" ? "APIJAMBPackagesV2.asp" : "APIWAECPackagesV2.asp", { UserID: userId });
+  const list = Array.isArray(body && body.EXAM_TYPE) ? body.EXAM_TYPE : [];
+  return list
+    .map((p) => ({ code: String(p.PRODUCT_CODE || ""), name: String(p.PRODUCT_DESCRIPTION || "").trim(), amount: num(p.PRODUCT_AMOUNT) }))
+    .filter((p) => p.code && Number.isFinite(p.amount) && p.amount > 0);
 };
 
 const getBalance = async () => {
@@ -302,6 +426,9 @@ module.exports = {
   queryStatus,
   getBalance,
   getDataPlans,
+  verifyAccount,
+  getCablePackages,
+  getExamPackages,
   interpret,
   toLocalMsisdn,
   NETWORK_CODES,

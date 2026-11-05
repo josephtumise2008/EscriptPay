@@ -6,4 +6,7 @@ const { payment, vtu, config } = require("./index");
 const { createOrderLifecycle } = require("./orderLifecycle");
 const { logEvent } = require("../utils/logger");
 
-module.exports = createOrderLifecycle({ Transaction, Plan, payment, vtu, config, logEvent });
+// Lazy require: deliveryEmail loads models/services that load this module.
+const onDelivered = (tx) => require("./deliveryEmail").emailDelivery(tx);
+
+module.exports = createOrderLifecycle({ Transaction, Plan, payment, vtu, config, logEvent, onDelivered });

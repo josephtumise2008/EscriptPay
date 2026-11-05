@@ -20,7 +20,7 @@ import { formatDateTime, formatNaira } from "@/lib/format";
 import { statusLabel, statusBadge } from "@/lib/transactions";
 
 const STATUS_OPTIONS = ["all", "successful", "pending", "failed"];
-const TYPE_OPTIONS = ["all", "data", "airtime"];
+const TYPE_OPTIONS = ["all", "data", "airtime", "bills"];
 const PAGE_SIZES = [10, 25, 50];
 
 const toDateInput = (ts) => {
@@ -247,7 +247,7 @@ export default function HistoryPage() {
                   value={type}
                   onChange={setType}
                   align="right"
-                  options={TYPE_OPTIONS.map((t) => ({ value: t, label: t === "all" ? "All types" : t === "data" ? "Data" : "Airtime" }))}
+                  options={TYPE_OPTIONS.map((t) => ({ value: t, label: t === "all" ? "All types" : t === "data" ? "Data" : t === "airtime" ? "Airtime" : "TV, power & exams" }))}
                 />
               </div>
               <div>

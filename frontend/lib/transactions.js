@@ -130,7 +130,7 @@ export const buildRangeSeries = (transactions = [], range = "7d") => {
 // Customer-facing explanation of where an order is. Payment and delivery are
 // separate steps, so "pending" can mean either; this keeps them distinct.
 export const describeTransaction = (tx = {}) => {
-  const what = tx.type === "airtime" ? "airtime" : "data";
+  const what = { airtime: "airtime", cable: "subscription", electricity: "electricity payment", exam: "PIN" }[tx.type] || "data";
 
   if (tx.status === "successful") {
     return { tone: "success", title: "Purchase Successful!", message: null };

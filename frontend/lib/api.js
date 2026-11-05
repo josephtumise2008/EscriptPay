@@ -170,6 +170,23 @@ export const getAppConfig = async () => {
 
 // Airtime purchase. Sends network + amount + phone; the backend re-validates
 // the network and amount range server-side. Same response shape as data.
+// Cable TV, electricity, exam PINs
+export const getBillsCatalog = async () => {
+  const { data } = await api.get("/api/bills/catalog");
+  return data.catalog;
+};
+
+// -> { name } of the smartcard / meter / JAMB profile owner
+export const verifyBillAccount = async ({ service, provider, account, meterType }) => {
+  const { data } = await api.post("/api/bills/verify", { service, provider, account, meterType });
+  return data;
+};
+
+export const createBillTransaction = async (body) => {
+  const { data } = await api.post("/api/transactions/bill", body);
+  return data;
+};
+
 export const createAirtimeTransaction = async ({ network, amount, phone, clientReference, payWith }) => {
   const { data } = await api.post("/api/transactions/airtime", {
     network,

@@ -362,7 +362,7 @@ const createWalletService = ({
       currency: config.currency,
       paymentProvider: "wallet",
       orderTransactionId: tx.transactionId,
-      description: `${tx.network} ${tx.type === "airtime" ? "airtime" : tx.plan} · ${tx.phone}`.slice(0, 120),
+      description: `${tx.network} ${tx.type === "airtime" ? "airtime" : tx.plan} · ${tx.account || tx.phone}`.slice(0, 120),
     });
 
   // Returns the money for a wallet-paid order that the supplier definitively

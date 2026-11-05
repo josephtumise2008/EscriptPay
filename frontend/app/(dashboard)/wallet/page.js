@@ -565,7 +565,7 @@ function WalletContent() {
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">Wallet</h1>
-        <p className="mt-1 text-sm text-ink-500">Top up once and pay for data and airtime in one tap.</p>
+        <p className="mt-1 text-sm text-ink-500">Top up once and pay for data, airtime, TV, electricity and exam PINs in one tap.</p>
       </header>
 
       {notice && (

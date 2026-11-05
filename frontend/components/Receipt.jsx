@@ -15,6 +15,8 @@ import {
 import Logo from "@/components/Logo";
 import { formatDateTime, formatNaira } from "@/lib/format";
 import { statusLabel } from "@/lib/transactions";
+import { isBill, typeMeta, meterTypeLabel } from "@/lib/bills";
+import BillDeliverables from "@/components/bills/BillDeliverables";
 
 const STATUS_META = {
   successful: { icon: CheckCircle2, cls: "bg-emerald-50 text-emerald-600 ring-emerald-100" },
@@ -49,10 +51,15 @@ export default function Receipt({ transaction }) {
 
   const rows = [
     { label: "Transaction ID", value: tx.transactionId || "—", mono: true },
-    { label: "Type", value: isAirtime ? "Airtime top-up" : "Data purchase" },
-    { label: "Network", value: tx.network || "—" },
-    { label: "Plan", value: isAirtime ? `Airtime ${formatNaira(tx.amount)}` : tx.plan || "—" },
+    { label: "Type", value: typeMeta(tx.type).label },
+    { label: isBill(tx) ? "Provider" : "Network", value: tx.network || "—" },
+    { label: isBill(tx) ? "Item" : "Plan", value: isAirtime ? `Airtime ${formatNaira(tx.amount)}` : tx.plan || "—" },
+    ...(tx.account
+      ? [{ label: tx.type === "cable" ? "Smartcard" : tx.type === "electricity" ? `Meter (${meterTypeLabel(tx.meterType)})` : "Profile ID", value: tx.account, mono: true }]
+      : []),
+    ...(tx.customerName ? [{ label: "Name", value: tx.customerName }] : []),
     { label: "Phone", value: tx.phone || "—" },
+    ...(tx.feeKobo ? [{ label: "Paystack fee", value: formatNaira(tx.feeKobo / 100) }] : []),
     {
       label: "Paid with",
       value: tx.paymentProvider === "wallet" ? "Wallet balance" : tx.paymentProvider === "paystack" ? "Paystack" : "Direct",
@@ -132,6 +139,12 @@ export default function Receipt({ transaction }) {
             </div>
           ))}
         </div>
+
+        {isBill(tx) && tx.status === "successful" && (
+          <div className="mt-5">
+            <BillDeliverables transaction={tx} />
+          </div>
+        )}
 
         {/* Payment pipeline status */}
         <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-center">

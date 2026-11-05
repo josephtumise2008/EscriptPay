@@ -44,4 +44,17 @@ const passwordReset = ({ name, link, minutes }) => {
   };
 };
 
-module.exports = { verificationCode, passwordReset };
+// Electricity token / exam PINs after a successful order.
+const billDelivered = ({ name, title, lines, appUrl }) => {
+  const first = escape(String(name || "").split(" ")[0] || "there");
+  const rows = lines
+    .map(([label, value]) => `<tr><td style="padding:6px 0;color:#64748b;font-size:13px">${escape(label)}</td><td style="padding:6px 0;text-align:right;font-weight:700;font-family:Menlo,Consolas,monospace;font-size:15px">${escape(value)}</td></tr>`)
+    .join("");
+  const html = layout(title, `<p style="margin:0 0 14px;font-size:15px;line-height:1.6">Hi ${first}, here are the details of your order. Keep this email safe.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eef2f7;border-bottom:1px solid #eef2f7;margin:0 0 16px">${rows}</table>
+<p style="margin:0;font-size:13px;color:#64748b">You can also see this anytime in your EscriptPay history: <a href="${escape(appUrl)}/history">${escape(appUrl.replace(/^https?:\/\//, ""))}/history</a></p>`);
+  const text = `Hi ${String(name || "").split(" ")[0] || "there"},\n\n${title}\n\n${lines.map(([l, v]) => `${l}: ${v}`).join("\n")}\n\nSee it anytime in your EscriptPay history: ${appUrl}/history`;
+  return { subject: title, html, text };
+};
+
+module.exports = { verificationCode, passwordReset, billDelivered };

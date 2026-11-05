@@ -327,3 +327,22 @@ test("still can't connect after the quick retries: fails at once as a network er
   assert.equal(doc().failureReason, "network_error");
   assert.equal(doc().purchaseErrorCode, "not_sent");
 });
+
+test("a delivered electricity/exam order stores the token and PINs and triggers the delivery email once", async () => {
+  const { createFakeTransactionModel: fake } = require("../helpers/fakeTransactionModel");
+  const Transaction = fake([baseTx({ type: "exam", paymentStatus: "successful" })]);
+  const emailed = [];
+  const lifecycle = makeLifecycle({
+    Transaction,
+    Plan: null,
+    payment: {},
+    vtu: { name: "fake", simulated: false, purchase: async () => ({ outcome: "delivered", reference: "S1", token: "1111-2222", cardDetails: "Serial No:WRN1, pin: 999" }) },
+    config: paystackConfig,
+    onDelivered: (tx) => emailed.push(tx.transactionId),
+  });
+  const r = await lifecycle.fulfillOrder(Transaction.docs[0]);
+  assert.equal(r.outcome, "delivered");
+  assert.equal(Transaction.docs[0].token, "1111-2222");
+  assert.deepEqual(Transaction.docs[0].pins, [{ serial: "WRN1", pin: "999" }]);
+  assert.equal(emailed.length, 1);
+});

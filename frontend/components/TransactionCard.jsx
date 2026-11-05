@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wifi } from "lucide-react";
+import { typeMeta } from "@/lib/bills";
 import { formatNaira, formatDateTime, maskPhone } from "@/lib/format";
 
 const STATUS_STYLES = {
@@ -19,6 +19,7 @@ export default function TransactionCard({ transaction, demo = false }) {
   const status = transaction.status || "pending";
   const date = transaction.createdAt || transaction.date;
   const href = `/history/${transaction._id}`;
+  const TypeIcon = typeMeta(transaction.type).icon;
 
   return (
     <Link
@@ -27,7 +28,7 @@ export default function TransactionCard({ transaction, demo = false }) {
       className="card card-hover focus-ring flex items-center gap-4 p-4 animate-fade-up"
     >
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-100 to-purple-lite-100 text-cyan-600">
-        <Wifi size={20} aria-hidden="true" />
+        <TypeIcon size={20} aria-hidden="true" />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -40,7 +41,7 @@ export default function TransactionCard({ transaction, demo = false }) {
           )}
         </div>
         <p className="truncate text-sm text-ink-500">
-          {transaction.plan} · {maskPhone(transaction.phone)}
+          {transaction.plan} · {transaction.account || maskPhone(transaction.phone)}
         </p>
       </div>
 

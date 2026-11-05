@@ -33,6 +33,20 @@ const costFor = (spec) => {
   return {};
 };
 
+// Extra fields stored on cable/electricity/exam orders.
+const billFields = (spec) => {
+  if (!spec.bill) return {};
+  const b = spec.bill;
+  return {
+    account: b.account || undefined,
+    customerName: b.customerName || undefined,
+    serviceCode: b.serviceCode,
+    packageCode: b.packageCode || undefined,
+    meterType: b.meterType || undefined,
+    faceAmountKobo: b.faceAmountKobo || undefined,
+  };
+};
+
 const AIRTIME_NETWORKS = ["MTN", "Airtel", "Glo", "9mobile"];
 const AIRTIME_MIN = 100;
 const AIRTIME_MAX = 10000;
@@ -91,6 +105,9 @@ const startOrder = async (req, res, spec) => {
 
   const checkout = payment.requiresCheckout === true;
   const transactionId = generateTransactionId();
+  // Bills paid by card/bank: the customer covers Paystack's fee (wallet
+  // payments have no fee). Data/airtime keep the price as is.
+  const card = checkout && spec.bill ? require("../services/bills").cardTotalKobo(toKobo(spec.amount)) : null;
 
   let created;
   try {
@@ -109,10 +126,12 @@ const startOrder = async (req, res, spec) => {
       mode: config.paymentMode,
       paymentProvider: config.paymentProvider,
       paymentReference: checkout ? transactionId : undefined,
-      paymentAmountKobo: toKobo(spec.amount),
+      paymentAmountKobo: card ? card.chargeKobo : toKobo(spec.amount),
+      feeKobo: card ? card.feeKobo : undefined,
       currency: config.currency,
       clientReference,
       ...costFor(spec),
+      ...billFields(spec),
     });
   } catch (error) {
     // Two identical requests raced past the lookup: return the winner.
@@ -222,6 +241,7 @@ const startWalletOrder = async (req, res, spec, clientReference) => {
       paidAt: new Date(),
       clientReference,
       ...costFor(spec),
+      ...billFields(spec),
     });
   } catch (error) {
     await wallet.reverseDebit(req.userId, amountKobo);
@@ -252,6 +272,116 @@ const startWalletOrder = async (req, res, spec, clientReference) => {
   });
 };
 
+// POST /api/transactions/bill
+//   { service: "cable", provider: "dstv", packageCode, account, phone, payWith, clientReference }
+//   { service: "electricity", provider: "07", meterType: "01"|"02", amount, account, phone, … }
+//   { service: "exam", provider: "waec"|"jamb", packageCode, account (JAMB profile), phone, … }
+// Everything is re-checked here: package and price come from the supplier's
+// live list, and the smartcard/meter/profile is verified with the supplier
+// before any money moves.
+const createBillTransaction = async (req, res) => {
+  const bills = require("../services/bills");
+  const b = req.body || {};
+  const service = String(b.service || "");
+  const provider = String(b.provider || "").trim().toLowerCase();
+  const account = String(b.account || "").replace(/\s/g, "");
+  const phoneCheck = validateNigerianPhone(b.phone);
+  if (!phoneCheck.valid) return res.status(400).json({ success: false, message: phoneCheck.message });
+
+  const fail = (status, message, code) => res.status(status).json({ success: false, message, ...(code ? { code } : {}) });
+  const verify = async (args) => {
+    try {
+      return await vtu.verifyAccount(args);
+    } catch (error) {
+      logEvent("bill.verify_error", { service, code: error && error.code });
+      return null;
+    }
+  };
+
+  let spec;
+  try {
+    if (service === "cable") {
+      const catalog = await bills.cableCatalog();
+      const group = catalog.find((g) => g.id === provider);
+      const pkg = group && group.packages.find((p) => p.code === String(b.packageCode || ""));
+      if (!group || !pkg) return fail(400, "Choose a package from the list.");
+      if (!/^\d{6,16}$/.test(account)) return fail(400, "Enter a valid smartcard / IUC number.");
+      const v = await verify({ service, provider, account });
+      if (!v) return fail(502, "We couldn't check that smartcard right now. You have not been charged. Please try again.");
+      if (!v.valid) return fail(400, "That smartcard / IUC number wasn't found. Please check it and try again.", "invalid_account");
+      spec = {
+        type: "cable",
+        network: group.name,
+        planName: pkg.name,
+        amount: pkg.price,
+        costPrice: pkg.cost,
+        bill: { serviceCode: group.id, packageCode: pkg.code, account, customerName: v.name, faceAmountKobo: Math.round(pkg.networkPrice * 100) },
+      };
+    } else if (service === "electricity") {
+      const disco = bills.DISCOS.find((d) => d.code === provider);
+      const meterType = String(b.meterType || "");
+      const amount = Number(b.amount);
+      if (!disco) return fail(400, "Choose your electricity company.");
+      if (!["01", "02"].includes(meterType)) return fail(400, "Choose prepaid or postpaid.");
+      if (!Number.isInteger(amount) || amount < bills.ELECTRICITY_MIN || amount > bills.ELECTRICITY_MAX) {
+        return fail(400, `Enter an amount between ₦${bills.ELECTRICITY_MIN.toLocaleString("en-NG")} and ₦${bills.ELECTRICITY_MAX.toLocaleString("en-NG")}.`);
+      }
+      if (!/^\d{6,16}$/.test(account)) return fail(400, "Enter a valid meter number.");
+      const v = await verify({ service, provider: disco.code, account, meterType });
+      if (!v) return fail(502, "We couldn't check that meter right now. You have not been charged. Please try again.");
+      if (!v.valid) return fail(400, "That meter number wasn't found for this company and meter type. Please check it.", "invalid_account");
+      spec = {
+        type: "electricity",
+        network: disco.short,
+        planName: `${meterType === "01" ? "Prepaid" : "Postpaid"} · ₦${amount.toLocaleString("en-NG")}`,
+        amount,
+        costPrice: Math.round(amount * bills.ELECTRICITY_COST_FACTOR * 100) / 100,
+        bill: { serviceCode: disco.code, meterType, account, customerName: v.name, faceAmountKobo: amount * 100 },
+      };
+    } else if (service === "exam") {
+      const catalog = await bills.examCatalog();
+      const exam = catalog.find((e) => e.id === provider);
+      if (!exam) return fail(400, "Choose WAEC or JAMB.");
+      if (!exam.packages.length) return fail(400, `${exam.name} PINs aren't available right now. Please check back soon.`, "unavailable");
+      const pkg = exam.packages.find((p) => p.code === String(b.packageCode || "")) || (exam.packages.length === 1 ? exam.packages[0] : null);
+      if (!pkg) return fail(400, "Choose a PIN type.");
+      let customerName;
+      if (exam.id === "jamb") {
+        if (!/^\d{6,16}$/.test(account)) return fail(400, "Enter your JAMB Profile ID.");
+        const v = await verify({ service, provider: "jamb", account });
+        if (!v) return fail(502, "We couldn't check that Profile ID right now. You have not been charged. Please try again.");
+        if (!v.valid) return fail(400, "That JAMB Profile ID wasn't found. Please check it.", "invalid_account");
+        customerName = v.name;
+      }
+      spec = {
+        type: "exam",
+        network: exam.name,
+        planName: pkg.name,
+        amount: pkg.price,
+        costPrice: pkg.cost,
+        bill: { serviceCode: exam.id, packageCode: pkg.code, account: exam.id === "jamb" ? account : undefined, customerName },
+      };
+    } else {
+      return fail(400, "Unknown service.");
+    }
+  } catch (error) {
+    logEvent("bill.catalog_error", { service, message: error && error.message });
+    return fail(502, "This service is temporarily unavailable. You have not been charged. Please try again shortly.");
+  }
+
+  try {
+    return await startOrder(req, res, {
+      ...spec,
+      phone: phoneCheck.normalized,
+      payWith: b.payWith === "wallet" ? "wallet" : "card",
+      clientReference: b.clientReference,
+    });
+  } catch (error) {
+    logEvent("bill.order_error", { service, message: error && error.message });
+    return res.status(500).json({ success: false, message: "Purchase could not be completed. Please try again." });
+  }
+};
+
 // GET /api/transactions — all transactions for the authenticated user.
 // Supports optional query filters (used by the history page):
 //   ?status=pending|successful|failed
@@ -270,7 +400,9 @@ const getUserTransactions = async (req, res) => {
       query.status = status;
     }
 
-    if (type && ["data", "airtime"].includes(type)) {
+    if (type === "bills") {
+      query.type = { $in: ["cable", "electricity", "exam"] };
+    } else if (type && ["data", "airtime", "cable", "electricity", "exam"].includes(type)) {
       query.type = type;
     }
 
@@ -281,7 +413,7 @@ const getUserTransactions = async (req, res) => {
 
     if (typeof q === "string" && q.trim()) {
       const term = new RegExp(escapeRegex(q.trim().slice(0, 64)), "i");
-      query.$or = [{ transactionId: term }, { network: term }, { plan: term }, { phone: term }];
+      query.$or = [{ transactionId: term }, { network: term }, { plan: term }, { phone: term }, { account: term }];
     }
 
     if (from || to) {
@@ -497,6 +629,7 @@ const verifyTransactionPayment = async (req, res) => {
 };
 
 module.exports = {
+  createBillTransaction,
   getUserTransactions,
   getTransactionById,
   createTestTransaction,

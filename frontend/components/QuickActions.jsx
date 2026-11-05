@@ -1,9 +1,12 @@
-import { Wifi, Phone, History, Wallet } from "lucide-react";
+import { Wifi, Phone, History, Wallet, Tv, Zap, GraduationCap } from "lucide-react";
 import Link from "next/link";
 
 const ACTIONS = [
   { href: "/buy-data", label: "Buy data", shortLabel: "Data", description: "Bundles for every network", icon: Wifi, tone: "bg-cyan-500" },
   { href: "/buy-airtime", label: "Buy airtime", shortLabel: "Airtime", description: "Top up any number", icon: Phone, tone: "bg-sky-500" },
+  { href: "/cable-tv", label: "Cable TV", shortLabel: "TV", description: "DStv, GOtv, StarTimes", icon: Tv, tone: "bg-violet-500" },
+  { href: "/electricity", label: "Electricity", shortLabel: "Power", description: "Tokens & postpaid bills", icon: Zap, tone: "bg-amber-500" },
+  { href: "/exam-pins", label: "Exam PINs", shortLabel: "Exams", description: "WAEC & JAMB", icon: GraduationCap, tone: "bg-rose-500" },
   { href: "/wallet?fund=1", label: "Fund wallet", shortLabel: "Fund", description: "Add money in seconds", icon: Wallet, tone: "bg-[#10b981]" },
   {
     href: "/history",

@@ -17,7 +17,7 @@ const forcedOutcome = () => {
   return OUTCOMES.includes(value) ? value : "delivered";
 };
 
-const purchase = async () => {
+const purchase = async ({ type } = {}) => {
   const delay = Number(process.env.TEST_VTU_DELAY_MS ?? 1200);
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -30,6 +30,8 @@ const purchase = async () => {
 
   return {
     outcome,
+    ...(outcome === "delivered" && type === "electricity" ? { token: "1234-5678-9012-3456-7890" } : {}),
+    ...(outcome === "delivered" && type === "exam" ? { cardDetails: "Serial No:WRN000000001, pin: 123456789012" } : {}),
     reference: `VTU-TEST-${crypto.randomBytes(4).toString("hex").toUpperCase()}`,
     simulated: true,
     message: "Test mode: VTU delivery simulated.",
@@ -51,4 +53,18 @@ const purchaseData = async (args) => {
   return { providerStatus, reference: result.reference, delivered: false, message: result.message };
 };
 
-module.exports = { name: "test", simulated: true, purchase, queryStatus, purchaseData };
+// Simulated bill catalog and account checks. Numbers starting with 0000 are
+// "invalid" so the error path can be tried.
+const verifyAccount = async ({ account }) => (/^0000/.test(String(account)) ? { valid: false } : { valid: true, name: "TEST CUSTOMER" });
+
+const getCablePackages = async () => [
+  { provider: "dstv", code: "dstv-padi", name: "DStv Padi", amount: 4400, cost: 4356 },
+  { provider: "dstv", code: "dstv-yanga", name: "DStv Yanga", amount: 6000, cost: 5940 },
+  { provider: "gotv", code: "gotv-smallie", name: "GOtv Smallie - monthly", amount: 1900, cost: 1881 },
+  { provider: "startimes", code: "nova", name: "Nova (Dish) - 1 Month", amount: 2100, cost: 2058 },
+];
+
+const getExamPackages = async (exam) =>
+  exam === "waec" ? [{ code: "waecdirect", name: "WAEC Result Checker PIN", amount: 5350 }] : [];
+
+module.exports = { name: "test", simulated: true, purchase, queryStatus, purchaseData, verifyAccount, getCablePackages, getExamPackages };

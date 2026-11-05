@@ -17,6 +17,8 @@ import { formatDateTime, formatNaira } from "@/lib/format";
 import { statusLabel, describeTransaction, isAwaitingUpdate } from "@/lib/transactions";
 import { isTrustedCheckoutUrl, openCheckout } from "@/lib/checkout";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import BillDeliverables from "@/components/bills/BillDeliverables";
+import { isBill, typeMeta } from "@/lib/bills";
 
 const STATUS_ICONS = {
   successful: CheckCircle2,
@@ -145,7 +147,11 @@ function SuccessContent() {
       : "";
   const isAirtime = transaction.type === "airtime";
   const deliveredLabel = isAirtime ? formatNaira(transaction.amount) : transaction.plan;
-  const buyAgainHref = isAirtime
+  const bill = isBill(transaction);
+  const billHref = { cable: "/cable-tv", electricity: "/electricity", exam: "/exam-pins" }[transaction.type];
+  const buyAgainHref = bill
+    ? billHref
+    : isAirtime
     ? `/buy-airtime?network=${encodeURIComponent(transaction.network)}&amount=${transaction.amount}`
     : `/buy-data?network=${encodeURIComponent(transaction.network)}${
         transaction.planId ? `&plan=${encodeURIComponent(transaction.planId)}` : ""
@@ -161,7 +167,9 @@ function SuccessContent() {
   const details = [
     { label: "Transaction ID", value: transaction.transactionId, mono: true },
     { label: "Network", value: transaction.network },
-    { label: isAirtime ? "Type" : "Plan", value: isAirtime ? "Airtime top-up" : transaction.plan },
+    { label: isAirtime ? "Type" : bill ? typeMeta(transaction.type).short : "Plan", value: isAirtime ? "Airtime top-up" : transaction.plan },
+    ...(transaction.account ? [{ label: transaction.type === "cable" ? "Smartcard" : transaction.type === "electricity" ? "Meter" : "Profile ID", value: transaction.account, mono: true }] : []),
+    ...(transaction.customerName ? [{ label: "Name", value: transaction.customerName }] : []),
     { label: "Phone number", value: transaction.phone },
     { label: "Date", value: formatDateTime(transaction.createdAt) },
     { label: "Status", value: statusLabel(transaction.status), badge: true },
@@ -183,8 +191,9 @@ function SuccessContent() {
               <p className="mt-1 text-sm leading-relaxed text-ink-500">
                 {successful ? (
                   <>
-                    <span className="font-semibold text-ink-800">{deliveredLabel}</span> sent to{" "}
-                    <span className="font-semibold text-ink-800">{transaction.phone}</span>
+                    <span className="font-semibold text-ink-800">{deliveredLabel}</span>{" "}
+                    {bill ? (transaction.type === "exam" ? "is ready below" : "paid for") : "sent to"}{" "}
+                    <span className="font-semibold text-ink-800">{bill ? (transaction.type === "exam" ? "" : transaction.customerName || transaction.account) : transaction.phone}</span>
                   </>
                 ) : (
                   summary.message
@@ -193,7 +202,7 @@ function SuccessContent() {
               {awaiting && transaction.paymentStatus === "successful" && (
                 <div className="mt-3 w-full max-w-xs" role="status">
                   <p className="text-xs font-medium text-ink-500">
-                    Sending to {transaction.phone}… this usually takes a few seconds.
+                    {bill ? "Processing your payment with the provider…" : `Sending to ${transaction.phone}…`} this usually takes a few seconds.
                   </p>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
                     <div className="delivery-bar h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 via-indigo-500 to-sky-400" />
@@ -234,6 +243,8 @@ function SuccessContent() {
           </a>
         )}
       </section>
+
+      {bill && successful && <BillDeliverables transaction={transaction} />}
 
       {/* Details */}
       <section className="card p-5 sm:p-7" aria-labelledby="details-heading">
