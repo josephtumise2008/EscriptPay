@@ -1,4 +1,4 @@
-import { Wifi, Phone, History, Wallet, Tv, Zap, GraduationCap } from "lucide-react";
+import { Wifi, Phone, History, Wallet, Tv, Zap, GraduationCap, LifeBuoy } from "lucide-react";
 import Link from "next/link";
 
 const ACTIONS = [
@@ -16,6 +16,7 @@ const ACTIONS = [
     icon: History,
     tone: "bg-indigo-500",
   },
+  { href: "/#contact", label: "Get help", shortLabel: "Help", description: "Talk to us anytime", icon: LifeBuoy, tone: "bg-slate-500" },
 ];
 
 // The main things people come to do — first on the dashboard, compact on phones.
