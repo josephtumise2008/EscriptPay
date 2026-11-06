@@ -17,7 +17,12 @@ export const platformHint = () => {
   const ua = navigator.userAgent || "";
   const iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
   if (/iPhone|iPad|iPod/.test(ua) || iPadOS) return /CriOS|EdgiOS|FxiOS/.test(ua) ? "ios-other" : "ios";
-  if (/Android/.test(ua)) return "android";
+  if (/Android/.test(ua)) {
+    // In-app browsers (Instagram, Facebook, TikTok, Snapchat, Opera Mini,
+    // Phoenix…) can't install web apps: send people to Chrome first.
+    if (/FBAN|FBAV|FB_IAB|Instagram|Musical_ly|TikTok|Snapchat|Line\/|OPR\/.*Mini|Opera Mini|PHX\/|Phoenix|; wv\)/i.test(ua)) return "android-inapp";
+    return "android";
+  }
   if (/Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua)) return "mac-safari";
   return null;
 };

@@ -25,10 +25,27 @@ const STEPS = {
   },
   android: {
     steps: [
-      { icon: MoreVertical, text: <>Tap your browser&apos;s <b>menu</b> (⋮).</> },
-      { icon: PlusSquare, text: <>Tap <b>Install app</b> or <b>Add to Home screen</b>.</> },
-      { icon: Smartphone, text: <>Confirm. EscriptPay now opens from your home screen like an app.</> },
+      { icon: MoreVertical, text: <>Open <b>escriptpay.com</b> in <b>Chrome</b> and tap the <b>menu</b> (⋮) at the top right.</> },
+      { icon: PlusSquare, text: <>Tap <b>Install app</b> (or <b>Add to Home screen</b>, then <b>Install</b>).</> },
+      { icon: Smartphone, text: <>Wait a few seconds. EscriptPay appears in your <b>app list</b>; long-press it to put it on your home screen.</> },
     ],
+    note: "Not showing? Swipe up to open all apps and search \"EscriptPay\". On Tecno, Infinix, itel, Xiaomi and some others, allow it once: Settings › Apps › Chrome › Permissions › Home screen shortcuts › Allow, then try again.",
+  },
+  "android-inapp": {
+    steps: [
+      { icon: MoreVertical, text: <>This browser can&apos;t install apps. Tap the <b>menu</b> (⋮ or ⋯) and choose <b>Open in Chrome</b> (or <b>Open in browser</b>).</> },
+      { icon: Compass, text: <>In <b>Chrome</b>, tap the menu (⋮) and choose <b>Install app</b>.</> },
+      { icon: Smartphone, text: <>EscriptPay appears in your <b>app list</b>; long-press it to add it to your home screen.</> },
+    ],
+    note: "Opened the link from Instagram, Facebook or TikTok? Those apps use their own browser. Copy escriptpay.com and paste it into Chrome.",
+  },
+  "android-installed": {
+    steps: [
+      { icon: Download, text: <>EscriptPay is installing. It takes a few seconds.</> },
+      { icon: Smartphone, text: <>Find it in your <b>app list</b> (swipe up) or on your home screen.</> },
+      { icon: PlusSquare, text: <>Not on your home screen? <b>Long-press</b> the EscriptPay icon in the app list and drag it there.</> },
+    ],
+    note: "Still nothing after a minute? On Tecno, Infinix, itel and Xiaomi phones: Settings › Apps › Chrome › Permissions › Home screen shortcuts › Allow, then install again.",
   },
   "mac-safari": {
     steps: [
@@ -56,7 +73,7 @@ function InstructionsSheet({ hint, onClose }) {
           <div className="flex items-center gap-3">
             <Logo size={44} withWordmark={false} />
             <div>
-              <h2 id="install-title" className="font-display text-lg font-extrabold tracking-tight text-ink-900">Install EscriptPay</h2>
+              <h2 id="install-title" className="font-display text-lg font-extrabold tracking-tight text-ink-900">{hint === "android-installed" ? "Installing EscriptPay" : "Install EscriptPay"}</h2>
               <p className="text-sm text-ink-500">Buy data and airtime in one tap from your home screen.</p>
             </div>
           </div>
@@ -104,8 +121,12 @@ export default function InstallApp({ variant = "row", rowClass = "", iconBox = "
   // The instructions sheet lives in <InstallSheetHost /> (root layout) so it
   // stays open even when the menu that opened it closes.
   const start = async () => {
-    if (canPrompt) await install();
-    else window.dispatchEvent(new CustomEvent("ep-install-steps", { detail: hint }));
+    if (canPrompt) {
+      const accepted = await install();
+      // Android installs in the background and often puts the icon only in
+      // the app list: tell people where to find it.
+      if (accepted && hint === "android") window.dispatchEvent(new CustomEvent("ep-install-steps", { detail: "android-installed" }));
+    } else window.dispatchEvent(new CustomEvent("ep-install-steps", { detail: hint }));
     onDone?.();
   };
 
