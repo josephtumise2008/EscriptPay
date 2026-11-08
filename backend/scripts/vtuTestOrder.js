@@ -3,6 +3,7 @@
 //
 //   npm run vtu:test-order -- --network MTN --amount 50 --phone 08012345678
 //   npm run vtu:test-order -- --network MTN --plan 1000.0 --phone 08012345678
+//   add --max 3000 to allow an order above the default ₦1,000 cap (up to ₦20,000)
 //     (--plan is the ClubKonnect plan ID; see npm run vtu:plans -- --network MTN)
 //
 // You must type YES to send it. The order is not recorded in EscriptPay.
@@ -21,8 +22,11 @@ const run = async () => {
   const type = planId ? "data" : "airtime";
   const amount = Number(option("amount"));
   const phoneCheck = validateNigerianPhone(option("phone") || "");
+  // Spending cap per order: ₦1,000 unless --max raises it (never above ₦20,000).
+  const max = option("max") ? Number(option("max")) : 1000;
+  if (!Number.isFinite(max) || max < 50 || max > 20000) throw new Error("--max must be a number from 50 to 20000.");
   if (!["MTN", "Airtel", "Glo", "9mobile"].includes(network)) throw new Error("--network must be MTN, Airtel, Glo or 9mobile.");
-  if (type === "airtime" && (!Number.isInteger(amount) || amount < 50 || amount > 1000)) throw new Error("--amount must be a whole number from 50 to 1000 for a test.");
+  if (type === "airtime" && (!Number.isInteger(amount) || amount < 50 || amount > max)) throw new Error(`--amount must be a whole number from 50 to ${max} (raise the cap with --max).`);
   if (!phoneCheck.valid) throw new Error(phoneCheck.message);
   if (!process.stdin.isTTY) throw new Error("Run this in a terminal so you can confirm.");
 
@@ -31,7 +35,7 @@ const run = async () => {
     const plans = await ck.getDataPlans();
     plan = plans.find((p) => p.network === network && p.providerPlanId === planId);
     if (!plan) throw new Error(`No ${network} plan with ID ${planId}. List them with: npm run vtu:plans -- --network ${network}`);
-    if (plan.cost > 1000) throw new Error(`That plan costs ₦${plan.cost}; tests are limited to ₦1,000.`);
+    if (plan.cost > max) throw new Error(`That plan costs ₦${plan.cost}; the cap is ₦${max}. Add --max ${Math.ceil(plan.cost)} to allow it.`);
   }
 
   const { balance } = await ck.getBalance();
