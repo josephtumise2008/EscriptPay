@@ -13,6 +13,7 @@ import { PackageOpen, AlertCircle } from "lucide-react";
 import { formatNaira } from "@/lib/format";
 import PaymentMethodPicker, { usePayWith } from "@/components/PaymentMethodPicker";
 import { useWallet } from "@/lib/wallet-context";
+import NumberPicker, { useAutoNetwork, NetworkHint } from "@/components/NumberPicker";
 
 const makeReference = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -33,6 +34,13 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
   const clientRef = useRef(null);
   const pay = usePayWith(selectedPlan ? selectedPlan.price : NaN);
   const { applyBalance, refresh: refreshWallet } = useWallet();
+
+  // Switching network drops a plan from the other network.
+  const applyNetwork = (n) => {
+    setNetwork(n);
+    setSelectedPlan((p) => (p && p.network !== n ? null : p));
+  };
+  const { detected, chooseManually, pickNumber } = useAutoNetwork(phone, applyNetwork);
 
   // Returning from Paystack with the browser Back button can restore this
   // page from cache with the button still "processing"; re-enable it.
@@ -128,10 +136,7 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
           </h2>
           <NetworkSelector
             selected={network}
-            onSelect={(n) => {
-              setNetwork(n);
-              if (selectedPlan && selectedPlan.network !== n) setSelectedPlan(null);
-            }}
+            onSelect={chooseManually}
           />
         </section>
 
@@ -165,10 +170,26 @@ export default function BuyForm({ initialNetwork = "", initialPlanId = "" }) {
               {phoneError}
             </p>
           ) : (
-            <p id="phone-hint" className="mt-1.5 text-xs text-ink-400">
-              The number that will receive the data, e.g. 08012345678.
-            </p>
+            <>
+              {detected ? (
+                <NetworkHint id="phone-hint" detected={detected} network={network} />
+              ) : (
+                <p id="phone-hint" className="mt-1.5 text-xs text-ink-400">
+                  The number that will receive the data, e.g. 08012345678.
+                </p>
+              )}
+            </>
           )}
+          <NumberPicker
+            phone={phone}
+            network={network}
+            onPick={(value, n) => {
+              setPhone(value);
+              setPhoneError("");
+              setSubmitError("");
+              pickNumber(value, n);
+            }}
+          />
         </section>
 
         <section aria-labelledby="pay-heading">

@@ -198,6 +198,22 @@ export const createAirtimeTransaction = async ({ network, amount, phone, clientR
   return data;
 };
 
+// Saved and recent numbers for quick top-ups.
+export const getNumbers = async () => {
+  const { data } = await api.get("/api/numbers");
+  return { saved: data.saved || [], recent: data.recent || [] };
+};
+
+export const saveNumber = async ({ phone, label, network }) => {
+  const { data } = await api.post("/api/numbers", { phone, label, network });
+  return data.saved || [];
+};
+
+export const removeNumber = async (phone) => {
+  const { data } = await api.delete(`/api/numbers/${encodeURIComponent(phone)}`);
+  return data.saved || [];
+};
+
 // Referrals ("Invite & earn").
 export const getReferrals = async () => {
   const { data } = await api.get("/api/referrals");

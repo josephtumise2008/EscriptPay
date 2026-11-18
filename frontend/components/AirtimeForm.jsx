@@ -10,6 +10,7 @@ import MobileCheckoutBar from "@/components/MobileCheckoutBar";
 import { formatNaira } from "@/lib/format";
 import PaymentMethodPicker, { usePayWith } from "@/components/PaymentMethodPicker";
 import { useWallet } from "@/lib/wallet-context";
+import NumberPicker, { useAutoNetwork, NetworkHint } from "@/components/NumberPicker";
 import { Smartphone, Banknote, AlertCircle, Wifi, Wallet, CreditCard } from "lucide-react";
 
 const PRESET_AMOUNTS = [100, 200, 500, 1000, 2000, 5000];
@@ -43,6 +44,7 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
   const currentAmount = customAmount ? Number(customAmount) : amount;
   const pay = usePayWith(currentAmount);
   const { applyBalance, refresh: refreshWallet } = useWallet();
+  const { detected, chooseManually, pickNumber } = useAutoNetwork(phone, setNetwork);
 
   // Returning from Paystack with the browser Back button can restore this
   // page from cache with the button still "processing"; re-enable it.
@@ -142,7 +144,7 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
             <span className={stepNumber} aria-hidden="true">1</span>
             Network
           </h2>
-          <NetworkSelector selected={network} onSelect={setNetwork} />
+          <NetworkSelector selected={network} onSelect={chooseManually} />
         </section>
 
         <section aria-labelledby="airtime-phone-heading">
@@ -175,10 +177,26 @@ export default function AirtimeForm({ initialNetwork = "", initialAmount = "" })
               {phoneError}
             </p>
           ) : (
-            <p id="airtime-phone-hint" className="mt-1.5 text-xs text-ink-400">
-              The number to recharge, e.g. 08012345678.
-            </p>
+            <>
+              {detected ? (
+                <NetworkHint id="airtime-phone-hint" detected={detected} network={network} />
+              ) : (
+                <p id="airtime-phone-hint" className="mt-1.5 text-xs text-ink-400">
+                  The number to recharge, e.g. 08012345678.
+                </p>
+              )}
+            </>
           )}
+          <NumberPicker
+            phone={phone}
+            network={network}
+            onPick={(value, n) => {
+              setPhone(value);
+              setPhoneError("");
+              setSubmitError("");
+              pickNumber(value, n);
+            }}
+          />
         </section>
 
         <section aria-labelledby="airtime-amount-heading">

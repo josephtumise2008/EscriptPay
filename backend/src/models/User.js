@@ -50,6 +50,21 @@ const userSchema = new mongoose.Schema(
       test: { type: Number, default: 0, min: 0 },
       live: { type: Number, default: 0, min: 0 },
     },
+    // Numbers the user saved for quick top-ups (max 20), e.g. "Mum".
+    savedNumbers: {
+      type: [
+        new mongoose.Schema(
+          {
+            phone: { type: String, required: true, trim: true },
+            label: { type: String, trim: true, maxlength: 30, default: "" },
+            network: { type: String, enum: ["MTN", "Airtel", "Glo", "9mobile", ""], default: "" },
+            savedAt: { type: Date, default: Date.now },
+          },
+          { _id: false }
+        ),
+      ],
+      default: undefined,
+    },
     // Referrals: this user's own invite code, and who invited them (if anyone).
     referralCode: { type: String, trim: true, uppercase: true },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },

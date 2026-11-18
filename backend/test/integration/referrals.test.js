@@ -117,3 +117,41 @@ test("unknown codes and your own phone number don't count, and never block signu
   const u = await User.findOne({ email: "self-invite@example.com" }).lean();
   assert.equal(u.referredBy, undefined);
 });
+
+// Saved and recent numbers live alongside the account; quick test here
+// keeps the integration suite small.
+test("saved numbers: add, rename, list with recent ones, remove", { skip }, async () => {
+  const anon = createClient(srv.baseUrl);
+  assert.equal((await anon.get("/api/numbers")).status, 401);
+
+  const c = await signup("numbers@example.com");
+  assert.equal((await c.post("/api/numbers", { phone: "12345" })).status, 400);
+
+  let r = await c.post("/api/numbers", { phone: "+2348031112222", label: "Mum <3", network: "MTN" });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.saved, [{ phone: "08031112222", label: "Mum 3", network: "MTN" }]);
+
+  // Same number again renames instead of duplicating.
+  r = await c.post("/api/numbers", { phone: "0803 111 2222", label: "Mummy" });
+  assert.deepEqual(r.body.saved.map((n) => [n.phone, n.label]), [["08031112222", "Mummy"]]);
+
+  // A number used for a purchase shows up as recent (saved ones don't repeat there).
+  await c.post("/api/wallet/fund", { amount: 1000 });
+  await c.post("/api/transactions/airtime", { network: "Glo", amount: 100, phone: "08051234567", payWith: "wallet" });
+  await c.post("/api/transactions/airtime", { network: "MTN", amount: 100, phone: "08031112222", payWith: "wallet" });
+  const list = (await c.get("/api/numbers")).body;
+  assert.deepEqual(list.recent.map((n) => [n.phone, n.network]), [["08051234567", "Glo"]]);
+  assert.equal(list.saved.length, 1);
+
+  // Another user never sees these.
+  const other = await signup("numbers-other@example.com");
+  const theirs = (await other.get("/api/numbers")).body;
+  assert.deepEqual(theirs, { success: true, saved: [], recent: [] });
+
+  assert.equal((await anon.del("/api/numbers/08031112222")).status, 401);
+  const del = await c.del("/api/numbers/08031112222");
+  assert.equal(del.status, 200);
+  assert.deepEqual(del.body.saved, []);
+  // Now that it isn't saved, it appears under recent.
+  assert.deepEqual((await c.get("/api/numbers")).body.recent.map((n) => n.phone), ["08031112222", "08051234567"]);
+});

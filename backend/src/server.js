@@ -36,6 +36,7 @@ const vtuRoutes = require("./routes/vtuRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const cronRoutes = require("./routes/cronRoutes");
 const referralRoutes = require("./routes/referralRoutes");
+const numbersRoutes = require("./routes/numbersRoutes");
 const billRoutes = require("./routes/billRoutes");
 const { rateLimit } = require("./middleware/rateLimit");
 // Loading the service registry validates PAYMENT_SERVICE / VTU_SERVICE and
@@ -145,6 +146,7 @@ app.use("/api/admin", rateLimit({ windowMs: 60 * 1000, max: 60, namespace: "admi
 app.use("/api/bills", rateLimit({ windowMs: 60 * 1000, max: 40, namespace: "bills" }), billRoutes);
 app.use("/api/cron", rateLimit({ windowMs: 60 * 1000, max: 10, namespace: "cron" }), cronRoutes);
 app.use("/api/referrals", rateLimit({ windowMs: 60 * 1000, max: 30, namespace: "referrals" }), referralRoutes);
+app.use("/api/numbers", rateLimit({ windowMs: 60 * 1000, max: 60, namespace: "numbers" }), numbersRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found." });
