@@ -9,13 +9,18 @@ import { formatNaira } from "@/lib/format";
 import { MASKED } from "@/components/WalletBalance";
 
 // Chooses wallet vs. direct payment. `value` is "wallet" | "card".
+// - The wallet is used whenever its balance covers the order.
+// - When it doesn't, this switches to card/transfer/USSD on its own (and back
+//   to the wallet once the amount fits again, e.g. a cheaper plan).
+// - A customer who picks card on purpose keeps card.
 export function usePayWith(amount) {
   const { balance } = useWallet();
   const [choice, setChoice] = useState(null);
-  const enough = balance !== null && Number.isFinite(amount) && amount > 0 && balance >= amount;
-  // Until the customer picks, prefer the wallet whenever it can cover the order.
-  const value = choice || (enough ? "wallet" : "card");
-  return { value, setValue: setChoice, enough, balance };
+  const known = balance !== null && Number.isFinite(amount) && amount > 0;
+  const enough = known && balance >= amount;
+  const short = known && balance < amount;
+  const value = short ? "card" : choice || (enough ? "wallet" : "card");
+  return { value, setValue: setChoice, enough, short, balance };
 }
 
 let cachedProvider = null;
@@ -42,7 +47,12 @@ export default function PaymentMethodPicker({ amount, value, onChange }) {
       id: "wallet",
       icon: Wallet,
       title: "Wallet",
-      detail: balance === null ? "Loading balance…" : `Balance ${hidden ? MASKED : formatNaira(balance)}`,
+      detail:
+        balance === null
+          ? "Loading balance…"
+          : short
+            ? `Not enough · ${hidden ? MASKED : formatNaira(balance)}`
+            : `Balance ${hidden ? MASKED : formatNaira(balance)}`,
     },
     {
       id: "card",
@@ -57,17 +67,21 @@ export default function PaymentMethodPicker({ amount, value, onChange }) {
       <div role="radiogroup" aria-label="Payment method" className="grid grid-cols-2 gap-2.5 sm:gap-3">
         {options.map((option) => {
           const selected = value === option.id;
+          const blocked = option.id === "wallet" && short;
           return (
             <button
               key={option.id}
               type="button"
               role="radio"
               aria-checked={selected}
-              onClick={() => onChange(option.id)}
-              className={`focus-ring press relative flex items-start gap-3 rounded-2xl border bg-white p-3.5 text-left ${
-                selected
-                  ? "border-cyan-400 bg-cyan-50 shadow-[0_0_0_1px_var(--color-cyan-400)]"
-                  : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+              aria-disabled={blocked ? "true" : undefined}
+              onClick={() => !blocked && onChange(option.id)}
+              className={`focus-ring relative flex items-start gap-3 rounded-2xl border bg-white p-3.5 text-left ${
+                blocked
+                  ? "cursor-not-allowed border-slate-200 opacity-60"
+                  : selected
+                    ? "press border-cyan-400 bg-cyan-50 shadow-[0_0_0_1px_var(--color-cyan-400)]"
+                    : "press border-slate-200 hover:border-slate-300 hover:bg-slate-50"
               }`}
             >
               <span
@@ -94,12 +108,14 @@ export default function PaymentMethodPicker({ amount, value, onChange }) {
         })}
       </div>
 
-      {value === "wallet" && short && (
-        <p className="mt-2.5 flex flex-wrap items-center gap-x-1.5 text-xs font-medium text-amber-700">
-          Your balance is {formatNaira(amount - balance)} short for this order.
+      {short && (
+        <p className="mt-2.5 text-xs font-medium text-amber-700">
+          Your wallet is {hidden ? "" : `${formatNaira(amount - balance)} `}short for this, so you&apos;ll pay by{" "}
+          {provider === "paystack" ? "card, transfer or USSD" : "direct payment"}.{" "}
           <Link href="/wallet?fund=1" className="font-bold text-cyan-700 underline underline-offset-2 hover:text-cyan-800">
             Fund wallet
-          </Link>
+          </Link>{" "}
+          to use your balance instead.
         </p>
       )}
     </div>
