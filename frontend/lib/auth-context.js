@@ -56,6 +56,7 @@ export function AuthProvider({ children }) {
         email: payload.email,
         phone: payload.phone,
         password: payload.password,
+        ...(payload.referralCode ? { referralCode: payload.referralCode } : {}),
       });
       setUser(newUser);
       return { user: newUser };

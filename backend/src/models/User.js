@@ -50,6 +50,9 @@ const userSchema = new mongoose.Schema(
       test: { type: Number, default: 0, min: 0 },
       live: { type: Number, default: 0, min: 0 },
     },
+    // Referrals: this user's own invite code, and who invited them (if anyone).
+    referralCode: { type: String, trim: true, uppercase: true },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
     // Email verification. The 6-digit code is stored only as a hash.
     emailVerified: {
       type: Boolean,
@@ -112,6 +115,8 @@ userSchema.methods.toJSON = function toJSON() {
   if (obj.savedCard) delete obj.savedCard.authorizationCode;
   return obj;
 };
+
+userSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
 
 const User = mongoose.model("User", userSchema);
 

@@ -179,13 +179,18 @@ export default function AdminPage() {
         <>
           <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
             <div className="col-span-2 lg:col-span-1">
-              <Kpi icon={TrendingUp} label="Profit" value={formatNaira(t.profit)} sub="After supplier cost and card fees" highlight />
+              <Kpi icon={TrendingUp} label="Profit" value={formatNaira(t.profit)} sub={t.referrals > 0 ? "After supplier cost, card fees and referral rewards" : "After supplier cost and card fees"} highlight />
             </div>
             <Kpi icon={ShoppingBag} label="Sales" value={formatNaira(t.sales)} sub={`${t.orders} delivered orders`} />
             <Kpi icon={Truck} label="Supplier cost" value={formatNaira(t.cost)} sub="Paid to ClubKonnect" />
             <Kpi icon={CreditCard} label="Card fees" value={formatNaira(t.fees)} sub="Paystack fees you paid" />
             <Kpi icon={ShoppingBag} label="Mix" value={`${t.data} / ${t.airtime}`} sub="Data / airtime orders" />
           </section>
+          {t.referrals > 0 && (
+            <p className="text-xs text-ink-500">
+              Referral rewards: {formatNaira(t.referrals)} paid to {t.referralCount} inviter{t.referralCount === 1 ? "" : "s"} (already taken off profit).
+            </p>
+          )}
           {t.unknownCost > 0 && (
             <p className="text-xs text-amber-700">
               {t.unknownCost} order(s) have no recorded cost yet (bought before costs were tracked), so they count as ₦0 profit.

@@ -51,6 +51,7 @@ const LABELS = [
   [/^\/electricity$/, "Electricity"],
   [/^\/exam-pins$/, "Exam PINs"],
   [/^\/history$/, "Transactions"],
+  [/^\/refer$/, "Invite & earn"],
   [/^\/history\/.+/, "Receipt"],
   [/^\/success$/, "Order status"],
   [/^\/profile$/, "Profile"],

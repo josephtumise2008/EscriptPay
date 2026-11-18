@@ -3,14 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, Gift } from "lucide-react";
 import AuthLayout, { Field } from "@/components/AuthLayout";
 import { PrimaryButton } from "@/components/ui/Buttons";
 import BackgroundGradient from "@/components/BackgroundGradient";
 import { useAuth } from "@/lib/auth-context";
 import { validateNigerianPhone } from "@/lib/validators";
 
-const initial = { fullName: "", email: "", phone: "", password: "", confirm: "" };
+const initial = { fullName: "", email: "", phone: "", password: "", confirm: "", referralCode: "" };
+
+// Invite links look like /signup?ref=AB3K9Q. The code is remembered for a few
+// days so it still counts if the friend wanders off and comes back to sign up.
+const REF_KEY = "escriptpay.ref";
+const REF_DAYS = 7;
+const cleanCode = (v) => String(v || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+const readStoredRef = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(REF_KEY) || "null");
+    return saved && saved.code && Date.now() - saved.at < REF_DAYS * 864e5 ? saved.code : "";
+  } catch {
+    return "";
+  }
+};
 
 export default function SignupPage() {
   const router = useRouter();
@@ -21,6 +35,22 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [fromLink, setFromLink] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+
+  useEffect(() => {
+    const fromUrl = cleanCode(new URLSearchParams(window.location.search).get("ref"));
+    if (fromUrl) {
+      try {
+        localStorage.setItem(REF_KEY, JSON.stringify({ code: fromUrl, at: Date.now() }));
+      } catch {}
+    }
+    const code = fromUrl || readStoredRef();
+    if (code) {
+      setValues((v) => ({ ...v, referralCode: code }));
+      setFromLink(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (user) router.replace("/dashboard");
@@ -54,13 +84,16 @@ export default function SignupPage() {
 
     setSubmitting(true);
     setSubmitError("");
-    const { error } = await register(values);
+    const { error } = await register({ ...values, referralCode: cleanCode(values.referralCode) });
     setSubmitting(false);
 
     if (error) {
       setSubmitError(error);
       return;
     }
+    try {
+      localStorage.removeItem(REF_KEY);
+    } catch {}
     router.replace("/dashboard");
   };
 
@@ -164,6 +197,41 @@ export default function SignupPage() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+
+          {fromLink && !showInvite ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
+              <span className="flex items-center gap-2 font-medium">
+                <Gift size={16} aria-hidden="true" />
+                Invited by a friend · <span className="font-bold tracking-wider">{values.referralCode}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowInvite(true)}
+                className="focus-ring rounded-md text-xs font-semibold text-violet-600 hover:text-violet-800"
+              >
+                Change
+              </button>
+            </div>
+          ) : showInvite ? (
+            <Field
+              id="referralCode"
+              label="Invite code (optional)"
+              value={values.referralCode}
+              onChange={(e) => setValues((v) => ({ ...v, referralCode: cleanCode(e.target.value) }))}
+              placeholder="e.g. AB3K9Q"
+              autoComplete="off"
+              hint="From the friend who told you about EscriptPay."
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowInvite(true)}
+              className="focus-ring flex items-center gap-1.5 rounded-md text-sm font-semibold text-cyan-600 hover:text-cyan-700"
+            >
+              <Gift size={15} aria-hidden="true" />
+              Have an invite code?
+            </button>
+          )}
 
           <PrimaryButton type="submit" loading={submitting} className="w-full" disabled={submitting}>
             {submitting ? "Creating account…" : "Create account"}

@@ -30,6 +30,9 @@ const createWalletService = ({
   config,
   generateReference,
   logEvent = () => {},
+  // Called after a top-up is credited (referral rewards). Never allowed to
+  // fail or slow down the top-up itself.
+  onFunded = null,
 }) => {
   const mode = config.paymentMode;
   const field = `walletBalances.${mode}`;
@@ -96,6 +99,13 @@ const createWalletService = ({
       AFTER
     );
     logEvent("wallet.funded", { reference: claimed.reference, source });
+    if (onFunded) {
+      try {
+        await onFunded({ userId: claimed.user, amountKobo: claimed.amountKobo, mode: claimed.mode, currency: claimed.currency });
+      } catch (error) {
+        logEvent("referral.reward_failed", { reference: claimed.reference, message: error && error.message });
+      }
+    }
     return { outcome: "credited", entry: credited, balanceKobo: balance };
   };
 

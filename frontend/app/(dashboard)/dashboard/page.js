@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, Plus, Wallet, ChevronRight } from "lucide-react";
+import { ShoppingBag, Plus, Wallet, ChevronRight, Gift } from "lucide-react";
 import { HideBalanceButton, BalanceAmount } from "@/components/WalletBalance";
 import SummaryCard from "@/components/SummaryCard";
 import QuickActions from "@/components/QuickActions";
@@ -145,6 +145,20 @@ export default function DashboardPage() {
         </h2>
         <QuickActions />
       </section>
+
+      <Link
+        href="/refer"
+        className="card focus-ring press group flex items-center gap-3.5 p-4 hover:border-slate-300 hover:shadow-[var(--shadow-card-hover)] sm:p-5"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 brand-contrast">
+          <Gift size={20} aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-sm font-bold text-ink-900 sm:text-base">Invite friends, earn ₦100 each</span>
+          <span className="block text-xs text-ink-500 sm:text-sm">You get paid when they add ₦500 or more to their wallet.</span>
+        </span>
+        <ChevronRight size={18} className="shrink-0 text-ink-400 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+      </Link>
 
       <section aria-label="Account summary">
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">

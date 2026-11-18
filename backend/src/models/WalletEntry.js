@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 //   funding  (credit) — money added through the payment provider
 //   purchase (debit)  — an order paid from the wallet
 //   refund   (credit) — a wallet-paid order the supplier definitively failed
+//   referral (credit) — reward for inviting a friend who topped up
 //
 // Amounts are integers in kobo. The balance itself lives on the User
 // (walletBalances.<mode>) and is only changed with atomic $inc updates; this
@@ -26,7 +27,7 @@ const walletEntrySchema = new mongoose.Schema(
     },
     kind: {
       type: String,
-      enum: ["funding", "purchase", "refund"],
+      enum: ["funding", "purchase", "refund", "referral"],
       required: true,
     },
     direction: {
@@ -94,6 +95,11 @@ const walletEntrySchema = new mongoose.Schema(
     orderTransactionId: {
       type: String,
       trim: true,
+    },
+    // Referral: the invited friend this reward is for.
+    referredUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
     description: {
       type: String,

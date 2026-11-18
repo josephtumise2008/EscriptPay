@@ -198,6 +198,12 @@ export const createAirtimeTransaction = async ({ network, amount, phone, clientR
   return data;
 };
 
+// Referrals ("Invite & earn").
+export const getReferrals = async () => {
+  const { data } = await api.get("/api/referrals");
+  return data.referrals;
+};
+
 // Wallet. Balances are computed and changed only by the server.
 export const getWallet = async (params = {}) => {
   const { data } = await api.get("/api/wallet", { params });

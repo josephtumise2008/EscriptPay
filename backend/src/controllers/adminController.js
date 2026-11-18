@@ -32,8 +32,8 @@ const overview = async (req, res) => {
 
     const fee = { percent: 1.5, flatKobo: 10000, flatThresholdKobo: 250000, capKobo: 200000, ...(config.walletFee || {}) };
     const byDay = {};
-    for (let i = days - 1; i >= 0; i -= 1) byDay[dayKey(startOfLagosDay(i))] = { sales: 0, cost: 0, fees: 0, profit: 0, orders: 0 };
-    const totals = { sales: 0, cost: 0, fees: 0, profit: 0, orders: 0, data: 0, airtime: 0, cable: 0, electricity: 0, exam: 0, unknownCost: 0 };
+    for (let i = days - 1; i >= 0; i -= 1) byDay[dayKey(startOfLagosDay(i))] = { sales: 0, cost: 0, fees: 0, referrals: 0, profit: 0, orders: 0 };
+    const totals = { sales: 0, cost: 0, fees: 0, referrals: 0, referralCount: 0, profit: 0, orders: 0, data: 0, airtime: 0, cable: 0, electricity: 0, exam: 0, unknownCost: 0 };
 
     for (const tx of delivered) {
       const salesK = tx.paymentAmountKobo || Math.round(tx.amount * 100);
@@ -70,7 +70,20 @@ const overview = async (req, res) => {
       }
     }
 
-    const toNaira = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, ["orders", "data", "airtime", "cable", "electricity", "exam", "unknownCost"].includes(k) ? v : v / 100]));
+    // Referral rewards paid into inviters' wallets are a marketing cost.
+    const rewards = await WalletEntry.find({ mode, kind: "referral", status: "successful", createdAt: { $gte: since } })
+      .select("amountKobo createdAt")
+      .lean();
+    for (const r of rewards) {
+      const d = byDay[dayKey(r.createdAt)];
+      for (const bucket of [totals, d].filter(Boolean)) {
+        bucket.referrals += r.amountKobo;
+        bucket.profit -= r.amountKobo;
+      }
+      totals.referralCount += 1;
+    }
+
+    const toNaira = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, ["orders", "data", "airtime", "cable", "electricity", "exam", "unknownCost", "referralCount"].includes(k) ? v : v / 100]));
 
     const [needsReview, pending, walletAgg, newMessages, failedRecent, blockedFundings] = await Promise.all([
       Transaction.find({ mode, needsReview: true }).sort({ updatedAt: -1 }).limit(50).populate("user", "name email").lean(),

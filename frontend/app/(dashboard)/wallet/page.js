@@ -11,6 +11,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   RotateCcw,
+  Gift,
   CheckCircle2,
   AlertCircle,
   X,
@@ -37,6 +38,7 @@ const makeReference = () =>
 const ENTRY_STYLE = {
   funding: { icon: ArrowDownLeft, label: "Wallet top-up", tone: "bg-emerald-50 text-emerald-600" },
   refund: { icon: RotateCcw, label: "Refund", tone: "bg-sky-50 text-sky-600" },
+  referral: { icon: Gift, label: "Referral reward", tone: "bg-violet-50 text-violet-600" },
   purchase: { icon: ArrowUpRight, label: "Purchase", tone: "bg-slate-100 text-ink-600" },
 };
 
@@ -451,7 +453,7 @@ function ActivityRow({ entry, hidden }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-ink-900">
-          {entry.kind === "purchase" ? entry.description || style.label : style.label}
+          {entry.kind === "purchase" || entry.kind === "referral" ? entry.description || style.label : style.label}
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
           {formatDateTime(entry.createdAt)}

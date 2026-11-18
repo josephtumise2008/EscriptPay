@@ -17,6 +17,7 @@ const {
 } = require("../services/email/verification");
 const { getConfig } = require("../config/payments");
 const { logEvent } = require("../utils/logger");
+const referrals = require("../services/referral");
 
 const sanitize = (user) => ({
   id: user.id,
@@ -45,7 +46,7 @@ const buildResetLink = (token) => `${getConfig().appUrl}/reset-password?token=${
 // POST /api/auth/signup
 const signup = async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body || {};
+    const { name, email, phone, password, referralCode } = req.body || {};
 
     const nameClean = (name || "").trim();
     const emailClean = (email || "").trim().toLowerCase();
@@ -75,12 +76,25 @@ const signup = async (req, res) => {
         .json({ success: false, message: "An account with this email already exists." });
     }
 
+    // An unknown or own invite code is ignored, never a reason to fail signup.
+    let inviter = null;
+    if (referralCode) {
+      try {
+        inviter = await referrals.findInviter(referralCode, { phone: phoneCheck.normalized });
+      } catch (error) {
+        logEvent("referral.lookup_failed", { message: error && error.message });
+      }
+    }
+
     const user = await User.create({
       name: nameClean,
       email: emailClean,
       phone: phoneCheck.normalized,
       password,
+      ...(inviter ? { referredBy: inviter._id } : {}),
     });
+    if (inviter) logEvent("referral.signup", { inviter: String(inviter._id) });
+    referrals.ensureCode(user._id).catch(() => {});
 
     const token = signToken(user);
     setAuthCookie(res, token);

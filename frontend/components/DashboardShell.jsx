@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wifi, Phone, History, UserRound, Settings, LogOut, Home, ChevronLeft, Wallet, BarChart3, Tv, Zap, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Wifi, Phone, History, UserRound, Settings, LogOut, Home, ChevronLeft, Wallet, BarChart3, Tv, Zap, GraduationCap, Gift } from "lucide-react";
 import Logo from "@/components/Logo";
 import WalletPill from "@/components/WalletBalance";
 import UserMenu from "@/components/UserMenu";
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { href: "/electricity", label: "Electricity", icon: Zap },
   { href: "/exam-pins", label: "Exam PINs", icon: GraduationCap },
   { href: "/history", label: "Transactions", icon: History },
+  { href: "/refer", label: "Invite & earn", icon: Gift },
   { href: "/profile", label: "Profile", icon: UserRound },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

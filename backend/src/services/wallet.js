@@ -15,4 +15,5 @@ module.exports = createWalletService({
   config,
   generateReference: generateWalletReference,
   logEvent,
+  onFunded: (funding) => require("./referral").rewardForTopup(funding),
 });
