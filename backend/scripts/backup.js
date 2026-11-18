@@ -46,7 +46,15 @@ const restore = async () => {
   if (!file || !fs.existsSync(file)) throw new Error("Give the backup file with --file <path>.");
   const pass = await passphrase();
   const { EJSON } = require("mongoose").mongo.BSON;
-  const data = EJSON.parse(decryptBackup(fs.readFileSync(file), pass), { relaxed: false });
+  const bytes = fs.readFileSync(file);
+  // Older backups were locked with the Vercel value exactly as saved, which can
+  // carry a stray space or line break from pasting; try those forms too.
+  const tries = [...new Set([pass, `${pass}\n`, `${pass}\r\n`, `${pass} `, ` ${pass}`, `"${pass}"`])];
+  let text = null;
+  for (const t of tries) {
+    try { text = decryptBackup(bytes, t); break; } catch (e) { if (t === tries[tries.length - 1]) throw e; }
+  }
+  const data = EJSON.parse(text, { relaxed: false });
   console.log(`\nBackup of "${data.database}" made ${data.createdAt}`);
   for (const [name, n] of Object.entries(data.counts)) console.log(`  ${name.padEnd(16)} ${n}`);
 

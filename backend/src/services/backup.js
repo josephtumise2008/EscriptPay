@@ -35,7 +35,7 @@ const recipients = async () => {
 
 // Makes the backup and emails it. Throws on any failure (the caller alerts).
 const runBackup = async () => {
-  const passphrase = process.env.BACKUP_PASSPHRASE || "";
+  const passphrase = (process.env.BACKUP_PASSPHRASE || "").trim();
   checkPassphrase(passphrase);
   const { json, counts, createdAt } = await snapshot();
   const file = encryptBackup(json, passphrase);
