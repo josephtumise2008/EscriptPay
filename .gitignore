@@ -27,3 +27,6 @@ npm-debug.log*
 
 # macOS
 .DS_Store
+
+# Database backup files (contain customer data, even though locked)
+*.epbk

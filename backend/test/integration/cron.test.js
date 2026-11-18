@@ -17,6 +17,7 @@ process.env.CRON_SECRET = "cron-test-secret";
 process.env.ALERT_EMAIL = "owner@example.com";
 process.env.RESEND_API_KEY = "re_test_key";
 process.env.EMAIL_FROM = "EscriptPay <no-reply@example.com>";
+process.env.BACKUP_PASSPHRASE = "integration backup passphrase";
 
 const mongoose = require("mongoose");
 const app = require("../../src/server");
@@ -95,4 +96,24 @@ test("orders needing review are emailed to the owner once", { skip }, async () =
 test("plan list is cacheable by the CDN", { skip }, async () => {
   const r = await fetch(`${srv.baseUrl}/api/plans`);
   assert.match(r.headers.get("cache-control") || "", /s-maxage=120/);
+});
+
+test("daily backup: secret required; emails a locked copy that restores every record", { skip }, async () => {
+  const backupCall = (auth) => fetch(`${srv.baseUrl}/api/cron/backup`, { headers: auth ? { Authorization: auth } : {} });
+  assert.equal((await backupCall()).status, 401);
+  sent.length = 0;
+  const r = await backupCall("Bearer cron-test-secret");
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.success, true);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].subject, /EscriptPay backup/);
+  const att = sent[0].attachments[0];
+  assert.match(att.filename, /^escriptpay-backup-\d{4}-\d{2}-\d{2}\.epbk$/);
+  const { decryptBackup } = require("../../src/services/backupCrypto");
+  const { EJSON } = mongoose.mongo.BSON;
+  const data = EJSON.parse(decryptBackup(Buffer.from(att.content, "base64"), process.env.BACKUP_PASSPHRASE), { relaxed: false });
+  assert.equal(data.collections.users.length, await User.countDocuments());
+  assert.equal(data.collections.transactions.length, await Transaction.countDocuments());
+  assert.ok(data.collections.users[0]._id instanceof mongoose.mongo.ObjectId, "ids keep their type");
 });

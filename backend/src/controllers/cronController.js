@@ -38,4 +38,29 @@ const sweep = async (req, res) => {
   }
 };
 
-module.exports = { sweep };
+// GET /api/cron/backup  (Authorization: Bearer <CRON_SECRET>) — once a day.
+// Emails a locked copy of the whole database to the owner; a failure emails
+// an alert instead.
+const backup = async (req, res) => {
+  if (!(process.env.CRON_SECRET || "").trim()) {
+    return res.status(503).json({ success: false, message: "Scheduled checks are not configured." });
+  }
+  if (!authorized(req)) return res.status(401).json({ success: false });
+  try {
+    const result = await require("../services/backup").runBackup();
+    const AlertState = require("../models/AlertState");
+    await AlertState.updateOne({ key: "last_backup" }, { $set: { lastSentAt: new Date() } }, { upsert: true });
+    return res.json({ success: true, bytes: result.bytes, records: result.counts });
+  } catch (error) {
+    logEvent("backup.failed", { code: error && error.code, message: error && error.message });
+    await require("../services/alerts")
+      .sendToOwner("EscriptPay: last night's database backup FAILED", [
+        `Reason: ${(error && error.message) || "unknown error"}`,
+        "Your site is still working; only the backup copy is missing. Check BACKUP_PASSPHRASE and the email settings in Vercel.",
+      ])
+      .catch(() => {});
+    return res.status(500).json({ success: false, code: (error && error.code) || "backup_failed" });
+  }
+};
+
+module.exports = { sweep, backup };

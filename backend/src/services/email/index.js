@@ -13,7 +13,7 @@
 // The API key is never logged.
 
 const RESEND_URL = "https://api.resend.com/emails";
-const TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS || 10000);
+const TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS || 30000);
 
 let fetchImpl = (...args) => fetch(...args);
 const __setFetch = (fn) => {
@@ -32,7 +32,8 @@ class EmailError extends Error {
 
 // Returns { sent: true, id } | { sent: false, reason }. Throws EmailError on
 // provider failures so callers can decide whether that is fatal.
-const sendEmail = async ({ to, subject, html, text }) => {
+// attachments: optional [{ filename, content (base64) }]
+const sendEmail = async ({ to, subject, html, text, attachments }) => {
   if (!isConfigured()) {
     if (process.env.NODE_ENV !== "production") {
       console.log(`\n[email not configured] To: ${to}\nSubject: ${subject}\n${text}\n`);
@@ -49,7 +50,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
         Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from: process.env.EMAIL_FROM.trim(), to: [to], subject, html, text }),
+      body: JSON.stringify({ from: process.env.EMAIL_FROM.trim(), to: [to], subject, html, text, ...(attachments && attachments.length ? { attachments } : {}) }),
       signal: controller.signal,
     });
   } catch (error) {

@@ -16,7 +16,9 @@
     "make:admin": "node scripts/makeAdmin.js",
     "logout:users": "node scripts/logoutUsers.js",
     "fix:costs": "node scripts/fixCosts.js",
-    "order:check": "node scripts/orderCheck.js"
+    "order:check": "node scripts/orderCheck.js",
+    "backup:make": "node scripts/backup.js make",
+    "backup:restore": "node scripts/backup.js restore"
   },
   "keywords": [],
   "author": "",

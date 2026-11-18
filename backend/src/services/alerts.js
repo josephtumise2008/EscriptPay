@@ -128,4 +128,4 @@ const runAlerts = async () => {
   return { reviewAlerts: review, supplierBalance: balance ? balance.balance : null, lowBalanceAlerted: Boolean(balance && balance.alerted) };
 };
 
-module.exports = { runAlerts, reviewAlerts, lowBalanceAlert };
+module.exports = { runAlerts, reviewAlerts, lowBalanceAlert, sendToOwner };
