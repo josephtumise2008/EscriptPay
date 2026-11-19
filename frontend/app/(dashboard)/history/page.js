@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -38,6 +38,7 @@ export default function HistoryPage() {
   const [networks, setNetworks] = useState([]);
 
   const [search, setSearch] = useState("");
+  const [searching, setSearching] = useState(false);
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
   const [network, setNetwork] = useState("all");
@@ -64,7 +65,9 @@ export default function HistoryPage() {
         : ""
     : "";
 
+  const seq = useRef(0);
   const load = useCallback(async () => {
+    const mine = ++seq.current;
     try {
       const params = {
         q: search.trim() || undefined,
@@ -76,19 +79,27 @@ export default function HistoryPage() {
         limit: pageSize,
       };
       const data = await getTransactions(params);
+      // A slower answer to an older search must not replace a newer one.
+      if (mine !== seq.current) return;
       setRows(data.transactions || []);
       setPagination(data.pagination || { page: 1, limit: pageSize, total: 0, pages: 1 });
       setError("");
     } catch (err) {
+      if (mine !== seq.current) return;
       setError(errorMessage(err, "Unable to load transactions."));
     } finally {
-      setLoading(false);
+      if (mine === seq.current) {
+        setLoading(false);
+        setSearching(false);
+      }
     }
   }, [search, status, type, network, fromDate, page, pageSize]);
 
   useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(load, search ? 300 : 0);
+    // Keep the current list on screen while a new search loads; only the
+    // very first load shows the full loading state.
+    setSearching(true);
+    const t = setTimeout(load, search ? 250 : 0);
     return () => clearTimeout(t);
   }, [load, search]);
 
@@ -312,7 +323,7 @@ export default function HistoryPage() {
       )}
 
       {!loading && !error && rows.length > 0 && (
-        <>
+        <div className={`transition-opacity ${searching ? "opacity-60" : ""}`} aria-busy={searching}>
           {/* Desktop table */}
           <div className="hidden lg:block">
             <table className="w-full border-separate border-spacing-y-2">
@@ -410,7 +421,7 @@ export default function HistoryPage() {
               </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

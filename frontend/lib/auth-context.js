@@ -10,6 +10,9 @@ import {
   changePassword as apiChangePassword,
   errorMessage,
 } from "@/lib/api";
+import { readCache, writeCache, clearUserCache } from "@/lib/cache";
+
+const USER_KEY = "u:session";
 
 const AuthContext = createContext(null);
 
@@ -20,13 +23,23 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let active = true;
 
+    // Show the person who was signed in last time straight away (no waiting
+    // on the network), then confirm the session with the server.
+    const cached = readCache(USER_KEY, { persist: true });
+    if (cached && cached.id) {
+      setUser(cached);
+      setLoading(false);
+    }
+
     const loadSession = async () => {
       try {
         const { user: sessionUser } = await apiMe();
         if (active) setUser(sessionUser);
-      } catch {
-        // Not authenticated or session expired — that's fine.
-        if (active) setUser(null);
+      } catch (error) {
+        const status = error && error.response && error.response.status;
+        // Signed out or session expired. A dropped connection keeps the
+        // cached session; the next request will check again.
+        if (active && (status === 401 || status === 403 || !cached)) setUser(null);
       } finally {
         if (active) setLoading(false);
       }
@@ -38,6 +51,14 @@ export function AuthProvider({ children }) {
       active = false;
     };
   }, []);
+
+  // Remember the signed-in person for an instant start next time; forget
+  // them (and anything cached for them) when they sign out.
+  useEffect(() => {
+    if (loading) return;
+    if (user) writeCache(USER_KEY, user, { persist: true });
+    else clearUserCache();
+  }, [user, loading]);
 
   const login = useCallback(async (email, password) => {
     try {

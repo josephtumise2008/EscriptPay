@@ -1,11 +1,9 @@
-import BuyForm from "@/components/BuyForm";
+import { Suspense } from "react";
+import { BuyDataFromUrl } from "@/components/FormsFromUrl";
 
 export const metadata = { title: "Buy Data" };
 
-export default async function BuyDataPage({ searchParams }) {
-  const sp = await (searchParams ?? {});
-  const network = typeof sp.network === "string" ? sp.network : "";
-  const plan = typeof sp.plan === "string" ? sp.plan : "";
+export default function BuyDataPage() {
 
   return (
     <div className="space-y-6">
@@ -21,7 +19,21 @@ export default async function BuyDataPage({ searchParams }) {
           </div>
         </div>
       </header>
-      <BuyForm initialNetwork={network} initialPlanId={plan} />
+      <Suspense fallback={<FormSkeleton />}>
+        <BuyDataFromUrl />
+      </Suspense>
+    </div>
+  );
+}
+
+function FormSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr]" aria-hidden="true">
+      <div className="space-y-4">
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-14 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+      </div>
     </div>
   );
 }

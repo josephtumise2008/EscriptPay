@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getPlans } from "@/lib/api";
+import { readCache, writeCache } from "@/lib/cache";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
 import { formatNaira } from "@/lib/format";
@@ -66,13 +67,22 @@ export default function PlanList({ network, selectedPlan, onSelect }) {
   const [filter, setFilter] = useState("all");
 
   const load = async () => {
-    setLoading(true);
+    // Prices shown from cache are only for display: the server always
+    // charges the current price.
+    const cached = readCache("plans", { persist: true, maxAgeMs: 7 * 864e5 });
+    if (cached && cached.length) {
+      setPlans(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError("");
     try {
       const data = await getPlans();
       setPlans(data);
+      writeCache("plans", data, { persist: true });
     } catch {
-      setError("Unable to load plans.");
+      if (!cached) setError("Unable to load plans.");
     } finally {
       setLoading(false);
     }

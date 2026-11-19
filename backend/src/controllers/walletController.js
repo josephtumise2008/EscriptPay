@@ -17,7 +17,9 @@ const walletSummary = (balanceKobo) => ({
 // GET /api/wallet?page=1&limit=20 — balance and recent wallet activity.
 const getWallet = async (req, res) => {
   try {
-    await require("../services/orderStatus").refreshStaleOrders({ user: req.userId }, { budgetMs: 1500 }).catch(() => {});
+    if (!req.query.page || String(req.query.page) === "1") {
+      await require("../services/orderStatus").refreshStaleOrders({ user: req.userId }, { budgetMs: 1000 }).catch(() => {});
+    }
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
     const [balanceKobo, { entries, total }] = await Promise.all([

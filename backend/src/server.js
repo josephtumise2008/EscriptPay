@@ -120,6 +120,10 @@ app.get("/api/config", (req, res) => {
   res.json({ success: true, config: publicConfig() });
 });
 
+// On Vercel, start connecting to MongoDB while the function boots instead of
+// on the first request, so a cold start pays for it in parallel.
+if (process.env.VERCEL) connectDB().catch(() => {});
+
 // Every data-bearing route below needs MongoDB. Connecting lazily (and
 // caching the connection) keeps cold starts short and lets a missing or
 // unreachable database return a clear 503 instead of crashing the process.

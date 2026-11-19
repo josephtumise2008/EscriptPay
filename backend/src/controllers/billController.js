@@ -7,7 +7,7 @@ const { logEvent } = require("../utils/logger");
 const getCatalog = async (req, res) => {
   try {
     const catalog = await bills.publicCatalog();
-    res.set("Cache-Control", "public, max-age=0, s-maxage=120, stale-while-revalidate=600");
+    res.set("Cache-Control", "public, max-age=0, s-maxage=120, stale-while-revalidate=86400");
     return res.json({ success: true, catalog });
   } catch (error) {
     logEvent("bill.catalog_error", { message: error && error.message });

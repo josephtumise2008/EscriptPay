@@ -15,6 +15,7 @@ import { getTransactions, errorMessage } from "@/lib/api";
 import { formatNaira } from "@/lib/format";
 import { computeStats, buildRangeSeries } from "@/lib/transactions";
 import InstallApp from "@/components/InstallApp";
+import { readCache, writeCache } from "@/lib/cache";
 
 const RANGES = [
   { value: "7d", label: "7 days" },
@@ -64,10 +65,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let active = true;
+    const key = user ? `u:${user.id}:tx` : null;
+    // Last time's orders first (instant), then the fresh list.
+    const cached = key ? readCache(key, { persist: true }) : undefined;
+    if (cached) {
+      setTransactions(cached);
+      setLoading(false);
+    }
     const load = async () => {
       try {
         const { transactions: rows } = await getTransactions();
-        if (active) setTransactions(rows);
+        if (active) {
+          setTransactions(rows);
+          if (key) writeCache(key, rows, { persist: true });
+        }
       } catch (err) {
         if (active) setError(errorMessage(err, "Unable to load your transactions."));
       } finally {
@@ -78,7 +89,8 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const stats = useMemo(() => computeStats(transactions), [transactions]);
   const chartSeries = useMemo(() => buildRangeSeries(transactions, range), [transactions, range]);

@@ -392,8 +392,12 @@ const createBillTransaction = async (req, res) => {
 //   ?page=1&limit=25 (pagination; without these the full list is returned)
 const getUserTransactions = async (req, res) => {
   try {
-    await refreshStaleOrders({ user: req.userId }, { budgetMs: 1500 }).catch(() => {});
     const { status, type, network, q, from, to, page, limit } = req.query || {};
+    // Bring unfinished orders up to date only on a plain first-page load, so
+    // searching and filtering never wait on the supplier. The 5-minute sweep
+    // covers the rest.
+    const plainLoad = !q && !status && !type && !network && !from && !to && (!page || String(page) === "1");
+    if (plainLoad) await refreshStaleOrders({ user: req.userId }, { budgetMs: 1000 }).catch(() => {});
     const query = { user: req.userId };
 
     if (status && ["pending", "successful", "failed"].includes(status)) {
@@ -430,15 +434,13 @@ const getUserTransactions = async (req, res) => {
     const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : null;
     const limitNum = limit ? Math.min(100, Math.max(1, parseInt(limit, 10) || 25)) : null;
 
+    // Without paging (the dashboard), send the latest 300 at most so a busy
+    // account never downloads its whole history on every visit.
     const find = Transaction.find(query).sort({ createdAt: -1 });
-    const total = await Transaction.countDocuments(query);
-
-    let transactions;
-    if (pageNum && limitNum) {
-      transactions = await find.skip((pageNum - 1) * limitNum).limit(limitNum);
-    } else {
-      transactions = await find;
-    }
+    const [total, transactions] = await Promise.all([
+      Transaction.countDocuments(query),
+      pageNum && limitNum ? find.skip((pageNum - 1) * limitNum).limit(limitNum) : find.limit(300),
+    ]);
 
     return res.json({
       success: true,

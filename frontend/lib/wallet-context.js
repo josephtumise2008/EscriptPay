@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { getWalletBalance } from "@/lib/api";
+import { readCache, writeCache } from "@/lib/cache";
 
 // Wallet balance shared by the header, account menu, wallet page and
 // checkout. The server is the only source of truth: this just caches the
@@ -45,7 +46,10 @@ export function WalletProvider({ children }) {
     setLoading(true);
     try {
       const next = await getWalletBalance();
-      if (id === requestId.current) setWallet(next);
+      if (id === requestId.current) {
+        setWallet(next);
+        writeCache(`u:${user.id}:wallet`, next, { persist: true });
+      }
       return next;
     } catch {
       return null;
@@ -66,6 +70,9 @@ export function WalletProvider({ children }) {
       setWallet(null);
       return undefined;
     }
+    // Last known balance first, fresh one a moment later.
+    const cached = readCache(`u:${user.id}:wallet`, { persist: true });
+    if (cached) setWallet(cached);
     refresh();
     const onVisible = () => {
       if (document.visibilityState === "visible") refresh();

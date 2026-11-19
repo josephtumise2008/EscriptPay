@@ -1,11 +1,9 @@
-import AirtimeForm from "@/components/AirtimeForm";
+import { Suspense } from "react";
+import { BuyAirtimeFromUrl } from "@/components/FormsFromUrl";
 
 export const metadata = { title: "Buy Airtime" };
 
-export default async function BuyAirtimePage({ searchParams }) {
-  const sp = await (searchParams ?? {});
-  const network = typeof sp.network === "string" ? sp.network : "";
-  const amount = typeof sp.amount === "string" ? sp.amount : "";
+export default function BuyAirtimePage() {
 
   return (
     <div className="space-y-6">
@@ -22,7 +20,21 @@ export default async function BuyAirtimePage({ searchParams }) {
         </div>
       </header>
 
-      <AirtimeForm initialNetwork={network} initialAmount={amount} />
+      <Suspense fallback={<FormSkeleton />}>
+        <BuyAirtimeFromUrl />
+      </Suspense>
+    </div>
+  );
+}
+
+function FormSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr]" aria-hidden="true">
+      <div className="space-y-4">
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-14 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getNetworks } from "@/lib/api";
+import { readCache, writeCache } from "@/lib/cache";
 import { Wifi, RefreshCw } from "lucide-react";
 
 const NETWORK_META = {
@@ -17,13 +18,20 @@ export default function NetworkSelector({ selected, onSelect }) {
   const [error, setError] = useState("");
 
   const load = async () => {
-    setLoading(true);
+    const cached = readCache("networks", { persist: true });
+    if (cached && cached.length) {
+      setNetworks(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError("");
     try {
       const data = await getNetworks();
       setNetworks(data);
+      writeCache("networks", data, { persist: true });
     } catch {
-      setError("Unable to load networks.");
+      if (!cached) setError("Unable to load networks.");
     } finally {
       setLoading(false);
     }
