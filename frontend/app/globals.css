@@ -60,8 +60,9 @@
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
 
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.1);
-  --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 16px 40px -16px rgb(124 58 237 / 0.2);
+  --shadow-card: 0 0 0 1px rgb(15 23 42 / 0.02), 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 10px -4px rgb(15 23 42 / 0.05), 0 14px 32px -18px rgb(15 23 42 / 0.12);
+  --shadow-card-hover: 0 0 0 1px rgb(124 58 237 / 0.06), 0 2px 4px rgb(15 23 42 / 0.04), 0 10px 22px -10px rgb(15 23 42 / 0.1), 0 26px 48px -24px rgb(124 58 237 / 0.28);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Motion system: one easing curve, short durations, small distances. */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
@@ -202,11 +203,15 @@
 /* Staggered reveal for groups of cards: children appear one after another. */
 html.js [data-reveal-stagger]:not(.is-visible) > * {
   opacity: 0;
-  transform: translateY(16px);
 }
-[data-reveal-stagger] > * {
-  transition: opacity 0.55s var(--ease-out-soft), transform 0.55s var(--ease-out-soft);
-  transition-delay: calc(var(--i, 0) * 90ms);
+html.js [data-reveal-stagger].is-visible > * {
+  animation: reveal-rise 0.85s var(--ease-spring) backwards;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+@keyframes reveal-rise {
+  from { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.985); filter: blur(6px); }
+  60% { filter: blur(0); }
+  to { opacity: 1; transform: none; filter: none; }
 }
 
 /* Class-based dark mode. Toggle `.dark` on <html>. */
@@ -431,11 +436,9 @@ body {
    scripts fail or are disabled. */
 html.js [data-reveal]:not(.is-visible) {
   opacity: 0;
-  transform: translateY(12px);
 }
-
-[data-reveal] {
-  transition: opacity 0.45s var(--ease-out-soft), transform 0.45s var(--ease-out-soft);
+html.js [data-reveal].is-visible {
+  animation: reveal-rise 0.85s var(--ease-spring) backwards;
 }
 
 /* Dropdown / popover open-close (kept mounted so closing can animate). */
@@ -473,10 +476,14 @@ html.js [data-reveal]:not(.is-visible) {
     opacity: 1;
     transform: none;
   }
-  html.js [data-reveal-stagger]:not(.is-visible) > * {
+  html.js [data-reveal-stagger]:not(.is-visible) > *,
+  html.js [data-reveal-stagger].is-visible > *,
+  html.js [data-reveal].is-visible {
     opacity: 1;
     transform: none;
+    animation: none;
   }
+  a.card:hover, button.card:hover, .card-hover:hover { transform: none; }
   .tilt-card { transform: none !important; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -515,8 +522,31 @@ html.js [data-reveal]:not(.is-visible) {
    alongside them (e.g. "btn-secondary py-2", "input-base pl-10") win. */
 @layer components {
 .card {
-  @apply rounded-2xl border border-slate-100 bg-white shadow-[var(--shadow-card)];
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  @apply rounded-2xl border border-slate-200/60 bg-white shadow-[var(--shadow-card)];
+  transition: box-shadow 0.35s var(--ease-spring), border-color 0.25s ease, transform 0.35s var(--ease-spring);
+}
+/* Cards you can click lift slightly and settle back; pressing sinks them. */
+a.card:hover,
+button.card:hover:not(:disabled),
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgb(124 58 237 / 0.18);
+}
+a.card:active,
+button.card:active:not(:disabled) {
+  transform: translateY(0) scale(0.985);
+  transition-duration: 0.12s;
+}
+.dark .card {
+  border-color: rgb(255 255 255 / 0.06);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 12px 30px -18px rgb(0 0 0 / 0.7);
+}
+.dark a.card:hover,
+.dark button.card:hover:not(:disabled),
+.dark .card-hover:hover {
+  border-color: rgb(167 139 250 / 0.28);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 22px 44px -22px rgb(124 58 237 / 0.45);
 }
 .btn-secondary {
   @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-ink-700 shadow-sm hover:border-cyan-300 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60;
@@ -695,11 +725,12 @@ html:not(.js) .hero-word { opacity: 1; animation: none; }
 .svc-card {
   --c1: #06b6d4;
   --c2: #3b82f6;
-  transition: transform 0.45s var(--ease-out-soft), box-shadow 0.45s var(--ease-out-soft), border-color 0.3s;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  transition: transform 0.5s var(--ease-spring), box-shadow 0.5s var(--ease-spring), border-color 0.3s;
+  box-shadow: var(--shadow-card);
 }
+.svc-card:active { transform: translateY(-1px) scale(0.99); transition-duration: 0.12s; }
 .svc-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-4px);
   border-color: transparent;
   box-shadow: 0 30px 60px -28px color-mix(in srgb, var(--c1) 55%, transparent), 0 0 0 1.5px color-mix(in srgb, var(--c1) 45%, transparent);
 }
@@ -841,7 +872,7 @@ html:not(.js) .hero-word { opacity: 1; animation: none; }
   to { opacity: 1; transform: none; }
 }
 .route-enter > * > * {
-  animation: route-rise 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: route-rise 0.52s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .route-enter > * > :nth-child(2) { animation-delay: 45ms; }
 .route-enter > * > :nth-child(3) { animation-delay: 90ms; }
@@ -849,7 +880,7 @@ html:not(.js) .hero-word { opacity: 1; animation: none; }
 .route-enter > * > :nth-child(5) { animation-delay: 170ms; }
 .route-enter > * > :nth-child(n + 6) { animation-delay: 200ms; }
 /* Pages whose root isn't a stack of sections still get the rise. */
-.route-enter > :only-child:not(:has(> *)) { animation: route-rise 0.52s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.route-enter > :only-child:not(:has(> *)) { animation: route-rise 0.52s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 @media (prefers-reduced-motion: reduce) {
   .route-enter > * > *,
   .route-enter > :only-child { animation: none; }
