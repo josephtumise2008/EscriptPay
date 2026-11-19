@@ -93,7 +93,7 @@ const selfOrder = async (req, res) => {
       if (!Number.isInteger(amount) || amount < AIRTIME_MIN || amount > MAX_NAIRA) {
         return res.status(400).json({ success: false, message: `Airtime must be a whole amount from ₦${AIRTIME_MIN} to ₦${MAX_NAIRA.toLocaleString("en-NG")}.` });
       }
-      spec = { type: "airtime", network, amount };
+      spec = { type: "airtime", network, amount, plan: `Airtime ₦${amount}` };
     } else {
       return res.status(400).json({ success: false, message: "Choose data or airtime." });
     }
