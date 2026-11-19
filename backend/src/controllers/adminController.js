@@ -26,7 +26,9 @@ const overview = async (req, res) => {
     const since = startOfLagosDay(days - 1);
     const mode = config.paymentMode;
 
-    const delivered = await Transaction.find({ mode, status: "successful", createdAt: { $gte: since } })
+    // Orders the owner bought for himself (paid from the supplier balance)
+    // are not sales.
+    const delivered = await Transaction.find({ mode, status: "successful", paymentProvider: { $ne: "owner" }, createdAt: { $gte: since } })
       .select("amount paymentAmountKobo paymentProvider costKobo costSource type createdAt")
       .lean();
 

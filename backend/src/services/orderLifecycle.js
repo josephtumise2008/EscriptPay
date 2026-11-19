@@ -248,7 +248,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
         failureReason: result.networkError ? "network_error" : "delivery_failed",
         // Paid but definitively not delivered: wallet orders are refunded
         // automatically; card payments need a person to refund.
-        needsReview: paid && claimed.paymentProvider !== "wallet",
+        needsReview: paid && !["wallet", "owner"].includes(claimed.paymentProvider),
       });
     } else if (outcome === "accepted") {
       // Supplier took the order but has not confirmed delivery yet.
@@ -366,7 +366,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
         providerStatus: "failed",
         status: "failed",
         failureReason: "not_received_by_supplier",
-        needsReview: claimed.paymentStatus === "successful" && claimed.paymentProvider !== "wallet",
+        needsReview: claimed.paymentStatus === "successful" && !["wallet", "owner"].includes(claimed.paymentProvider),
       });
     } else if (result.outcome === "delivered") {
       outcome = "delivered";
@@ -380,7 +380,7 @@ const createOrderLifecycle = ({ Transaction, Plan, payment, vtu, config, logEven
         failureReason: "delivery_failed",
         // Wallet orders are refunded automatically by the caller; card
         // payments need a person to refund.
-        needsReview: paid && claimed.paymentProvider !== "wallet",
+        needsReview: paid && !["wallet", "owner"].includes(claimed.paymentProvider),
       });
     }
 

@@ -62,7 +62,7 @@ export default function Receipt({ transaction }) {
     ...(tx.feeKobo ? [{ label: "Paystack fee", value: formatNaira(tx.feeKobo / 100) }] : []),
     {
       label: "Paid with",
-      value: tx.paymentProvider === "wallet" ? "Wallet balance" : tx.paymentProvider === "paystack" ? "Paystack" : "Direct",
+      value: tx.paymentProvider === "wallet" ? "Wallet balance" : tx.paymentProvider === "paystack" ? "Paystack" : tx.paymentProvider === "owner" ? "ClubKonnect balance (owner)" : "Direct",
     },
     ...(tx.paymentProvider === "wallet"
       ? []

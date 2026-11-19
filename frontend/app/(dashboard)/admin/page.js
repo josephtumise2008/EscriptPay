@@ -20,6 +20,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/lib/auth-context";
 import { getAdminOverview, resolveAdminTransaction, updateAdminMessage, errorMessage } from "@/lib/api";
 import { formatNaira, formatDateTime } from "@/lib/format";
+import SelfOrder from "@/components/admin/SelfOrder";
 
 const RANGES = [
   { days: 1, label: "Today" },
@@ -224,6 +225,8 @@ export default function AdminPage() {
               <p className="mt-1 text-xs text-ink-500">Prepaid by customers — keep at least this much in ClubKonnect. It isn&apos;t profit.</p>
             </div>
           </section>
+
+          <SelfOrder onDone={load} />
 
           <ProfitBars series={data.series} />
 

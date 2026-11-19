@@ -196,7 +196,9 @@ export const describeTransaction = (tx = {}) => {
       message:
         tx.paymentStatus !== "successful"
           ? `The ${what} could not be delivered.`
-          : tx.paymentProvider === "wallet"
+          : tx.paymentProvider === "owner"
+            ? `ClubKonnect couldn't deliver this ${what}. Failed orders aren't charged; check your ClubKonnect history to be sure.`
+            : tx.paymentProvider === "wallet"
             ? `The network couldn't deliver this ${what}, so the full amount has been returned to your EscriptPay wallet. You can buy again now.`
             : `We received your payment but the ${what} could not be delivered. We'll refund you, and you'll get an email when it's done.`,
     };

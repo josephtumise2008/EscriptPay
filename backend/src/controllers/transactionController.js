@@ -629,6 +629,7 @@ const verifyTransactionPayment = async (req, res) => {
 };
 
 module.exports = {
+  awaitDelivery,
   createBillTransaction,
   getUserTransactions,
   getTransactionById,

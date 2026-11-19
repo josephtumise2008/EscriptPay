@@ -91,7 +91,7 @@ const transactionSchema = new mongoose.Schema(
     // ---- Payment (Paystack) ----
     paymentProvider: {
       type: String,
-      enum: ["test", "paystack", "wallet"],
+      enum: ["test", "paystack", "wallet", "owner"],
       default: "test",
     },
     // Reference sent to the payment provider. No default: the sparse unique

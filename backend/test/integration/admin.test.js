@@ -97,3 +97,48 @@ test("card fees on free wallet top-ups count against profit", { skip }, async ()
   assert.equal(Math.round((after.fees - before.fees) * 100), 1500);
   assert.equal(Math.round((before.profit - after.profit) * 100), 1500);
 });
+
+test("owner can buy data/airtime for himself from the supplier balance; not counted as sales", { skip }, async () => {
+  const customer = await signup("self-customer@example.com");
+  assert.equal((await customer.post("/api/admin/self-order", { type: "airtime", network: "MTN", amount: 100, phone: "08031234567", clientReference: "self-cust-0001" })).status, 403);
+
+  await signup("self-owner@example.com");
+  await User.updateOne({ email: "self-owner@example.com" }, { $set: { role: "admin" } });
+  const admin = createClient(srv.baseUrl);
+  assert.equal((await admin.post("/api/auth/login", { email: "self-owner@example.com", password: "password123" })).status, 200);
+
+  const plan = await Plan.create({ network: "Glo", name: "2 GB - Monthly", price: 900, costPrice: 820, validity: "30 days", provider: "clubkonnect", providerPlanId: "2000" });
+  const info = await admin.get("/api/admin/self-order");
+  assert.equal(info.status, 200);
+  assert.equal(info.body.phone, "08012345678");
+  const listed = info.body.plans.find((p) => p.id === String(plan._id));
+  assert.equal(listed.cost, 820);
+
+  const salesBefore = (await admin.get("/api/admin/overview?days=7")).body.totals.sales;
+
+  const data = await admin.post("/api/admin/self-order", { type: "data", planId: String(plan._id), phone: "08051234567", clientReference: "self-data-0001" });
+  assert.equal(data.status, 201, JSON.stringify(data.body));
+  assert.equal(data.body.order.status, "successful");
+  assert.equal(data.body.order.cost, 820);
+
+  // A double tap with the same key never sends twice.
+  const again = await admin.post("/api/admin/self-order", { type: "data", planId: String(plan._id), phone: "08051234567", clientReference: "self-data-0001" });
+  assert.equal(again.body.reused, true);
+  assert.equal(await Transaction.countDocuments({ paymentProvider: "owner" }), 1);
+
+  const air = await admin.post("/api/admin/self-order", { type: "airtime", network: "Airtel", amount: 200, phone: "08021234567", clientReference: "self-air-0001" });
+  assert.equal(air.status, 201);
+  assert.equal(air.body.order.status, "successful");
+
+  for (const bad of [
+    { type: "airtime", network: "MTN", amount: 20001, phone: "08031234567", clientReference: "self-bad-0001" },
+    { type: "airtime", network: "Nope", amount: 100, phone: "08031234567", clientReference: "self-bad-0002" },
+    { type: "data", planId: "nope", phone: "08031234567", clientReference: "self-bad-0003" },
+    { type: "airtime", network: "MTN", amount: 100, phone: "123", clientReference: "self-bad-0004" },
+  ]) {
+    assert.equal((await admin.post("/api/admin/self-order", bad)).status, 400, JSON.stringify(bad));
+  }
+
+  assert.equal((await admin.get("/api/admin/overview?days=7")).body.totals.sales, salesBefore, "self-orders are not sales");
+  assert.equal((await admin.get("/api/admin/self-order")).body.recent.length, 2);
+});

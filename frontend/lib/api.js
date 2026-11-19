@@ -256,6 +256,17 @@ export const verifyWalletFunding = async (reference) => {
   return data;
 };
 
+// Admin: buy data/airtime for yourself, paid from the ClubKonnect balance.
+export const getSelfOrderInfo = async () => {
+  const { data } = await api.get("/api/admin/self-order");
+  return data;
+};
+
+export const createSelfOrder = async (body) => {
+  const { data } = await api.post("/api/admin/self-order", body, { timeout: 45000 });
+  return data.order;
+};
+
 // Website contact form. `website` is a hidden honeypot (left empty by people).
 export const sendContactMessage = async ({ name, email, message, website = "" }) => {
   const { data } = await api.post("/api/contact", { name, email, message, website });
