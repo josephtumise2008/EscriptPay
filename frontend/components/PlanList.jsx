@@ -172,12 +172,12 @@ export default function PlanList({ network, selectedPlan, onSelect }) {
                   className={`focus-ring press relative flex h-full w-full flex-col rounded-2xl border bg-white p-3 text-left sm:p-4 ${
                     isSelected
                       ? "border-cyan-400 bg-cyan-50 shadow-[0_0_0_1px_var(--color-cyan-400)]"
-                      : "border-slate-200 hover:border-slate-300"
+                      : "border-slate-200 hover:border-slate-300 hover:shadow-[var(--shadow-card)]"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     {info.type ? (
-                      <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${TYPE_STYLES[info.type]}`}>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ${TYPE_STYLES[info.type]}`}>
                         {info.type}
                       </span>
                     ) : (
@@ -195,12 +195,12 @@ export default function PlanList({ network, selectedPlan, onSelect }) {
                   </p>
                   {info.detail && (
                     <p className="mt-1 flex items-start gap-1 text-xs leading-snug text-ink-500">
-                      <CalendarDays size={13} className="mt-px shrink-0 text-ink-400" aria-hidden="true" />
+                      <CalendarDays size={13} className="mt-px shrink-0 text-cyan-500" aria-hidden="true" />
                       <span className="line-clamp-2">{info.detail}</span>
                     </p>
                   )}
 
-                  <p className="mt-auto pt-3 font-display text-base font-extrabold tracking-tight text-ink-900 tabular-nums sm:text-lg">
+                  <p className="mt-auto pt-3 font-display text-base font-extrabold tracking-tight text-cyan-700 sm:text-lg">
                     {formatNaira(plan.price)}
                   </p>
                 </button>

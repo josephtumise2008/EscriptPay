@@ -1,23 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Wifi, Phone, Tv, Zap, GraduationCap } from "lucide-react";
+import { ArrowUpRight, Wifi, Phone, Tv, Zap, GraduationCap, Sparkles } from "lucide-react";
 import { formatNaira } from "@/lib/format";
+
+// Cursor spotlight on each card (CSS reads --mx / --my).
+const spot = (e) => {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
+};
 
 function Card({ href, tone, icon: Icon, title, body, badge, className = "", children, i }) {
   return (
     <li style={{ "--i": i }} className={className}>
       <Link
         href={href}
+        onMouseMove={spot}
         className={`svc-card group focus-ring relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 ${tone}`}
       >
+        <span aria-hidden="true" className="svc-spot" />
+        <span aria-hidden="true" className="svc-orb" />
         <div className="relative flex items-start justify-between gap-3">
           <span className="svc-icon flex h-12 w-12 items-center justify-center rounded-2xl brand-contrast shadow-lg">
             <Icon size={22} aria-hidden="true" />
           </span>
           <span className="flex items-center gap-2">
             {badge && <span className="svc-badge rounded-full px-2.5 py-1 text-[11px] font-bold">{badge}</span>}
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-ink-500 transition-all duration-300 group-hover:border-transparent group-hover:bg-ink-900 group-hover:text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-ink-500 transition-all duration-300 group-hover:rotate-45 group-hover:border-transparent group-hover:bg-ink-900 group-hover:text-white">
               <ArrowUpRight size={16} aria-hidden="true" />
             </span>
           </span>
@@ -35,10 +45,14 @@ const MARQUEE = ["MTN", "Airtel", "Glo", "9mobile", "DStv", "GOtv", "StarTimes",
 export default function ServicesShowcase({ cheapest1GB }) {
   return (
     <section id="services" aria-labelledby="services-heading" className="relative overflow-hidden py-20 lg:py-28">
+      <div aria-hidden="true" className="svc-aurora" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl">
-          <h2 id="services-heading" className="font-display text-3xl font-extrabold tracking-tight text-ink-900 sm:text-5xl">
-            One wallet for every bill
+        <div className="mx-auto max-w-2xl text-center" data-reveal>
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-violet-200/70 bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-violet-600 backdrop-blur">
+            <Sparkles size={13} aria-hidden="true" /> New on EscriptPay
+          </p>
+          <h2 id="services-heading" className="mt-4 font-display text-3xl font-extrabold tracking-tight text-ink-900 sm:text-5xl">
+            One wallet. <span className="gradient-text anim-shine">Every bill.</span>
           </h2>
           <p className="mt-4 text-base leading-relaxed text-ink-500 sm:text-lg">
             Data, airtime, cable TV, electricity and exam PINs, all in one place. Pay from your wallet with no fee, and get your token or PIN on screen in seconds.
