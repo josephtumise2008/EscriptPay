@@ -353,6 +353,63 @@ const createWalletService = ({
     return { outcome: "unpaid", entry };
   };
 
+  // A bank transfer into a customer's own account number (Paystack
+  // Dedicated Virtual Account). Called for charge.success references that
+  // match no order or checkout. Paystack is asked directly (never the
+  // webhook body alone) and the money goes to the user who owns that
+  // account. Idempotent: the Paystack reference is unique on the ledger.
+  const creditBankTransfer = async (reference) => {
+    if (payment.requiresCheckout !== true) return { outcome: "not_applicable" };
+    const known = await WalletEntry.findOne({ paymentReference: reference });
+    if (known) {
+      if (known.status === "successful") return { outcome: "already_credited", entry: known };
+      if (["pending", "expired"].includes(known.status)) return applyFunding(known, { source: "bank_transfer" });
+      return { outcome: "in_progress", entry: known };
+    }
+
+    const v = await payment.verifyPayment(reference);
+    if (v.status !== "success") return { outcome: "not_paid" };
+    if (v.channel !== "dedicated_nuban") return { outcome: "not_transfer" };
+    if (v.reference !== reference || v.currency !== config.currency || !Number.isInteger(v.amountKobo) || v.amountKobo <= 0) {
+      logEvent("wallet.transfer_rejected", { reference, reason: "mismatch" });
+      return { outcome: "mismatch" };
+    }
+    const owner = v.customerCode ? await User.findOne({ "virtualAccount.customerCode": v.customerCode }, { _id: 1 }) : null;
+    if (!owner) {
+      // Money is in the Paystack balance but matches no customer: a person
+      // must look at it in the Paystack dashboard.
+      logEvent("wallet.transfer_unmatched", { reference });
+      return { outcome: "unknown_customer" };
+    }
+
+    let entry;
+    try {
+      entry = await WalletEntry.create({
+        user: owner._id,
+        reference: generateReference(),
+        kind: "funding",
+        direction: "credit",
+        amountKobo: v.amountKobo,
+        chargedKobo: v.amountKobo,
+        feeKobo: 0,
+        status: "pending",
+        mode,
+        currency: config.currency,
+        paymentProvider: "paystack",
+        paymentReference: reference,
+        payVia: "transfer",
+        description: "Bank transfer",
+      });
+    } catch (error) {
+      if (error && error.code === 11000) {
+        const again = await WalletEntry.findOne({ paymentReference: reference });
+        return { outcome: again && again.status === "successful" ? "already_credited" : "in_progress", entry: again };
+      }
+      throw error;
+    }
+    return applyFunding(entry, { source: "bank_transfer", gatewayTransactionId: v.gatewayTransactionId, paidAt: v.paidAt });
+  };
+
   // Takes the order amount from the wallet. Returns the new balance or null
   // (insufficient funds). The caller records the purchase entry once the
   // order exists, or calls reverseDebit if creating the order fails.
@@ -442,6 +499,7 @@ const createWalletService = ({
     getBalanceKobo,
     startFunding,
     confirmFunding,
+    creditBankTransfer,
     getSavedCard,
     removeSavedCard,
     debitForOrder,

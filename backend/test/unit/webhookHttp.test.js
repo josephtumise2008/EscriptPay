@@ -68,6 +68,7 @@ test("public config exposes mode only, never secrets", async () => {
     paymentMode: "test",
     deliveryMode: "test",
     currency: "NGN",
+    virtualAccounts: false,
   });
   assert.ok(!JSON.stringify(res.body).includes("sk_test"));
 });

@@ -59,11 +59,14 @@ const overview = async (req, res) => {
     // Card top-ups: whatever part of the processor's fee the customer didn't
     // pay (all of it when the top-up fee is switched off) is our cost.
     const fundings = await WalletEntry.find({ mode, kind: "funding", status: "successful", paymentProvider: "paystack", createdAt: { $gte: since } })
-      .select("amountKobo chargedKobo feeKobo createdAt")
+      .select("amountKobo chargedKobo feeKobo payVia createdAt")
       .lean();
     for (const f of fundings) {
       const chargedK = f.chargedKobo || f.amountKobo;
-      const absorbedK = Math.max(0, providerFee(chargedK, fee) - (f.feeKobo || 0));
+      // Transfers into a customer's own account number: Paystack charges 1%,
+      // capped at ₦300. Checkout and saved-card top-ups use the card price.
+      const gatewayK = f.payVia === "transfer" ? Math.min(Math.round(chargedK * 0.01), 30000) : providerFee(chargedK, fee);
+      const absorbedK = Math.max(0, gatewayK - (f.feeKobo || 0));
       if (!absorbedK) continue;
       const d = byDay[dayKey(f.createdAt)];
       for (const bucket of [totals, d].filter(Boolean)) {

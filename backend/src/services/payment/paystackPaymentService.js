@@ -15,6 +15,14 @@
 //             payment (authorization.reusable === true)
 //   - POST https://api.paystack.co/refund
 //       body: transaction (reference or id); full refund when amount is omitted
+//   - POST https://api.paystack.co/customer
+//       body: email, first_name, last_name, phone -> data.customer_code
+//   - POST https://api.paystack.co/dedicated_account
+//       body: customer (code), preferred_bank (provider slug)
+//       response data: account_number, account_name, bank { name, slug }, id
+//     Incoming transfers arrive as charge.success with channel
+//     "dedicated_nuban" and are verified with /transaction/verify like any
+//     other payment.
 //   - Webhooks carry `x-paystack-signature`: an HMAC SHA512 of the event
 //     payload (the raw request body) signed with the secret key.
 //
@@ -145,6 +153,8 @@ const verifyPayment = async (reference) => {
     currency: String(data.currency || "").toUpperCase(),
     reference: data.reference,
     paidAt: data.paid_at || data.paidAt || null,
+    // Who paid (for bank transfers into a customer's own account number).
+    customerCode: data.customer && data.customer.customer_code ? String(data.customer.customer_code) : null,
     gatewayTransactionId: data.id != null ? String(data.id) : null,
     // How the customer paid ("card", "bank_transfer", "ussd", ...) and, for
     // cards, the issuing country (ISO code, e.g. "NG").
@@ -212,6 +222,46 @@ const refundPayment = async (reference) => {
   return { status: String(data.status || "pending").toLowerCase() };
 };
 
+// Creates (or returns) the Paystack customer record. -> { customerCode }
+const createCustomer = async ({ email, firstName, lastName, phone }) => {
+  if (!email) throw new PaymentProviderError("Customer email is required.", "invalid_email");
+  const { httpStatus, json } = await request("POST", "/customer", {
+    email,
+    first_name: firstName,
+    last_name: lastName,
+    phone,
+  });
+  const data = json && json.data;
+  if (httpStatus < 200 || httpStatus >= 300 || !json || json.status !== true || !data || !data.customer_code) {
+    throw new PaymentProviderError("Could not create the customer.", "customer_failed");
+  }
+  return { customerCode: String(data.customer_code) };
+};
+
+// Gives a customer their own bank account number.
+// -> { accountNumber, accountName, bankName, providerSlug, dedicatedAccountId }
+const createDedicatedAccount = async ({ customerCode, preferredBank }) => {
+  if (!customerCode) throw new PaymentProviderError("Customer is required.", "invalid_customer");
+  const { httpStatus, json } = await request("POST", "/dedicated_account", {
+    customer: customerCode,
+    ...(preferredBank ? { preferred_bank: preferredBank } : {}),
+  });
+  const data = json && json.data;
+  if (httpStatus < 200 || httpStatus >= 300 || !json || json.status !== true || !data || !data.account_number) {
+    const error = new PaymentProviderError("Could not create the account number.", "dva_failed");
+    // Paystack's own reason (e.g. the business isn't eligible yet); safe to log, no secrets.
+    error.providerMessage = json && typeof json.message === "string" ? json.message.slice(0, 200) : null;
+    throw error;
+  }
+  return {
+    accountNumber: String(data.account_number),
+    accountName: data.account_name ? String(data.account_name) : "",
+    bankName: data.bank && data.bank.name ? String(data.bank.name) : "",
+    providerSlug: data.bank && data.bank.slug ? String(data.bank.slug) : preferredBank || "",
+    dedicatedAccountId: data.id != null ? String(data.id) : null,
+  };
+};
+
 // Constant-time check of the webhook signature against the RAW body bytes.
 const verifyWebhookSignature = (rawBody, signature) => {
   if (!Buffer.isBuffer(rawBody) || typeof signature !== "string" || !signature) return false;
@@ -234,6 +284,8 @@ module.exports = {
   verifyPayment,
   refundPayment,
   chargeAuthorization,
+  createCustomer,
+  createDedicatedAccount,
   verifyWebhookSignature,
   isValidReference,
   PaymentProviderError,

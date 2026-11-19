@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { HideBalanceButton, MASKED } from "@/components/WalletBalance";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import BankTransferAccount from "@/components/BankTransferAccount";
 import { useWallet } from "@/lib/wallet-context";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { getWallet, fundWallet, getFundingQuote, removeSavedCard, errorMessage } from "@/lib/api";
@@ -251,6 +252,7 @@ function FundPanel({ limits, mode, savedCard, onClose, onFunded, onPending, onCa
 
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-5">
+        <BankTransferAccount compact />
         <div role="group" aria-label="Quick amounts" className="grid grid-cols-3 gap-2.5">
           {QUICK_AMOUNTS.filter((v) => v >= min && v <= max).map((v) => {
             const active = !custom && amount === v;
@@ -590,6 +592,7 @@ function WalletContent() {
       )}
 
       <WalletHero balance={balance} hidden={hidden} onFund={() => setFundOpen(true)} />
+      <BankTransferAccount />
 
       {fundOpen && (
         <FundPanel

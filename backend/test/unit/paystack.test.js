@@ -105,6 +105,7 @@ test("verifyPayment normalizes Paystack's response", async () => {
     currency: "NGN",
     reference: "ESCP-1",
     paidAt: "2026-10-22T10:00:00Z",
+    customerCode: null,
     gatewayTransactionId: "42",
     channel: null,
     cardCountry: null,
@@ -208,4 +209,31 @@ test("verifyPayment exposes the reusable card authorization; chargeAuthorization
   assert.deepEqual(await paystack.chargeAuthorization({ email: "a@b.co", amountKobo: 50000, authorizationCode: "AUTH_x", reference: "ESCW-3" }), { status: "failed" });
   paystack.__setFetch(async () => jsonResponse(502, null));
   await assert.rejects(paystack.chargeAuthorization({ email: "a@b.co", amountKobo: 50000, authorizationCode: "AUTH_x", reference: "ESCW-4" }), { code: "charge_unknown" });
+});
+
+test("createCustomer and createDedicatedAccount call Paystack's documented endpoints", async () => {
+  const calls = [];
+  paystack.__setFetch(async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    if (url.endsWith("/customer")) return jsonResponse(200, { status: true, data: { customer_code: "CUS_abc" } });
+    return jsonResponse(200, {
+      status: true,
+      data: { id: 77, account_number: "9930000737", account_name: "EscriptPay/Tunde Okafor", bank: { name: "Test Bank", slug: "test-bank" } },
+    });
+  });
+  const { customerCode } = await paystack.createCustomer({ email: "t@x.com", firstName: "Tunde", lastName: "Okafor", phone: "+2348031234567" });
+  assert.equal(customerCode, "CUS_abc");
+  const acct = await paystack.createDedicatedAccount({ customerCode, preferredBank: "test-bank" });
+  assert.deepEqual(calls.map((c) => c.url), ["https://api.paystack.co/customer", "https://api.paystack.co/dedicated_account"]);
+  assert.deepEqual(calls[0].body, { email: "t@x.com", first_name: "Tunde", last_name: "Okafor", phone: "+2348031234567" });
+  assert.deepEqual(calls[1].body, { customer: "CUS_abc", preferred_bank: "test-bank" });
+  assert.deepEqual(acct, { accountNumber: "9930000737", accountName: "EscriptPay/Tunde Okafor", bankName: "Test Bank", providerSlug: "test-bank", dedicatedAccountId: "77" });
+});
+
+test("createDedicatedAccount reports Paystack's reason when refused", async () => {
+  paystack.__setFetch(async () => jsonResponse(400, { status: false, message: "Dedicated NUBAN not available for this business" }));
+  await assert.rejects(
+    () => paystack.createDedicatedAccount({ customerCode: "CUS_abc", preferredBank: "test-bank" }),
+    (e) => e.code === "dva_failed" && /not available/.test(e.providerMessage)
+  );
 });

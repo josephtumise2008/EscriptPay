@@ -52,7 +52,13 @@ const paystackWebhook = async (req, res) => {
     if (result.outcome === "not_found") {
       // Not an order: it may be a wallet top-up.
       const funding = await wallet.confirmFunding(reference, { source: "webhook" });
-      if (funding.outcome === "not_found") logEvent("webhook.ignored", { reason: "unknown_reference" });
+      if (funding.outcome === "not_found") {
+        // Or a bank transfer into a customer's own account number.
+        const transfer = await wallet.creditBankTransfer(reference);
+        if (!["credited", "already_credited", "in_progress"].includes(transfer.outcome)) {
+          logEvent("webhook.ignored", { reason: transfer.outcome === "not_transfer" ? "unknown_reference" : transfer.outcome });
+        }
+      }
       return res.status(200).json({ received: true });
     }
     if (result.tx && result.tx.paymentStatus === "successful" && result.tx.providerStatus === "pending") {

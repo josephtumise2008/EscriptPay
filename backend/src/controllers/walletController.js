@@ -143,4 +143,27 @@ const removeCard = async (req, res) => {
   }
 };
 
-module.exports = { getWallet, getBalance, fundWallet, verifyFunding, quoteFunding, removeCard };
+// GET /api/wallet/account — the customer's own account number, if any.
+const getAccount = async (req, res) => {
+  try {
+    return res.json({ success: true, ...(await require("../services/virtualAccount").getAccount(req.userId)) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not load your account number." });
+  }
+};
+
+// POST /api/wallet/account — create the customer's account number.
+const createAccount = async (req, res) => {
+  try {
+    const result = await require("../services/virtualAccount").requestAccount(req.userId);
+    if (!result.enabled) return res.status(404).json({ success: false, message: "Bank transfer top-ups aren't available yet." });
+    if (result.account && result.account.status === "failed") {
+      return res.status(502).json({ success: false, ...result, message: "We couldn't create your account number right now. Please try again later." });
+    }
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not create your account number." });
+  }
+};
+
+module.exports = { getAccount, createAccount, getWallet, getBalance, fundWallet, verifyFunding, quoteFunding, removeCard };

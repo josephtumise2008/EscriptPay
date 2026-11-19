@@ -89,7 +89,7 @@ const walletEntrySchema = new mongoose.Schema(
     paidAt: Date,
     verifiedVia: {
       type: String,
-      enum: ["test", "callback", "webhook", "reconciliation", "saved_card"],
+      enum: ["test", "callback", "webhook", "reconciliation", "saved_card", "bank_transfer"],
     },
     // Purchase/refund: the order this entry belongs to.
     orderTransactionId: {

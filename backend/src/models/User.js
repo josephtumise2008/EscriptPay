@@ -65,6 +65,20 @@ const userSchema = new mongoose.Schema(
       ],
       default: undefined,
     },
+    // Personal bank account number for wallet top-ups by transfer (Paystack
+    // Dedicated Virtual Account). Not secret: it's shown to the customer.
+    virtualAccount: {
+      status: { type: String, enum: ["requesting", "active", "failed"] },
+      customerCode: { type: String, trim: true, index: true, sparse: true },
+      accountNumber: { type: String, trim: true },
+      accountName: { type: String, trim: true },
+      bankName: { type: String, trim: true },
+      providerSlug: { type: String, trim: true },
+      dedicatedAccountId: { type: String, trim: true },
+      failureReason: { type: String, trim: true },
+      requestedAt: Date,
+      assignedAt: Date,
+    },
     // Referrals: this user's own invite code, and who invited them (if anyone).
     referralCode: { type: String, trim: true, uppercase: true },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },

@@ -139,6 +139,15 @@ const readConfig = (env = process.env) => {
       Glo: Number(env.AIRTIME_DISCOUNT_GLO || 8),
       "9mobile": Number(env.AIRTIME_DISCOUNT_9MOBILE || 7),
     },
+    // Personal bank account numbers (Paystack Dedicated Virtual Accounts):
+    // customers fund their wallet by bank transfer. Paystack only offers them
+    // to registered businesses, so this stays off until PAYSTACK_DVA_ENABLED
+    // is "true". PAYSTACK_DVA_BANK is the provider slug from Paystack's
+    // available_providers list ("test-bank" with test keys).
+    virtualAccounts: {
+      enabled: paymentProvider === "paystack" && env.PAYSTACK_DVA_ENABLED === "true" && Boolean((env.PAYSTACK_DVA_BANK || "").trim()),
+      preferredBank: (env.PAYSTACK_DVA_BANK || "").trim(),
+    },
     // Minimum gap between supplier status checks for the same order.
     statusCheckIntervalMs: positiveInt(env.VTU_STATUS_CHECK_INTERVAL_SECONDS, 20) * 1000,
     appUrl,
@@ -159,6 +168,7 @@ const publicConfig = () => {
     paymentMode: c.paymentMode,
     deliveryMode: c.deliveryMode,
     currency: c.currency,
+    virtualAccounts: c.virtualAccounts.enabled,
   };
 };
 

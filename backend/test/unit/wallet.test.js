@@ -299,3 +299,39 @@ test("removing the saved card forgets it", async () => {
   assert.equal(await wallet.getSavedCard("u1"), null);
   assert.equal(User.docs[0].savedCard, undefined);
 });
+
+// Bank transfers into a customer's own account number (Dedicated Virtual Account).
+const transferSetup = (verification) => {
+  const s = setup({ provider: "paystack", verification: { channel: "dedicated_nuban", customerCode: "CUS_u1", amountKobo: 250000, ...verification } });
+  s.User.docs[0].virtualAccount = { status: "active", customerCode: "CUS_u1", accountNumber: "9930000737" };
+  return s;
+};
+
+test("bank transfer: verified with Paystack, credited to the account's owner, exactly once", async () => {
+  const { wallet, balanceOf, WalletEntry, calls } = transferSetup();
+  const results = await Promise.all([
+    wallet.creditBankTransfer("T-REF-1"),
+    wallet.creditBankTransfer("T-REF-1"),
+    wallet.creditBankTransfer("T-REF-1"),
+  ]);
+  assert.equal(balanceOf(), 250000, "₦2,500 credited once, no fee taken from the customer");
+  assert.equal(results.filter((r) => r.outcome === "credited").length, 1);
+  assert.ok(calls.verify >= 1, "always asks Paystack");
+  const entry = WalletEntry.docs.find((d) => d.paymentReference === "T-REF-1");
+  assert.equal(entry.payVia, "transfer");
+  assert.equal(entry.status, "successful");
+  assert.equal((await wallet.creditBankTransfer("T-REF-1")).outcome, "already_credited");
+});
+
+test("bank transfer: unpaid, not a transfer, or unknown account is never credited", async () => {
+  for (const [verification, outcome] of [
+    [{ status: "failed" }, "not_paid"],
+    [{ channel: "card" }, "not_transfer"],
+    [{ customerCode: "CUS_someone_else" }, "unknown_customer"],
+    [{ currency: "USD" }, "mismatch"],
+  ]) {
+    const { wallet, balanceOf } = transferSetup(verification);
+    assert.equal((await wallet.creditBankTransfer("T-REF-2")).outcome, outcome);
+    assert.equal(balanceOf(), 0);
+  }
+});

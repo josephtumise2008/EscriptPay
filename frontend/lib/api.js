@@ -246,6 +246,17 @@ export const removeSavedCard = async () => {
   return data;
 };
 
+// Personal bank account number for funding the wallet by transfer.
+export const getWalletAccount = async () => {
+  const { data } = await api.get("/api/wallet/account");
+  return { enabled: data.enabled === true, account: data.account || null };
+};
+
+export const createWalletAccount = async () => {
+  const { data } = await api.post("/api/wallet/account", {}, { timeout: 30000 });
+  return { enabled: data.enabled === true, account: data.account || null };
+};
+
 export const getFundingQuote = async (amount) => {
   const { data } = await api.get("/api/wallet/quote", { params: { amount } });
   return data.quote;

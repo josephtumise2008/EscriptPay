@@ -155,3 +155,12 @@ test("saved numbers: add, rename, list with recent ones, remove", { skip }, asyn
   // Now that it isn't saved, it appears under recent.
   assert.deepEqual((await c.get("/api/numbers")).body.recent.map((n) => n.phone), ["08031112222", "08051234567"]);
 });
+
+test("bank-transfer account numbers stay off until enabled", { skip }, async () => {
+  const c = await signup("dva-off@example.com");
+  const r = await c.get("/api/wallet/account");
+  assert.equal(r.status, 200);
+  assert.deepEqual({ enabled: r.body.enabled, account: r.body.account }, { enabled: false, account: null });
+  assert.equal((await c.post("/api/wallet/account", {})).status, 404);
+  assert.equal((await createClient(srv.baseUrl).get("/api/wallet/account")).status, 401);
+});
