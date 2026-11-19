@@ -52,12 +52,17 @@ const paystackWebhook = async (req, res) => {
     if (result.outcome === "not_found") {
       // Not an order: it may be a wallet top-up.
       const funding = await wallet.confirmFunding(reference, { source: "webhook" });
-      if (funding.outcome === "not_found") {
-        // Or a bank transfer into a customer's own account number.
+      // Or a bank transfer into a customer's own account number. The event's
+      // channel only decides whether to look; the credit itself is decided by
+      // Paystack's verify answer.
+      const channel = event.data && event.data.channel;
+      if (funding.outcome === "not_found" && channel === "dedicated_nuban") {
         const transfer = await wallet.creditBankTransfer(reference);
         if (!["credited", "already_credited", "in_progress"].includes(transfer.outcome)) {
-          logEvent("webhook.ignored", { reason: transfer.outcome === "not_transfer" ? "unknown_reference" : transfer.outcome });
+          logEvent("webhook.ignored", { reason: transfer.outcome });
         }
+      } else if (funding.outcome === "not_found") {
+        logEvent("webhook.ignored", { reason: "unknown_reference" });
       }
       return res.status(200).json({ received: true });
     }
