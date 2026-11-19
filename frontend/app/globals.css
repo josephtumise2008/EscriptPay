@@ -209,9 +209,8 @@ html.js [data-reveal-stagger].is-visible > * {
   animation-delay: calc(var(--i, 0) * 80ms);
 }
 @keyframes reveal-rise {
-  from { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.985); filter: blur(6px); }
-  60% { filter: blur(0); }
-  to { opacity: 1; transform: none; filter: none; }
+  from { opacity: 0; transform: translate3d(0, 22px, 0) scale(0.985); }
+  to { opacity: 1; transform: none; }
 }
 
 /* Class-based dark mode. Toggle `.dark` on <html>. */
@@ -884,5 +883,15 @@ html:not(.js) .hero-word { opacity: 1; animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .route-enter > * > *,
   .route-enter > :only-child { animation: none; }
+}
+
+/* An open dropdown always sits above the cards that come after it, even
+   while page sections are animating in (each animating section is its own
+   layer, so a later section would otherwise paint over the menu). */
+.route-enter > * > *:has(.popover[data-state="open"]),
+[data-reveal]:has(.popover[data-state="open"]),
+[data-reveal-stagger] > *:has(.popover[data-state="open"]) {
+  position: relative;
+  z-index: 40;
 }
 
