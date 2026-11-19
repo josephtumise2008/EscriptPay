@@ -293,7 +293,7 @@ export default function DashboardShell({ children }) {
         <main className="flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 sm:px-6 lg:px-8 lg:py-8">
           {/* Keyed by route: only the page content fades in on navigation —
               the sidebar and header stay put and never re-animate. */}
-          <div key={pathname} className="mx-auto max-w-6xl animate-page-in">
+          <div key={pathname} className="route-enter mx-auto max-w-6xl">
             {children}
           </div>
         </main>

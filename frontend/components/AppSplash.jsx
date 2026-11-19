@@ -1,8 +1,28 @@
+"use client";
+
+import { useEffect } from "react";
+import { SPLASH_MS, SPLASH_FADE_MS } from "@/lib/splash";
+
 // Launch screen shown when EscriptPay is opened from the home screen or as an
 // installed app. Plain HTML + inline CSS (lib/splash.js) so it paints with the
 // first HTML, before React or the stylesheet load. Hidden in the browser.
+// Safety net: if the phone paused the app during the splash (so its timers
+// never fired), make sure the splash and its dark page colour are gone.
+function SplashFailsafe() {
+  useEffect(() => {
+    const d = document.documentElement;
+    if (!d.classList.contains("ep-splash-on")) return undefined;
+    const clear = () => d.classList.remove("ep-splash-on", "ep-splash-out");
+    const timer = setTimeout(clear, SPLASH_MS + SPLASH_FADE_MS + 400);
+    return () => clearTimeout(timer);
+  }, []);
+  return null;
+}
+
 export default function AppSplash() {
   return (
+    <>
+    <SplashFailsafe />
     <div id="ep-splash" aria-hidden="true" className="ep-splash">
       <div className="ep-splash-glow" />
       <div className="ep-splash-mark">
@@ -47,5 +67,6 @@ export default function AppSplash() {
       <p className="ep-splash-tag">Cheaper data. Instant airtime.</p>
       <div className="ep-splash-bar"><i /></div>
     </div>
+    </>
   );
 }

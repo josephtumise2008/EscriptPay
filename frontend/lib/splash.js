@@ -5,11 +5,11 @@
 export const SPLASH_MS = 4000; // how long it stays before fading out
 export const SPLASH_FADE_MS = 500;
 
-export const SPLASH_SCRIPT = `try{var d=document.documentElement;var sa=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;if(sa&&!sessionStorage.getItem("ep-splash")){sessionStorage.setItem("ep-splash","1");var rm=window.matchMedia("(prefers-reduced-motion: reduce)").matches;var hold=rm?900:${SPLASH_MS};d.classList.add("ep-splash-on");var end=function(){d.classList.add("ep-splash-out");setTimeout(function(){d.classList.remove("ep-splash-on","ep-splash-out")},${SPLASH_FADE_MS})};setTimeout(end,hold);}}catch(e){}`;
+export const SPLASH_SCRIPT = `try{var d=document.documentElement;var sa=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;if(sa&&!sessionStorage.getItem("ep-splash")){sessionStorage.setItem("ep-splash","1");var rm=window.matchMedia("(prefers-reduced-motion: reduce)").matches;var hold=rm?900:${SPLASH_MS};d.classList.add("ep-splash-on");var t0=Date.now();var gone=false;var clear=function(){if(gone)return;gone=true;d.classList.remove("ep-splash-on","ep-splash-out")};var end=function(){d.classList.add("ep-splash-out");setTimeout(clear,${SPLASH_FADE_MS})};setTimeout(end,hold);var late=function(){if(Date.now()-t0>hold+${SPLASH_FADE_MS})clear()};document.addEventListener("visibilitychange",late);window.addEventListener("pageshow",late);}}catch(e){}`;
 
 export const SPLASH_CSS = `
 .ep-splash{display:none}
-html.ep-splash-on,html.ep-splash-on body{background:#060915}
+html.ep-splash-on:not(.ep-splash-out),html.ep-splash-on:not(.ep-splash-out) body{background:#060915}
 html.ep-splash-on .ep-splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 80% at 50% 40%,#1a1446 0%,#0b1124 50%,#060915 100%);transition:opacity .5s ease,transform .5s ease}
 html.ep-splash-out .ep-splash{opacity:0;transform:scale(1.06);pointer-events:none}
 .ep-splash-glow{position:absolute;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgb(124 58 237/.45),rgb(56 189 248/.12) 55%,transparent 70%);filter:blur(20px);animation:ep-glow 2.4s ease-in-out infinite alternate}
