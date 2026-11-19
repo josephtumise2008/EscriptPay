@@ -16,9 +16,18 @@ const ACCENTS = {
   successful: "from-emerald-50 to-cyan-50 text-emerald-600",
 };
 
-export default function SummaryCard({ icon, title, value, sub, index = 0 }) {
+export default function SummaryCard({ icon, title, value, sub, index = 0, bare = false }) {
   const Icon = ICONS[icon] || Wallet;
   const accent = ACCENTS[icon] || ACCENTS.balance;
+  if (bare) {
+    // One cell of a shared stats panel: number first, label under it.
+    return (
+      <div className="bg-white px-4 py-4 sm:px-5 sm:py-5" data-index={index}>
+        <p className="font-display text-2xl font-extrabold tracking-tight text-ink-900 tabular-nums sm:text-[1.75rem]">{value}</p>
+        <p className="mt-1 text-xs font-medium text-ink-500 sm:text-sm">{title}</p>
+      </div>
+    );
+  }
   return (
     <div className="card p-4 sm:p-5" data-index={index}>
       <div className="flex items-start justify-between gap-2">

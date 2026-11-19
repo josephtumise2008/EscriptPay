@@ -173,12 +173,13 @@ export default function DashboardPage() {
       </Link>
 
       <section aria-label="Account summary">
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-200/80 shadow-[var(--shadow-card)] xl:grid-cols-4">
           <SummaryCard
             icon="total"
             title="Total Transactions"
             value={stats.total}
             sub={loading ? "Loading…" : "All purchases"}
+            bare
             index={1}
           />
           <SummaryCard
@@ -186,6 +187,7 @@ export default function DashboardPage() {
             title="Data Purchased"
             value={stats.dataPurchased}
             sub={loading ? "Loading…" : "Successful data orders"}
+            bare
             index={2}
           />
           <SummaryCard
@@ -193,6 +195,7 @@ export default function DashboardPage() {
             title="Airtime Purchased"
             value={stats.airtimePurchased}
             sub={loading ? "Loading…" : "Successful airtime orders"}
+            bare
             index={3}
           />
           <SummaryCard
@@ -200,6 +203,7 @@ export default function DashboardPage() {
             title="Successful Transactions"
             value={`${stats.successful}/${stats.total}`}
             sub={loading ? "Loading…" : "Completed orders"}
+            bare
             index={4}
           />
         </div>

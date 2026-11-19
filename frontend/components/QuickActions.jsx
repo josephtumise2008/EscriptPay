@@ -22,15 +22,15 @@ const ACTIONS = [
 // The main things people come to do — first on the dashboard, compact on phones.
 export default function QuickActions() {
   return (
-    <div className="grid grid-cols-4 gap-2 sm:gap-4 xl:grid-cols-4">
+    <div className="card grid grid-cols-4 gap-y-1 p-2 sm:p-3 lg:gap-2">
       {ACTIONS.map((a) => (
         <Link
           key={a.href}
           href={a.href}
           aria-label={a.label}
-          className="card focus-ring press group flex flex-col items-center gap-2.5 px-1 py-3.5 text-center hover:border-slate-300 hover:shadow-[var(--shadow-card-hover)] sm:gap-2.5 sm:p-4 lg:flex-row lg:gap-4 lg:p-5 lg:text-left"
+          className="focus-ring press group flex flex-col items-center gap-2 rounded-xl px-1 py-3 text-center transition-colors hover:bg-slate-50 sm:py-4 lg:flex-row lg:gap-3.5 lg:p-3.5 lg:text-left"
         >
-          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl brand-contrast sm:h-12 sm:w-12 ${a.tone}`}>
+          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] brand-contrast transition-transform duration-200 group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${a.tone}`}>
             <a.icon size={21} aria-hidden="true" />
           </span>
           <span className="min-w-0">
