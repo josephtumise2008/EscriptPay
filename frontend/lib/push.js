@@ -123,5 +123,18 @@ export function usePushAlerts() {
     return OneSignal.Notifications.permission === true;
   }, [read]);
 
-  return { state, enable };
+  // Turns alerts off for this phone (the browser permission stays, so turning
+  // them back on is one tap with no prompt).
+  const disable = useCallback(async () => {
+    const OneSignal = await start();
+    if (!OneSignal) return;
+    try {
+      await OneSignal.User?.PushSubscription?.optOut();
+    } catch {
+      // ignore
+    }
+    setState("off");
+  }, []);
+
+  return { state, enable, disable };
 }

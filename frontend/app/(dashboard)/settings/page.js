@@ -4,6 +4,41 @@ import { Bell, Monitor, Moon, Palette, Sun, User, Check } from "lucide-react";
 import Link from "next/link";
 import { useTheme, THEME_OPTIONS } from "@/components/ThemeProvider";
 import { useAuth } from "@/lib/auth-context";
+import { usePushAlerts } from "@/lib/push";
+
+// On/off switch for phone notifications (gift box, cashback, referrals).
+function PushToggle() {
+  const { state, enable, disable } = usePushAlerts();
+  const on = state === "on";
+  const note =
+    state === "install-first"
+      ? "On iPhone, add EscriptPay to your Home Screen first."
+      : state === "blocked"
+        ? "Blocked in your browser settings. Allow notifications for escriptpay.com there."
+        : state === "unavailable"
+          ? "This browser doesn't support notifications."
+          : "Daily gift reminders, cashback and referral rewards.";
+  const usable = state === "on" || state === "off";
+  return (
+    <li className="flex items-start justify-between gap-4">
+      <div>
+        <p className="font-semibold text-ink-800">Phone notifications</p>
+        <p className="mt-0.5 text-ink-500">{note}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="Phone notifications"
+        disabled={!usable}
+        onClick={() => (on ? disable() : enable())}
+        className={`focus-ring relative mt-0.5 inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 ${on ? "bg-emerald-500" : "bg-slate-300"}`}
+      >
+        <span className={`inline-block h-5 w-5 rounded-full bg-[#ffffff] shadow transition-transform ${on ? "translate-x-6" : "translate-x-1"}`} />
+      </button>
+    </li>
+  );
+}
 
 const THEME_META = {
   light: { label: "Light", icon: Sun, hint: "Bright surfaces" },
@@ -129,6 +164,7 @@ export default function SettingsPage() {
             <h2 id="s-notifications" className="font-display text-base font-bold text-ink-800">Notifications</h2>
           </div>
           <ul className="space-y-3 text-sm">
+            <PushToggle />
             <li className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-semibold text-ink-800">In-app purchase updates</p>

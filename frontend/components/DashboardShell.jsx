@@ -11,6 +11,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import BackgroundGradient from "@/components/BackgroundGradient";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import NotificationBell from "@/components/NotificationBell";
+import PushPrompt from "@/components/PushPrompt";
 import { useLogout, LogoutErrorToast } from "@/hooks/useLogout";
 import { useAuth } from "@/lib/auth-context";
 import { initials } from "@/lib/format";
@@ -302,6 +303,7 @@ export default function DashboardShell({ children }) {
       <MobileTabBar pathname={pathname} />
 
       <LogoutErrorToast message={logoutError} />
+      <PushPrompt />
     </div>
   );
 }
