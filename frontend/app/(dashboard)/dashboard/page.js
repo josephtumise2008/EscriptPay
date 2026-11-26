@@ -15,6 +15,7 @@ import { getTransactions, errorMessage } from "@/lib/api";
 import { formatNaira } from "@/lib/format";
 import { computeStats, buildRangeSeries } from "@/lib/transactions";
 import InstallApp from "@/components/InstallApp";
+import GiftBoxCard from "@/components/GiftBox";
 import { readCache, writeCache } from "@/lib/cache";
 
 const RANGES = [
@@ -157,6 +158,8 @@ export default function DashboardPage() {
         </h2>
         <QuickActions />
       </section>
+
+      <GiftBoxCard />
 
       <Link
         href="/refer"

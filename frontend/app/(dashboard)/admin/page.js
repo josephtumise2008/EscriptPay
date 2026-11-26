@@ -180,7 +180,7 @@ export default function AdminPage() {
         <>
           <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
             <div className="col-span-2 lg:col-span-1">
-              <Kpi icon={TrendingUp} label="Profit" value={formatNaira(t.profit)} sub={t.referrals > 0 ? "After supplier cost, card fees and referral rewards" : "After supplier cost and card fees"} highlight />
+              <Kpi icon={TrendingUp} label="Profit" value={formatNaira(t.profit)} sub={t.referrals > 0 || t.gifts > 0 ? "After supplier cost, card fees, referral rewards and gift cashback" : "After supplier cost and card fees"} highlight />
             </div>
             <Kpi icon={ShoppingBag} label="Sales" value={formatNaira(t.sales)} sub={`${t.orders} delivered orders`} />
             <Kpi icon={Truck} label="Supplier cost" value={formatNaira(t.cost)} sub="Paid to ClubKonnect" />
@@ -190,6 +190,11 @@ export default function AdminPage() {
           {t.referrals > 0 && (
             <p className="text-xs text-ink-500">
               Referral rewards: {formatNaira(t.referrals)} paid to {t.referralCount} inviter{t.referralCount === 1 ? "" : "s"} (already taken off profit).
+            </p>
+          )}
+          {t.gifts > 0 && (
+            <p className="text-xs text-ink-500">
+              Gift box cashback: {formatNaira(t.gifts)} across {t.giftCount} gift{t.giftCount === 1 ? "" : "s"} (already taken off profit).
             </p>
           )}
           {t.unknownCost > 0 && (

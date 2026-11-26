@@ -4,6 +4,15 @@
 //   - page loads go to the network first; on a slow connection (no answer in
 //     3.5s) the copy saved last time is shown, and offline shows /offline
 //   - Next.js build files (/_next/static, hashed and immutable) are cached
+// Web push (OneSignal): its worker code runs inside this service worker so
+// there is only one. If OneSignal can't load (offline install), the rest of
+// the worker still works; push just starts on a later update.
+try {
+  importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
+} catch {
+  // ignore
+}
+
 const VERSION = "escriptpay-v2";
 const PAGES = "escriptpay-pages-v2";
 const SLOW_MS = 3500;

@@ -40,6 +40,7 @@ const ENTRY_STYLE = {
   funding: { icon: ArrowDownLeft, label: "Wallet top-up", tone: "bg-emerald-50 text-emerald-600" },
   refund: { icon: RotateCcw, label: "Refund", tone: "bg-sky-50 text-sky-600" },
   referral: { icon: Gift, label: "Referral reward", tone: "bg-violet-50 text-violet-600" },
+  gift: { icon: Gift, label: "Gift box cashback", tone: "bg-amber-50 text-amber-600" },
   purchase: { icon: ArrowUpRight, label: "Purchase", tone: "bg-slate-100 text-ink-600" },
 };
 

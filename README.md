@@ -21,6 +21,8 @@ with clear prices and a receipt for every order.
   low supplier balance)
 - Owner Business page: sales, profit, wallet balances, supplier balance
 - Transaction history with search, filters, receipts and CSV export
+- Daily gift box: cashback paid into the wallet after a data order, with
+  OneSignal web push reminders (morning and evening)
 - Installable app (PWA), light/dark themes, mobile tab bar
 
 ## Tech stack

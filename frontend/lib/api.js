@@ -163,6 +163,17 @@ export const verifyPayment = async (reference) => {
 };
 
 // Public, non-secret runtime mode (test/live) from the backend.
+// Daily gift box.
+export const getGiftBox = async () => {
+  const { data } = await api.get("/api/gifts/today");
+  return data.gift;
+};
+
+export const openGiftBox = async () => {
+  const { data } = await api.post("/api/gifts/open", {});
+  return data.gift;
+};
+
 export const getAppConfig = async () => {
   const { data } = await api.get("/api/config");
   return data.config;

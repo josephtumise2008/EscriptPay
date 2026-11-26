@@ -63,4 +63,35 @@ const backup = async (req, res) => {
   }
 };
 
-module.exports = { sweep, backup };
+// GET /api/cron/gift-push?slot=morning|evening  (same Authorization header).
+// morning (about 8am WAT): "buy your data today" (+ today's gift box).
+// evening (about 6pm WAT): "invite friends and earn". Both go to every
+// subscribed browser, at most once a day each.
+const giftPush = async (req, res) => {
+  if (!(process.env.CRON_SECRET || "").trim()) {
+    return res.status(503).json({ success: false, message: "Scheduled checks are not configured." });
+  }
+  if (!authorized(req)) return res.status(401).json({ success: false });
+  const slot = String(req.query.slot || "").trim().toLowerCase();
+  if (!["morning", "evening"].includes(slot)) {
+    return res.status(400).json({ success: false, message: "slot must be morning or evening." });
+  }
+  try {
+    const { createGiftPush } = require("../services/giftPush");
+    const { createPushService } = require("../services/push");
+    const { config } = require("../services");
+    const runner = createGiftPush({
+      push: createPushService({ logEvent }),
+      AlertState: require("../models/AlertState"),
+      appUrl: config.appUrl,
+      logEvent,
+    });
+    const result = await runner.run({ slot, mode: config.paymentMode });
+    logEvent("cron.gift_push", result);
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return res.status(502).json({ success: false, message: "Push service error.", status: error && error.status });
+  }
+};
+
+module.exports = { sweep, backup, giftPush };

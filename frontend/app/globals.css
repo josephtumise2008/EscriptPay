@@ -72,6 +72,7 @@
   --animate-scale-in: scale-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-page-in: page-in 0.2s ease-out;
   --animate-pop: pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-gift-wiggle: gift-wiggle 2.4s ease-in-out infinite;
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
   --animate-draw: draw 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -126,6 +127,18 @@
 @keyframes draw {
   from { stroke-dashoffset: 600; }
   to { stroke-dashoffset: 0; }
+}
+
+/* Daily gift box: a small shake every couple of seconds while unopened. */
+@keyframes gift-wiggle {
+  0%, 70%, 100% { transform: rotate(0deg); }
+  76% { transform: rotate(-9deg); }
+  82% { transform: rotate(8deg); }
+  88% { transform: rotate(-5deg); }
+  94% { transform: rotate(3deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-gift-wiggle { animation: none; }
 }
 
 @keyframes float {

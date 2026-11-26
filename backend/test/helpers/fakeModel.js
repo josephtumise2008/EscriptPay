@@ -28,7 +28,10 @@ const matches = (doc, filter) =>
     if (cond && typeof cond === "object" && !(cond instanceof Date)) {
       if ("$in" in cond) return cond.$in.includes(value);
       if ("$ne" in cond) return value !== cond.$ne;
-      if ("$gte" in cond) return typeof value === "number" && value >= cond.$gte;
+      if ("$gte" in cond) {
+        if (cond.$gte instanceof Date) return value != null && new Date(value).getTime() >= cond.$gte.getTime();
+        return typeof value === "number" && value >= cond.$gte;
+      }
       if ("$exists" in cond) return cond.$exists ? value !== undefined : value === undefined;
       if ("$lte" in cond) return value !== undefined && new Date(value).getTime() <= new Date(cond.$lte).getTime();
     }

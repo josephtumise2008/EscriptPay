@@ -34,8 +34,8 @@ const overview = async (req, res) => {
 
     const fee = { percent: 1.5, flatKobo: 10000, flatThresholdKobo: 250000, capKobo: 200000, ...(config.walletFee || {}) };
     const byDay = {};
-    for (let i = days - 1; i >= 0; i -= 1) byDay[dayKey(startOfLagosDay(i))] = { sales: 0, cost: 0, fees: 0, referrals: 0, profit: 0, orders: 0 };
-    const totals = { sales: 0, cost: 0, fees: 0, referrals: 0, referralCount: 0, profit: 0, orders: 0, data: 0, airtime: 0, cable: 0, electricity: 0, exam: 0, unknownCost: 0 };
+    for (let i = days - 1; i >= 0; i -= 1) byDay[dayKey(startOfLagosDay(i))] = { sales: 0, cost: 0, fees: 0, referrals: 0, gifts: 0, profit: 0, orders: 0 };
+    const totals = { sales: 0, cost: 0, fees: 0, referrals: 0, referralCount: 0, gifts: 0, giftCount: 0, profit: 0, orders: 0, data: 0, airtime: 0, cable: 0, electricity: 0, exam: 0, unknownCost: 0 };
 
     for (const tx of delivered) {
       const salesK = tx.paymentAmountKobo || Math.round(tx.amount * 100);
@@ -88,7 +88,20 @@ const overview = async (req, res) => {
       totals.referralCount += 1;
     }
 
-    const toNaira = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, ["orders", "data", "airtime", "cable", "electricity", "exam", "unknownCost", "referralCount"].includes(k) ? v : v / 100]));
+    // Daily gift box cashback is a marketing cost too.
+    const giftCredits = await WalletEntry.find({ mode, kind: "gift", status: "successful", createdAt: { $gte: since } })
+      .select("amountKobo createdAt")
+      .lean();
+    for (const g of giftCredits) {
+      const d = byDay[dayKey(g.createdAt)];
+      for (const bucket of [totals, d].filter(Boolean)) {
+        bucket.gifts += g.amountKobo;
+        bucket.profit -= g.amountKobo;
+      }
+      totals.giftCount += 1;
+    }
+
+    const toNaira = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, ["orders", "data", "airtime", "cable", "electricity", "exam", "unknownCost", "referralCount", "giftCount"].includes(k) ? v : v / 100]));
 
     const [needsReview, pending, walletAgg, newMessages, failedRecent, blockedFundings] = await Promise.all([
       Transaction.find({ mode, needsReview: true }).sort({ updatedAt: -1 }).limit(50).populate("user", "name email").lean(),

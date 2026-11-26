@@ -6,6 +6,7 @@ import AppSplash from "@/components/AppSplash";
 import { SPLASH_CSS, SPLASH_SCRIPT } from "@/lib/splash";
 import { InstallSheetHost } from "@/components/InstallApp";
 import { PwaRegister } from "@/lib/pwa";
+import { PushRegister } from "@/lib/push";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
@@ -118,6 +119,7 @@ window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();win
           <AuthProvider>
             <WalletProvider>{children}</WalletProvider>
             <InstallSheetHost />
+            <PushRegister />
           </AuthProvider>
         </ThemeProvider>
         <PwaRegister />

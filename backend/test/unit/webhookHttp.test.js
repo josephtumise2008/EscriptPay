@@ -69,6 +69,7 @@ test("public config exposes mode only, never secrets", async () => {
     deliveryMode: "test",
     currency: "NGN",
     virtualAccounts: false,
+    pushAppId: null,
   });
   assert.ok(!JSON.stringify(res.body).includes("sk_test"));
 });

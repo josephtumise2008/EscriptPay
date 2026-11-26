@@ -47,7 +47,25 @@ const shortName = (name) => {
   return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.` : parts[0];
 };
 
-const createReferralService = ({ User, WalletEntry, logEvent = () => {} }) => {
+// notify(userIds, { heading, text, url }) sends a push; best effort.
+const createReferralService = ({ User, WalletEntry, logEvent = () => {}, notify = null }) => {
+  const alert = (userId, message) => {
+    if (!notify || !userId) return;
+    Promise.resolve()
+      .then(() => notify([String(userId)], message))
+      .catch((error) => logEvent("referral.push_failed", { message: error && error.message }));
+  };
+
+  // Tells the inviter a friend joined with their link.
+  const notifySignup = ({ inviterId, friendName }) => {
+    const { rewardKobo, minTopupKobo } = rules();
+    alert(inviterId, {
+      heading: "🎉 Your friend just joined EscriptPay",
+      text: `${shortName(friendName)} signed up with your link. You get ₦${rewardKobo / 100} when they add ₦${minTopupKobo / 100}+ to their wallet.`,
+      url: "/refer",
+    });
+  };
+
   // Gives the user a code if they don't have one yet. Returns the code.
   const ensureCode = async (userId) => {
     const current = await User.findById(userId, { referralCode: 1 }).lean();
@@ -125,6 +143,11 @@ const createReferralService = ({ User, WalletEntry, logEvent = () => {} }) => {
       { $set: { status: "successful", balanceAfterKobo: balance } }
     );
     logEvent("referral.rewarded", { reference: entry.reference });
+    alert(invitee.referredBy, {
+      heading: `💰 ₦${rewardKobo / 100} added to your wallet`,
+      text: `${shortName(invitee.name)} topped up, so your referral reward is in. Invite more friends to earn more!`,
+      url: "/refer",
+    });
     return { outcome: "rewarded", rewardKobo };
   };
 
@@ -158,7 +181,7 @@ const createReferralService = ({ User, WalletEntry, logEvent = () => {} }) => {
     };
   };
 
-  return { ensureCode, findInviter, rewardForTopup, summary };
+  return { ensureCode, findInviter, rewardForTopup, summary, notifySignup };
 };
 
 module.exports = { createReferralService, normalizeCode, shortName, randomCode, rules };

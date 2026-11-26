@@ -138,3 +138,60 @@ identifiers and status codes, never passwords, tokens or connection strings.
    and the Paystack callback/webhook URLs.
 4. **Go live** — only after test runs pass and you approve: live keys,
    `LIVE_PAYMENTS_ENABLED=true`, `LIVE_DELIVERY_ENABLED=true`.
+
+## Daily gift box + push notifications (OneSignal)
+
+The dashboard shows a gift box once a day (Lagos time). Opening it reveals a
+cashback amount; it is paid into the wallet when the customer buys data of at
+least ₦500 the same day. Rules and limits are env variables (see
+`backend/.env.example`, "DAILY GIFT BOX"). It works without push; push only
+adds the daily reminder.
+
+### 1. OneSignal (one time)
+
+1. onesignal.com → **New App/Website** → name `EscriptPay` → **Web**.
+2. Integration: **Typical Site**. Site URL `https://escriptpay.com`, site
+   name `EscriptPay`, icon `https://escriptpay.com/icons/icon-192.png`.
+   Turn the slide/bell prompts **off** (the app has its own button).
+3. Service worker settings (under "Advanced"): path `/sw.js`, scope `/`.
+   Our `/sw.js` already loads OneSignal's worker; **don't** upload
+   OneSignal's own worker file.
+4. Settings → **Keys & IDs**: copy the **App ID**, and create a
+   **REST API key**.
+
+### 2. Vercel environment variables
+
+| Name | Value |
+|---|---|
+| `ONESIGNAL_APP_ID` | the App ID |
+| `ONESIGNAL_REST_API_KEY` | the REST API key (secret) |
+| `ONESIGNAL_ICON_URL` | `https://escriptpay.com/icons/icon-192.png` (optional) |
+
+Redeploy. The "Remind me every day" button then appears on the gift box.
+On iPhone, web push only works after the customer adds EscriptPay to the
+Home Screen (iOS 16.4+); the card tells them so.
+
+### 3. Two daily jobs (cron-job.org)
+
+Both use the header `Authorization: Bearer <CRON_SECRET>`, method GET,
+time zone **Africa/Lagos**:
+
+| Time | URL |
+|---|---|
+| 08:00 every day | `https://escriptpay.com/api/cron/gift-push?slot=morning` |
+| 18:00 every day | `https://escriptpay.com/api/cron/gift-push?slot=evening` |
+
+Morning: "buy your data today" (plus today's gift box). Evening: "invite
+friends and earn ₦100 each". Both go to everyone who turned on alerts, at
+most once a day each, so a retry never double-sends.
+
+Referral alerts are instant (no job needed): the inviter gets a
+notification when a friend signs up with their link, and another when the
+₦100 reward lands in their wallet.
+
+### Costs
+
+Defaults: prizes ₦5 / ₦10 / ₦20 / ₦50 (about ₦11 per paid gift on average),
+paid only after a ₦500+ data order, and never more than ₦2,000 a day in
+total (`GIFT_BOX_DAILY_BUDGET_NAIRA`). Cashback paid is taken off profit on
+the Business page. `GIFT_BOX_ENABLED=false` pauses it.

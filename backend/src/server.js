@@ -38,6 +38,7 @@ const cronRoutes = require("./routes/cronRoutes");
 const referralRoutes = require("./routes/referralRoutes");
 const numbersRoutes = require("./routes/numbersRoutes");
 const billRoutes = require("./routes/billRoutes");
+const giftRoutes = require("./routes/giftRoutes");
 const { rateLimit } = require("./middleware/rateLimit");
 // Loading the service registry validates PAYMENT_SERVICE / VTU_SERVICE and
 // refuses to start with an unsafe combination (see config/payments.js).
@@ -117,7 +118,8 @@ app.get("/api/health", (req, res) => {
 
 // Public, non-secret runtime configuration for the frontend.
 app.get("/api/config", (req, res) => {
-  res.json({ success: true, config: publicConfig() });
+  // The OneSignal App ID is public (it is in every subscribed browser).
+  res.json({ success: true, config: { ...publicConfig(), pushAppId: (process.env.ONESIGNAL_APP_ID || "").trim() || null } });
 });
 
 // On Vercel, start connecting to MongoDB while the function boots instead of
@@ -150,6 +152,7 @@ app.use("/api/admin", rateLimit({ windowMs: 60 * 1000, max: 60, namespace: "admi
 app.use("/api/bills", rateLimit({ windowMs: 60 * 1000, max: 40, namespace: "bills" }), billRoutes);
 app.use("/api/cron", rateLimit({ windowMs: 60 * 1000, max: 10, namespace: "cron" }), cronRoutes);
 app.use("/api/referrals", rateLimit({ windowMs: 60 * 1000, max: 30, namespace: "referrals" }), referralRoutes);
+app.use("/api/gifts", rateLimit({ windowMs: 60 * 1000, max: 30, namespace: "gifts" }), giftRoutes);
 app.use("/api/numbers", rateLimit({ windowMs: 60 * 1000, max: 60, namespace: "numbers" }), numbersRoutes);
 
 app.use((req, res) => {

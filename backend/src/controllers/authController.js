@@ -93,7 +93,10 @@ const signup = async (req, res) => {
       password,
       ...(inviter ? { referredBy: inviter._id } : {}),
     });
-    if (inviter) logEvent("referral.signup", { inviter: String(inviter._id) });
+    if (inviter) {
+      logEvent("referral.signup", { inviter: String(inviter._id) });
+      referrals.notifySignup({ inviterId: inviter._id, friendName: nameClean });
+    }
     referrals.ensureCode(user._id).catch(() => {});
 
     const token = signToken(user);
